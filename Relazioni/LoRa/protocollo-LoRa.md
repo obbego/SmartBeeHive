@@ -1,128 +1,151 @@
-# Protocollo di comunicazione LoRa 
-La comunicazione con le arnie richiede un protocollo wireless dati i requisiti del cliente. Le api sono sensibili a certe frequenze radio prodotte quindi e’ necessario comunicare ad una frequenza che non vada a disturbare il loro lavoro.  
+# Protocollo di comunicazione LoRa
 
-La comunicazione avviene tra un Raspberry Pi con un LoRa HAT montato, che permette di comunicare con un microcontrollore basato su ESP32 con a sua volta un chip LoRa montato per l’invio delle letture eseguite attraverso i sensori ad esso collegati verso il raspberry. Il raspberry funge da gateway, di conseguenza si occupa di effettuare un instradamento dei dati verso un server thingsboard inserito all’interno della rete LAN a cui accede per salvare le letture all’interno di un database e visualizzarle in una dashboard. 
+La comunicazione con le arnie richiede un protocollo wireless, dati i requisiti del cliente. Le api sono sensibili a certe frequenze radio prodotte, quindi è necessario comunicare a una frequenza che non vada a disturbare il loro lavoro.  
 
-Cio’ impedisce la normale comunicazione attraverso un protocollo dello stack TCP-IP come il WiFi 802.11. E’ quindi necessario una comunicazione con parametri specifici, ove sia provato che non vadano ad influire con la corretta lavorazione delle arnie. Seguono i parametri di frequenza e potenza radio utilizzati da LoRa in unione europea. 
-## Parametri di comunicazione del protocollo LoRa nell’UE 
-Tutte le informazioni qua mostrate sono state ricavate dalle specifiche regionali di LoRA, almeno che non sia inserito un link di una sorgente diversa:  [https://resources.lora-alliance.org/technical-specifications/rp002-1-0-4-regional-parameters](https://resources.lora-alliance.org/technical-specifications/ts001-1-0-4-lorawan-l2-1-0-4-specification) 
+La comunicazione avviene tra un Raspberry Pi con un LoRa HAT montato, che permette di comunicare con un microcontrollore basato su ESP32, a sua volta dotato di un chip LoRa, per l’invio delle letture eseguite attraverso i sensori ad esso collegati verso il Raspberry. Il Raspberry funge da gateway, di conseguenza si occupa di effettuare un instradamento dei dati verso un server ThingsBoard inserito all’interno della rete LAN, al quale accede per salvare le letture all’interno di un database e visualizzarle in una dashboard.  
 
-([Riga 1266-1277, pagina 40, Specifiche generali del protocollo](https://resources.lora-alliance.org/technical-specifications/ts001-1-0-4-lorawan-l2-1-0-4-specification) - Il modulo non può in alcun caso superare i 36dBm o 3.98W, ma questi sono solo i valori massimi supportati dal modulo, seguono le specifiche massime in Europa) 
+Ciò impedisce la normale comunicazione attraverso un protocollo dello stack TCP/IP come il Wi-Fi 802.11. È quindi necessaria una comunicazione con parametri specifici, ove sia dimostrato che non vadano a influire con la corretta operatività delle arnie. Seguono i parametri di frequenza e potenza radio utilizzati da LoRa in Unione Europea.
 
-(Sezione 2.4.2, Pagina 32, Tabella riga 572) 
+## Parametri di comunicazione del protocollo LoRa nell’UE
 
-Il modulo utilizza la banda EU863-870 che ha le frequenze specificate dalla tabella: **868.10MHz - 868.625MHz**  
+Tutte le informazioni qui mostrate sono state ricavate dalle specifiche regionali di LoRa, a meno che non sia inserito un link di una sorgente diversa:  
+[https://resources.lora-alliance.org/technical-specifications/rp002-1-0-4-regional-parameters](https://resources.lora-alliance.org/technical-specifications/ts001-1-0-4-lorawan-l2-1-0-4-specification)
 
-In base al canale che viene utilizzato per la comunicazione. 
+([Riga 1266-1277, pagina 40, Specifiche generali del protocollo](https://resources.lora-alliance.org/technical-specifications/ts001-1-0-4-lorawan-l2-1-0-4-specification) - Il modulo non può in alcun caso superare i 36 dBm o 3.98 W, ma questi sono solo i valori massimi supportati dal modulo. Seguono le specifiche massime in Europa.)
 
-(Sezione 2.4.3, Pagina 33, Paragrafo Riga 595) 
+(Sezione 2.4.2, Pagina 32, Tabella riga 572)
 
-La potenza massima trasmessa in Europa deve essere di **+16dBm (39.8mW)**, secondo la banda europea EU863-870 (Indicata anche nelle [specifiche regionali di questa banda](https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/eu868/) sotto la sezione "*Maximum EIRP / ERP*") 
+Il modulo utilizza la banda EU863-870 che ha le frequenze specificate dalla tabella: **868.10 MHz - 868.625 MHz**  
+in base al canale che viene utilizzato per la comunicazione.
 
-*ERP*: **Effective Radiated Power**, ovvero la potenza effettiva irradiata da un'antenna tenendo conto del suo guadagno rispetto ad un dipolo standard, EIRP differisce da ERP perché il guadagno dell'antenna viene misurato rispetto ad un'antenna isotropa. 
-# Protocollo ideale 
-Per la soddisfazione di questi requisiti, il protocollo ideale e’ il LoRaWAN, ovvero un'integrazione layer 3 del protocollo LoRa, che sarebbe layer 2. Seguono le differenze fra i due ed i problemi riscontrati relativi ad essi.
+(Sezione 2.4.3, Pagina 33, Paragrafo Riga 595)
 
-*Differenza tra LoRa e LoRaWAN* 
+La potenza massima trasmessa in Europa deve essere di **+16 dBm (39.8 mW)**, secondo la banda europea EU863-870 (indicata anche nelle [specifiche regionali di questa banda](https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/eu868/) sotto la sezione "*Maximum EIRP / ERP*").
 
-*Il protocollo LoRa è solamente un protocollo layer fisico della pila ISO/OSI, di conseguenza gestisce solamente un broadcast via radio verso gli altri dispositivi compatibili con lo standard LoRa nelle vicinanze. Non gestisce alcuna tecnica a contesa per connessioni multiple, non gestisce nemmeno connessioni o criptazione dati.* 
+**ERP**: *Effective Radiated Power*, ovvero la potenza effettiva irradiata da un'antenna tenendo conto del suo guadagno rispetto a un dipolo standard. EIRP differisce da ERP perché il guadagno dell'antenna viene misurato rispetto a un'antenna isotropa.
 
-![](Aspose.Words.de22a184-0d72-48d9-a225-55b0e886d0af.001.jpeg)
+# Protocollo ideale
 
-*Di conseguenza, se viene acquistato un modulo che supporta **solamente** il protocollo LoRa, e non LoRaWAN, non sarà possibile gestire una serie di funzionalità tra cui le seguenti:* 
+Per soddisfare questi requisiti, il protocollo ideale è il LoRaWAN, ovvero un'integrazione layer 3 del protocollo LoRa, che invece si colloca al layer 2. Seguono le differenze fra i due e i problemi riscontrati relativi ad essi.
 
-- *Connessioni multiple attraverso un singolo dispositivo* 
-- *Criptazione dati attraverso una chiave di applicazione* 
-- *Classi di lavoro per diminuire la potenza utilizzata compromettendo la latenza* 
+### Differenza tra LoRa e LoRaWAN
 
-*Quando si stabilisce una connessione di un dispositivo con un gateway LoRaWAN, è quindi* 
+*Il protocollo LoRa è solamente un protocollo layer fisico della pila ISO/OSI; di conseguenza, gestisce solamente un broadcast via radio verso gli altri dispositivi compatibili con lo standard LoRa nelle vicinanze. Non gestisce alcuna tecnica a contesa per connessioni multiple, né connessioni o criptazione dei dati.* 
 
-*necessario specificare i seguenti parametri:* 
+![](img/lora-protocol.png)
 
-- ***EUI Dispositivo**: sarebbe l’identificativo del dispositivo a cui si deve connettere il gateway* 
-- ***EUI Applicazione**: identificativo dell’applicazione utilizzata, su alcuni gateway come il Milesight basta impostarlo a tutti zeri* 
-- ***Chiave Applicazione**: chiave di criptazione che viene utilizzata per cifrare il contenuto dei pacchetti* 
+*Di conseguenza, se viene acquistato un modulo che supporta **solamente** il protocollo LoRa, e non LoRaWAN, non sarà possibile gestire una serie di funzionalità tra cui le seguenti:*  
 
-*Nel caso la connessione non venga eseguita attraverso OTAA (Over The Air Activation), che* 
+- *Connessioni multiple attraverso un singolo dispositivo*  
+- *Criptazione dei dati attraverso una chiave di applicazione*  
+- *Classi di lavoro per diminuire la potenza utilizzata compromettendo la latenza*  
 
-*è una handshake che permette la trasmissione di ulteriori chiavi di comunicazione all’attivazione, viene utilizzata, invece, ABP (Activation By Personalization). Quest’ultima tecnica di connessione è meno sicura e richiede l’inserimento manuale di alcune chiavi ulteriori. Generalmente, però, è più altamente supportata della più sicura OTAA. La maggior parte degli errori riscontrati durante l’utilizzo di schede di sviluppo LoRa sono stati provocati dall’OTAA.* 
-## Differenze fra chip 
-La differenza fra i due protocolli e’ stata dimostrata perche’ un problema riscontrato durante lo sviluppo e’ dato dal mancato supporto di un chip che integri il LoRaWAN lato server a basso costo e disponibile per le piattaforme richieste. 
+*Quando si stabilisce una connessione di un dispositivo con un gateway LoRaWAN, è quindi*  
 
-La comunicazione fra il Raspberry Pi e l’ESP32 avviene facendo uso di un chip SX1262, malgrado questo supporti solamente la comunicazione LoRaWAN come client, e non come server, da quello che e' stato letto da varie fonti su internet. Nonostante ciò, in ogni caso la comunicazione tra il chip ESP32 ed un gateway Milesight LoRaWAN server e’ sempre fallita nonostante i vari tentativi seguendo i passaggi riferiti dal manuale. 
+*necessario specificare i seguenti parametri:*  
 
-In ogni caso, per la corretta comunicazione tramite LoRaWAN, il gateway deve essere composto da un chip della serie SX123x, i quali non sono prodotti in massa su LoRaHAT per Raspberry Pi. Non e’ nemmeno possibile utilizzare un gateway commerciale come quello della Milesight utilizzato per le prove, perche’ non ci permetterebbe di gestire manualmente l’occupazione della banda radio che, data l’interferenza con le arnie, deve essere controllata. 
-## Scelta del chip 
-Il chip per la comunicazione è stato scelto sulla base del supporto di librerie. Il chip SX 1262 e’ supportato dalla libreria [RadioLib](https://github.com/jgromes/RadioLib) che a sua volta supporta contemporaneamente sia la piattaforma Arduino che la piattaforma Raspberry Pi, permettendo di scrivere codice portabile su entrambe le piattaforme con modifiche minori. 
-# Creazione del protocollo di comunicazione 
-Date le problematiche citate in questo documento, e’ sembrata plausibile la creazione di un protocollo che permetta la comunicazione con una certa affidabilita’ facendo solamente uso di LoRa radio. 
+- ***EUI Dispositivo***: identificativo del dispositivo a cui si deve connettere il gateway  
+- ***EUI Applicazione***: identificativo dell’applicazione utilizzata; su alcuni gateway, come il Milesight, basta impostarlo a tutti zeri  
+- ***Chiave Applicazione***: chiave di criptazione utilizzata per cifrare il contenuto dei pacchetti  
 
-Segue una descrizione delle caratteristiche del protocollo 
-# Descrizione protocollo 
-Il protocollo introduce le seguenti funzionalità alla comunicazione corrente: 
+*Nel caso in cui la connessione non venga eseguita attraverso OTAA (Over The Air Activation), che*  
 
-- Indirizzamento 
-- Messaggi di controllo 
-- Abilitazione del CRC sul protocollo LoRa sottostante 
+*è un handshake che permette la trasmissione di ulteriori chiavi di comunicazione all’attivazione, viene utilizzata invece ABP (Activation By Personalization). Quest’ultima tecnica di connessione è meno sicura e richiede l’inserimento manuale di alcune chiavi ulteriori. Generalmente, però, è più altamente supportata rispetto alla più sicura OTAA. La maggior parte degli errori riscontrati durante l’utilizzo di schede di sviluppo LoRa sono stati provocati dall’OTAA.*
 
-Un pacchetto inviato dal protocollo contiene la sorgente e la destinazione del messaggio, il dispositivo ricevente viene identificato con una stringa di testo che deve combaciare con quella contenuta nella destinazione del pacchetto ricevuto, altrimenti il pacchetto viene ignorato, la stringa di testo non ha un limite sulla lunghezza al momento. 
+## Differenze fra chip
 
-Nell’header, in seguito alla sezione contenente sorgente e destinazione del pacchetto segue un valore numerico contenente il messaggio di controllo, che può essere una REQUEST, una REPLY o un PING, al momento il protocollo non ha comportamenti differenti in base al messaggio di controllo inviato, esso può essere direttamente specificato e letto dall’utente. Il protocollo inoltre si occupa di abilitare la codifica CRC nel LoRa sottostante per garantire una maggiore accuratezza nel trasferimento delle informazioni. 
-## Utilizzo della libreria 
-- **Costruttore** 
+La differenza fra i due protocolli è stata evidenziata perché un problema riscontrato durante lo sviluppo è dato dal mancato supporto di un chip che integri LoRaWAN lato server, a basso costo e disponibile per le piattaforme richieste.
 
-  Il costruttore della libreria permette la creazione dell’identificatore del dispositivo: NiagaraPi(“RASPI”, true); 
+La comunicazione fra il Raspberry Pi e l’ESP32 avviene facendo uso di un chip SX1262. Malgrado questo supporti la comunicazione LoRaWAN solo come client (e non come server), da quanto risulta da varie fonti online, la comunicazione tra il chip ESP32 e un gateway Milesight LoRaWAN server è sempre fallita nonostante i vari tentativi, seguendo i passaggi riferiti dal manuale.
 
-  Il secondo parametro e’ opzionale e determina se mostrare i messaggi di log nel terminale durante l’inizializzazione del modulo radio. 
+In ogni caso, per la corretta comunicazione tramite LoRaWAN, il gateway deve essere composto da un chip della serie SX123x, i quali non sono prodotti in massa su LoRaHAT per Raspberry Pi. Non è nemmeno possibile utilizzare un gateway commerciale come quello della Milesight utilizzato per le prove, perché non ci permetterebbe di gestire manualmente l’occupazione della banda radio che, data l’interferenza con le arnie, deve essere controllata.
 
-- **Invio dati** 
+## Scelta del chip
 
-  L’invio dei dati avviene attraverso l’utilizzo del seguente metodo: 
+Il chip per la comunicazione è stato scelto sulla base del supporto di librerie. Il chip SX1262 è supportato dalla libreria [RadioLib](https://github.com/jgromes/RadioLib), che a sua volta supporta contemporaneamente sia la piattaforma Arduino che la piattaforma Raspberry Pi, permettendo di scrivere codice portabile su entrambe le piattaforme con modifiche minori.
 
-  Niagara\_Ret NiagaraPi::send(std::string destination, Niagara\_Control control, std::string message); 
+# Creazione del protocollo di comunicazione
 
-  Si specifica come prima stringa la destinazione del pacchetto, ovvero l’identificativo che il dispositivo ricevente ha inserito nel costruttore della libreria, successivamente si specifica il messaggio di controllo, contenuto nell’enumeratore Niagara\_Control e infine viene specificata una stringa con il messaggio vero e proprio. 
+Date le problematiche citate in questo documento, è sembrata plausibile la creazione di un protocollo che permetta la comunicazione con una certa affidabilità, facendo solamente uso di radio LoRa.
 
-  Nel caso ci sia stato un errore durante l’invio dei dati, viene ritornato un valore diverso da NIAGARA\_OK contenuto nell'enumeratore Niagara\_Ret. 
+Segue una descrizione delle caratteristiche del protocollo.
 
-- **Ricezione dati** 
+# Descrizione protocollo
 
-  La ricezione dei dati avviene attraverso il metodo bloccante seguente: Niagara\_Ret NiagaraPi::receive(std::string\* source, Niagara\_Control\* control\_output, std::string\* message\_output); 
+Il protocollo introduce le seguenti funzionalità alla comunicazione corrente:
 
-  Richiede un puntatore ad una stringa che verra’ riempita con l’identificatore della sorgente che ha inviato il messaggio, inoltre un altro puntatore ad un tipo Niagara\_Control che riempira’ il valore di controllo che conteneva il messaggio ricevuto e infine un ultima stringa che viene popolata con il messaggio ricevuto effettivo. 
+- Indirizzamento  
+- Messaggi di controllo  
+- Abilitazione del CRC sul protocollo LoRa sottostante  
 
-  Nel caso ci sia stato un errore durante la ricezione dei dati, viene ritornato un valore diverso da NIAGARA\_OK contenuto nell'enumeratore Niagara\_Ret. 
-## Miglioramenti futuri 
-Si prevede di integrare il protocollo con le seguenti funzionalità: 
+Un pacchetto inviato dal protocollo contiene la sorgente e la destinazione del messaggio. Il dispositivo ricevente viene identificato con una stringa di testo che deve combaciare con quella contenuta nella destinazione del pacchetto ricevuto, altrimenti il pacchetto viene ignorato. La stringa di testo non ha un limite di lunghezza al momento.  
 
-- Handshake tra i dispositivi e gestione (benchè minima) delle sessioni a layer 4, con aggiunta di ritrasmissione dei pacchetti 
-- Messaggi di controllo Utilizzati effettivamente per questo handshake 
-- Specificare un formato per le stringhe di indirizzamento 
-- Fare in modo che la funzione di invio dati costruisca direttamente il json da inviare nel corpo del messaggio destinato al gateway in modo da passare direttamente le letture dei sensori ad essa e lasciare che essa si occupi della formattazione di queste 
-# Specifiche protocollo 
-## Handshake di inizio connessione 
-Per instaurare una connessione da un dispositivo A (possibilmente il gateway) ad un dispositivo B (il ricevitore della scheda sensori) 
+Nell’header, in seguito alla sezione contenente sorgente e destinazione del pacchetto, segue un valore numerico contenente il messaggio di controllo, che può essere una `REQUEST`, una `REPLY` o un `PING`. Al momento il protocollo non ha comportamenti differenti in base al messaggio di controllo inviato; esso può essere direttamente specificato e letto dall’utente. Il protocollo inoltre si occupa di abilitare la codifica CRC nel LoRa sottostante per garantire una maggiore accuratezza nel trasferimento delle informazioni.
 
-- GATEWAY INVIA SYN cioè chiede di connettersi con il dispositivo interessato utilizzando un identificativo specifico. 
-- ACKNOWLEDGEMENT dal dispositivo che riceve la richiesta, confermando la connessione 
-- DISPOSITIVO INVIA UN PING chiedendo una conferma di connessione al primo dispositivo 
-- DISPOSITIVO CONFERMA mandando un pacchetto di acknowledgement. 
+## Utilizzo della libreria
 
-Tale operazione verrà ripetuta ogni qualvolta si instaura una connessione tra due dispositivi.  
+- **Costruttore**  
 
-Le funzioni che la libreria dovrebbe prevedere sono: 
+  Il costruttore della libreria permette la creazione dell’identificatore del dispositivo:  
+  `NiagaraPi("RASPI", true);`  
 
-- *connect()* per il dispositivo che instaura una connessione.  
-- *listen()* che blocca il dispositivo fin quando non riceve una richiesta di sincronizzazione. 
-## Conoscenza del tempo 
-Nei dispositivi imputati alla rilevazione dei dati dei sensori (siano essi Arduino o ESP32) non è possibile sapere il giorno o l’ora di misurazione, ma è possibile sapere da quanti millisecondi la scheda è accesa.  
+  Il secondo parametro è opzionale e determina se mostrare i messaggi di log nel terminale durante l’inizializzazione del modulo radio.
 
-Il tempo però risulta essere un componente fondamentale. Infatti la connessione tra dispositivi via LoRa può essere fatta solo poche volte al giorno (tre indicativamente) per non interferire con le api e poterle danneggiare. Tuttavia la lettura dei sensori può non essere fatta solo al momento, ma includere anche altre eseguite durante il corso della giornata.  
+- **Invio dati**  
 
-Il tempo aiuta a comprendere quindi a identificare univocamente il tipo di misurazione assieme al tipo di valore misurato. Grazie a questo è possibile conservarla in memoria per una certa unità di tempo e poi scartata.  
+  L’invio dei dati avviene attraverso l’utilizzo del seguente metodo:  
+  `Niagara_Ret NiagaraPi::send(std::string destination, Niagara_Control control, std::string message);`
 
-Proprio per questo, tra le varie tipologie di comunicazione è *TIME\_SYNC.* Il pacchetto in questo caso trasmette il timestamp della data precisa o i millisecondi dall’accensione della scheda.  
+  Si specifica come prima stringa la destinazione del pacchetto, ovvero l’identificativo che il dispositivo ricevente ha inserito nel costruttore della libreria. Successivamente si specifica il messaggio di controllo, contenuto nell’enumeratore `Niagara_Control`, e infine viene specificata una stringa con il messaggio vero e proprio.
 
-Così è possibile che i dispositivi possano risalire all’ora in cui le misurazioni sono state compiute. 
+  Nel caso ci sia stato un errore durante l’invio dei dati, viene ritornato un valore diverso da `NIAGARA_OK` contenuto nell'enumeratore `Niagara_Ret`.
 
-**N.B.** Tale comunicazione è completamente slegata dall’handshake iniziale e può essere fatta in qualsiasi momento sia opportuno, anche alla riaccensione di uno dei due dispositivi. 
+- **Ricezione dati**  
+
+  La ricezione dei dati avviene attraverso il metodo bloccante seguente:  
+  `Niagara_Ret NiagaraPi::receive(std::string* source, Niagara_Control* control_output, std::string* message_output);`
+
+  Richiede un puntatore a una stringa che verrà riempita con l’identificatore della sorgente che ha inviato il messaggio. Inoltre, un altro puntatore a un tipo `Niagara_Control` che riempirà il valore di controllo contenuto nel messaggio ricevuto e infine un’ultima stringa che viene popolata con il messaggio ricevuto effettivo.
+
+  Nel caso ci sia stato un errore durante la ricezione dei dati, viene ritornato un valore diverso da `NIAGARA_OK` contenuto nell'enumeratore `Niagara_Ret`.
+
+## Miglioramenti futuri
+
+Si prevede di integrare il protocollo con le seguenti funzionalità:
+
+- Handshake tra i dispositivi e gestione (benché minima) delle sessioni a layer 4, con aggiunta di ritrasmissione dei pacchetti  
+- Messaggi di controllo utilizzati effettivamente per questo handshake  
+- Specificare un formato per le stringhe di indirizzamento  
+- Fare in modo che la funzione di invio dati costruisca direttamente il JSON da inviare nel corpo del messaggio destinato al gateway, in modo da passare direttamente le letture dei sensori e lasciare che essa si occupi della loro formattazione  
+
+# Specifiche protocollo
+
+## Handshake di inizio connessione
+
+Per instaurare una connessione da un dispositivo A (possibilmente il gateway) a un dispositivo B (il ricevitore della scheda sensori):
+
+- Il gateway invia `SYN`, cioè chiede di connettersi con il dispositivo interessato, utilizzando un identificativo specifico  
+- Acknowledgement dal dispositivo che riceve la richiesta, confermando la connessione  
+- Il dispositivo invia un `PING`, chiedendo una conferma di connessione al primo dispositivo  
+- Il dispositivo conferma inviando un pacchetto di acknowledgement  
+
+Tale operazione verrà ripetuta ogni qualvolta si instaura una connessione tra due dispositivi.
+
+Le funzioni che la libreria dovrebbe prevedere sono:
+
+- `connect()` per il dispositivo che instaura una connessione  
+- `listen()` che blocca il dispositivo finché non riceve una richiesta di sincronizzazione
+
+## Conoscenza del tempo
+
+Nei dispositivi incaricati della rilevazione dei dati dei sensori (siano essi Arduino o ESP32), non è possibile sapere il giorno o l’ora della misurazione, ma è possibile sapere da quanti millisecondi la scheda è accesa.
+
+Il tempo, però, risulta essere un componente fondamentale. Infatti, la connessione tra dispositivi via LoRa può essere fatta solo poche volte al giorno (indicativamente tre), per non interferire con le api e danneggiarle. Tuttavia, la lettura dei sensori può non essere fatta solo in quel momento, ma includere anche quelle eseguite durante la giornata.
+
+Il tempo aiuta quindi a identificare univocamente il tipo di misurazione, assieme al tipo di valore misurato. Grazie a questo è possibile conservarla in memoria per un certo periodo e poi scartarla.
+
+Proprio per questo, tra le varie tipologie di comunicazione vi è *TIME_SYNC*. Il pacchetto in questo caso trasmette il timestamp della data precisa o i millisecondi dall’accensione della scheda.
+
+Così è possibile che i dispositivi possano risalire all’ora in cui le misurazioni sono state compiute.
+
+**N.B.** Tale comunicazione è completamente slegata dall’handshake iniziale e può essere effettuata in qualsiasi momento opportuno, anche alla riaccensione di uno dei due dispositivi.
