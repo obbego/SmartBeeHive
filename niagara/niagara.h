@@ -7,35 +7,81 @@
 // include the hardware abstraction layer
 #include "hal/RPi/PiHal.h"
 
-/*Returned by the receive method when the
- * message received's destination isn't this device
-*/
-#define NIAGARA_NOT_DESTINATION 10
-/*
- * Returned by the transmit method when the
- * destination device string or the control message are
- * invalid, or by the transmit method when the
- * destination string is valid but the control message
- * received isn't.
-*/
-#define NIAGARA_INVALID_DATA 11
+#define BROADCAST "BROAD"
+#define NIAGARA_RETRANSMISSIONS 10
 
-#define CONTROL_REQUEST_DATA "A"
-#define CONTROL_RESPONSE "B"
-#define CONTROL_PING "C"
+/**
+ * This enumerator is returned by any method of the
+ * library indicating any error occurred during any operation.
+ */
+enum Niagara_Ret {
+    /*
+     * No error encountered
+     */
+    NIAGARA_OK,    
+    /*
+     * Returned by the transmit method when the
+     * destination device string or the control message are
+     * invalid, or by the transmit method when the
+     * destination string is valid but the control message
+     * received isn't.
+    */
+    NIAGARA_INVALID_DATA,    
+    /*Returned by the receive method when the
+     * message received's destination isn't this device
+    */
+    NIAGARA_NOT_DESTINATION,
+    /*
+     * Returned when the process timed out
+     */
+    NIAGARA_TIMEOUT,
+    /*
+     * Error returned when the internal library
+     * gave an error during the process.
+     */
+    RADIOLIB_ERROR,
+    /*
+     * When an error occurred while receiving
+     */
+    NIAGARA_RECEIVE_ERROR,
+    /*
+     * When an error occurred while sending
+     */
+    NIAGARA_SEND_ERROR
+}
+
+/**
+ * This contains the possible control messages.
+ * 
+ * The enumerator's elements must all be ascending constantly from zero.
+ */
+enum Niagara_Control {
+    HANDSHAKE_SYN,
+    HANDSHAKE_ACK,
+    CONTROL_PING,
+    CONTROL_REQUEST_DATA,
+    CONTROL_RESPONSE,
+    TIME_SYNC,
+    END //This must be the last element
+}
 
 class NiagaraPi {
   public:    
     NiagaraPi(std::string _identifier, bool log);
     NiagaraPi(std::string _identifier);
-
+    
+    Niagara_Ret listen();
+    Niagara_Ret connect(std::string identifier);
+    
+    Niagara_Ret end();
+    
+  private:
     /*Receives a message from the LoRa device*/
-    int receive(std::string* source, std::string* control_output, std::string* message_output);
+    Niagara_Ret receive(std::string* source, Niagara_Control* control_output, std::string* message_output);
 
     /*Sends a message to a specific destination*/
-    int send(std::string destination, std::string control, std::string message);
+    Niagara_Ret send(std::string destination, Niagara_Control control, std::string message);
 
-  private:
     SX1262* lora;
     std::string identifier;
     bool display_log;

@@ -55,18 +55,65 @@ NiagaraPi::NiagaraPi(std::string identifier) {
   NiagaraPi::identifier = _identifier;
 }
 
-int NiagaraPi::receive(std::string* source, std::string* control_output, std::string* message_output) {
+Niagara_Ret NiagaraPi::listen() {
+  std::string device;
+  Niagara_Control control;
+  std::string output;
+  int status;
+  while(true) {    
+    int status = NiagaraPi::receive(&source, &control, &output)
+    if(status == NIAGARA_TIMEOUT)
+      continue;
+    if(status != NIAGARA_OK)
+      return NIAGARA_RECEIVE_ERROR;
+    
+    //If not a syn req, skip  
+    if(control != HANDSHAKE_SYN)
+      continue;
+  }
+  
+  while(true) {
+    if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+      return NIAGARA_SEND_ERROR;
+      
+    std::string source;
+    if(NiagaraPi::receive(&source, &control, &output) != NIAGARA_OK)
+      return NIAGARA_RECEIVE_ERROR;
+    
+    if(source != device || control != CONTROL_PING)
+      continue;
+      
+    if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+      return NIAGARA_SEND_ERROR;
+  }
+  
+  return NIAGARA_OK;
+}
+
+Niagara_Ret NiagaraPi::connect(std::string identifier) {
+  //Send a SYN
+}
+
+Niagara_Ret NiagaraPi::receive(std::string* source, Niagara_Control* control_output, std::string* message_output, int timeout = 0) {
   std::string receive_output;
-  int status = NiagaraPi::lora->receive(receive_output);
-  if(status != RADIOLIB_ERR_NONE) return status;
+  int status = NiagaraPi::lora->receive(receive_output, timeout);
+  if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
+  if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
   std::string* processed_output = NiagaraPi::process_message(receive_output);
   if(processed_output == nullptr) return NIAGARA_NOT_DESTINATION;
-  if(processed_output[1] != CONTROL_REQUEST_DATA && processed_output[1] != CONTROL_RESPONSE && processed_output[1] != CONTROL_PING)
+  
+  int control_value;
+  try {
+    control_value = std::stoi(processed_output[1]);
+    if(control_value < 0 || control_value >= END)
+      return NIAGARA_INVALID_DATA;
+  } catch(...) {
     return NIAGARA_INVALID_DATA;
+  }
   *source = processed_output[0];
-  *control_output = processed_output[1];
+  *control_output = static_cast<Niagara_Control>(control_value);
   *message_output = processed_output[2];
-  return RADIOLIB_ERR_NONE;
+  return NIAGARA_OK;
 }
 
 std::string* NiagaraPi::process_message(std::string message) {
@@ -81,7 +128,7 @@ std::string* NiagaraPi::process_message(std::string message) {
   if(callsign.length() <= identifierSeparator) return nullptr;
   sourceID = callsign.substring(0, identifierSeparator - 1);
   destinationID = callsign.substring(identifierSeparator + 1);
-  if(destinationID != identifier) return nullptr;
+  if(destinationID != BROADCAST && destinationID != identifier) return nullptr;
   if(message.length() <= separatorIndex + 1) return nullptr;
   int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|');
   if(secondSeparatorIndex <= 0) return nullptr;
@@ -96,17 +143,17 @@ std::string* NiagaraPi::process_message(std::string message) {
   return separated;
 }
 
-int NiagaraPi::send(std::string destination, std::string control, std::string message) {
+Niagara_Ret NiagaraPi::send(std::string destination, Niagara_Control control, std::string message) {
   std::string formattedMessage = NiagaraPi::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
   int status = NiagaraPi::lora->transmit(formattedMessage);
-  return status;
+  if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
+  if(status != RADIOLIB_ERR_NONE)
+    return RADIOLIB_ERROR;
+  return NIAGARA_OK;
 }
 
-std::string NiagaraPi::format_message(std::string destination, std::string control, std::string message) {
+std::string NiagaraPi::format_message(std::string destination, Niagara_Control control, std::string message) {
   if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0 || control.indexOf('|') >= 0) return "";
-  //Check the control std::string
-  if(control != CONTROL_REQUEST_DATA && control != CONTROL_RESPONSE && control != CONTROL_PING)
-    return "";
-  return (NiagaraPi::identifier + "." + destination + "|" + control + "|" + message);
+  return (NiagaraPi::identifier + "." + destination + "|" + static_cast<int>(control) + "|" + message);
 }
