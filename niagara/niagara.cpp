@@ -1,5 +1,5 @@
 #include "niagara.h"
-
+#include "Timer.h"
 
 std::optional<SX1262> NiagaraPi::init_radio() {
   // now we can create the radio module
@@ -67,6 +67,9 @@ Niagara_Ret NiagaraPi::listen() {
   //Amount of retransmissions done during the handshake
   int retransmission_counter = 0;
 
+  //Timer to check for retransmissions
+  Timer retransmission_timer;
+
   //Wait until a receive has completed
   while(true) {
     //Try to receive data
@@ -84,24 +87,38 @@ Niagara_Ret NiagaraPi::listen() {
   }
   
   //While cycle for retransmissions
+  retransmission_timer.start();
+  //Set to false when a retransmission is not necessary
+  bool retransmit = true;
   while(retransmission_counter < NIAGARA_RETRANSMISSIONS) {
-    //Send the first acknowledgement
-    if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
-      return NIAGARA_SEND_ERROR;
+    if(retransmit) {
+      retransmit = true;
+      //Send the first acknowledgement
+      if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+        return NIAGARA_SEND_ERROR;
+    }
       
     //Try to receive new data, check the source
     std::string source;
     status NiagaraPi::receive(&source, &control, &output);
-    if(status != NIAGARA_OK && status != NIAGARA_TIMEOUT)
-      return NIAGARA_RECEIVE_ERROR;
+    if(status == NIAGARA_TIMEOUT) {
+      retransmission_counter++;
+      continue;
+    }
+    if(status != NIAGARA_OK && status != NIAGARA_TIMEOUT) {
+      if(retransmission_timer.elapsed() > 10000) {
+        retransmission_timer.start();
+        retransmission_counter++;
+        continue;
+      }
+
+      retransmit = false;
+      continue;
+    }
     
     //If the source isn't the device which is handshaking or the control message isn't a ping then ignore
-    if(source != device || control != CONTROL_PING)
+    if(source != device || control != HANDSHAKE_ACK)
       continue;
-      
-    //Send the last acknowledgement and exit
-    if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
-      return NIAGARA_SEND_ERROR;
   }
 
   //If the max retransmission amount was reached then ignore
@@ -112,7 +129,62 @@ Niagara_Ret NiagaraPi::listen() {
 }
 
 Niagara_Ret NiagaraPi::connect(std::string identifier) {
-  //Send a SYN
+  //Source of the receivings
+  std::string source;
+  //Received control message
+  Niagara_Control control_msg;
+  //Buffer to save the payload
+  std::string message;
+  //Timer to keep track of retransmissions
+  Timer retransmission_timer;
+  //Retransmission counter
+  int retransmission_counter = 0;
+  //Status code returned by methods
+  Niagara_Ret status;
+
+  //Set to false when a retransmission is not necessary
+  bool retransmit = true;
+  //Start retransmission timer
+  retransmission_timer.start();
+  while(retransmission_counter < NIAGARA_RETRANSMISSIONS) {
+    if(retransmit) {
+      retransmit = true;
+      //Send SYN to establish connection
+      if(NiagaraPi::send(identifier, HANDSHAKE_SYN, "") != NIAGARA_OK)
+        return NIAGARA_SEND_ERROR;
+    }
+
+    //Wait for acknowledgement
+    status = NiagaraPi::receive(&source, &control_msg, &message);
+    if(status == NIAGARA_TIMEOUT) {
+      retransmission_counter++;
+      continue;
+    }
+    if(status != NIAGARA_OK)
+      return NIAGARA_RECEIVE_ERROR;
+
+    //Check that source and received parameters match with an acknowledgement
+    if(source != identifier || control_msg != HANDSHAKE_ACK) {
+      if(retransmission_timer.elapsed() > 10000)
+      {
+        retransmission_timer.start();
+        retransmission_counter++;
+        continue;
+      }
+
+      retransmit = false;
+      continue;
+    }
+  }
+
+  if(retransmission_counter == NIAGARA_RETRANSMISSIONS)
+    return NIAGARA_TIMEOUT;
+
+  //Send the last acknowledgement and exit
+  if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+    return NIAGARA_SEND_ERROR;
+
+  return NIAGARA_OK;
 }
 
 Niagara_Ret NiagaraPi::receive(std::string* source, Niagara_Control* control_output, std::string* message_output, int timeout = 0) {

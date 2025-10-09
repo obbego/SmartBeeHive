@@ -1,3 +1,6 @@
+#ifndef NIAGARA_H
+#define NIAGARA_H
+
 // include the library
 #include <RadioLib/RadioLib.h>
 #include <optional>
@@ -114,3 +117,5 @@ class NiagaraPi {
     */
     std::string format_message(std::string destination, std::string control, std::string message);
 };
+
+#endif
