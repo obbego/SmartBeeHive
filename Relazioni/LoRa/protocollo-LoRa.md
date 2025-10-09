@@ -124,17 +124,17 @@ Si prevede di integrare il protocollo con le seguenti funzionalità:
 
 Per instaurare una connessione da un dispositivo A (possibilmente il gateway) a un dispositivo B (il ricevitore della scheda sensori):
 
-- Il gateway invia `SYN`, cioè chiede di connettersi con il dispositivo interessato, utilizzando un identificativo specifico  
-- Acknowledgement dal dispositivo che riceve la richiesta, confermando la connessione  
-- Il dispositivo invia un `PING`, chiedendo una conferma di connessione al primo dispositivo  
-- Il dispositivo conferma inviando un pacchetto di acknowledgement  
+1. **Richiesta di sincronizzazione** fatta dal dispositivo che desidera iniziare la connessione. 
+2. **Conferma della sincronizzazione** da parte del dispositivo che riceve la richiesta, quindi accetta la connessione.
+3. **Conferma della connessione** da parte del dispositivo che aveva inviato la richiesta di sincronizzazione. La connessione ora può partire.
 
 Tale operazione verrà ripetuta ogni qualvolta si instaura una connessione tra due dispositivi.
 
 Le funzioni che la libreria dovrebbe prevedere sono:
 
-- `connect()` per il dispositivo che instaura una connessione  
-- `listen()` che blocca il dispositivo finché non riceve una richiesta di sincronizzazione
+- `connect()` per il dispositivo che instaura una connessione ed eseguire l'handshake a tre vie 
+- `listen()` che blocca il dispositivo finché non riceve una richiesta di sincronizzazione e poi continua con l'handshake a tre vie
+- `end()` utilizzato per terminare la connessione
 
 ## Conoscenza del tempo
 
@@ -149,3 +149,14 @@ Proprio per questo, tra le varie tipologie di comunicazione vi è *TIME_SYNC*. I
 Così è possibile che i dispositivi possano risalire all’ora in cui le misurazioni sono state compiute.
 
 **N.B.** Tale comunicazione è completamente slegata dall’handshake iniziale e può essere effettuata in qualsiasi momento opportuno, anche alla riaccensione di uno dei due dispositivi.
+
+## Tipologie di comunicazione
+Ogni messaggio inviato viene associato un valore che indica il tipo di informazione che il dispositivo vuole trasmettere. 
+Questi valori appartengono ad un enumeatore della libreria `niagara.h` e sono:
+- `HANSHAKE_SYN` valore di controllo inviato all'inizio dell'handshake in fase di connessione
+- `HANDSHAKE_ACK` valore che indica la conferma del dispositivo ricevente all'interno del processo di handshake
+- `CONTROL_PING` invio ping di controllo
+- `CONTROL_REQUEST_DATA` richiesta dei dati rilevati dai sensori
+- `CONTROL_RESPONSE` risposta alla richiesta di invio dati
+- `TIME_SYNC` invio del tempo (millisecondi o data) da parte di uno dei dispositivi per potersi sincronizzare. 
+- `END` fine della connessione tra i due dispositivi
