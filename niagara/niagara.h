@@ -70,9 +70,19 @@ class NiagaraPi {
     NiagaraPi(std::string _identifier, bool log);
     NiagaraPi(std::string _identifier);
     
+    /**
+     * Waits for an incoming connection from a device and
+     * accepts it.
+     */
     Niagara_Ret listen();
+    /**
+     * Sends a connection request to another specified
+     * device.
+     */
     Niagara_Ret connect(std::string identifier);
-    
+    /**
+     * Closes an established connection with the device
+     */
     Niagara_Ret end();
     
   private:

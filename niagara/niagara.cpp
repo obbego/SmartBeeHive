@@ -56,36 +56,57 @@ NiagaraPi::NiagaraPi(std::string identifier) {
 }
 
 Niagara_Ret NiagaraPi::listen() {
+  //Contains the ID of the first device whose first SYN was received
   std::string device;
+  //Saves the received control signals
   Niagara_Control control;
+  //Saves the output of the receivings, unused
   std::string output;
-  int status;
-  while(true) {    
-    int status = NiagaraPi::receive(&source, &control, &output)
+  //Contains the status of the operations
+  Niagara_Ret status;
+  //Amount of retransmissions done during the handshake
+  int retransmission_counter = 0;
+
+  //Wait until a receive has completed
+  while(true) {
+    //Try to receive data
+    status = NiagaraPi::receive(&source, &control, &output)
+    //If it timed out, then retry
     if(status == NIAGARA_TIMEOUT)
       continue;
+    //In case an error occurred then return an error
     if(status != NIAGARA_OK)
       return NIAGARA_RECEIVE_ERROR;
     
-    //If not a syn req, skip  
+    //If not a syn req, skip
     if(control != HANDSHAKE_SYN)
       continue;
   }
   
-  while(true) {
+  //While cycle for retransmissions
+  while(retransmission_counter < NIAGARA_RETRANSMISSIONS) {
+    //Send the first acknowledgement
     if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
       return NIAGARA_SEND_ERROR;
       
+    //Try to receive new data, check the source
     std::string source;
-    if(NiagaraPi::receive(&source, &control, &output) != NIAGARA_OK)
+    status NiagaraPi::receive(&source, &control, &output);
+    if(status != NIAGARA_OK && status != NIAGARA_TIMEOUT)
       return NIAGARA_RECEIVE_ERROR;
     
+    //If the source isn't the device which is handshaking or the control message isn't a ping then ignore
     if(source != device || control != CONTROL_PING)
       continue;
       
+    //Send the last acknowledgement and exit
     if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
       return NIAGARA_SEND_ERROR;
   }
+
+  //If the max retransmission amount was reached then ignore
+  if(retransmission_counter == NIAGARA_RETRANSMISSIONS)
+    return NIAGARA_TIMEOUT;
   
   return NIAGARA_OK;
 }
