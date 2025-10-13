@@ -64,6 +64,7 @@ Di seguito è riportato l’elenco dei sensori scelti per la misurazione dei var
 - [**DHT22**](https://amzn.eu/d/d1KN32y): sensore in grado di misurare temperatura e umidità. Facilmente programmabile con Arduino e resistente a escursioni termiche elevate.
 - [**Cella di carico**](https://www.tinkerforge.com/en/shop/load-cell-100kg-czl601.html): verrà posizionata all’interno dell’arnia per misurare il peso dell’alveare. La misurazione funziona anche con l’alveare inclinato.
 - [**Microfono omnidirezionale**](https://www.amazon.it/AHELECTRO-microfono-sensibilit%C3%A0-rilevamento-compatibile/dp/B0FJX3KJB1): compatibile con Arduino, garantisce una facile configurazione.
+- **RTC** componente che verrà collegato per determinare l'ora in modo esatto, anche in caso di spegnimento del dispositivo. Sarà utile per comprendere quando verranno effettuate le misurazioni. 
 
 Per l’alimentazione del sistema si è pensato a:
 - [**Batteria AGM**](https://www.leroymerlin.it/prodotti/green-cell-agm04-batteria-ups-acido-piombo-vrla-12-v-7-ah-91021332.html): batteria che resiste a inclinazioni e vibrazioni, offrendo maggiore autonomia di utilizzo.  

@@ -136,20 +136,6 @@ Le funzioni che la libreria dovrebbe prevedere sono:
 - `listen()` che blocca il dispositivo finché non riceve una richiesta di sincronizzazione e poi continua con l'handshake a tre vie
 - `end()` utilizzato per terminare la connessione
 
-## Conoscenza del tempo
-
-Nei dispositivi incaricati della rilevazione dei dati dei sensori (siano essi Arduino o ESP32), non è possibile sapere il giorno o l’ora della misurazione, ma è possibile sapere da quanti millisecondi la scheda è accesa.
-
-Il tempo, però, risulta essere un componente fondamentale. Infatti, la connessione tra dispositivi via LoRa può essere fatta solo poche volte al giorno (indicativamente tre), per non interferire con le api e danneggiarle. Tuttavia, la lettura dei sensori può non essere fatta solo in quel momento, ma includere anche quelle eseguite durante la giornata.
-
-Il tempo aiuta quindi a identificare univocamente il tipo di misurazione, assieme al tipo di valore misurato. Grazie a questo è possibile conservarla in memoria per un certo periodo e poi scartarla.
-
-Proprio per questo, tra le varie tipologie di comunicazione vi è *TIME_SYNC*. Il pacchetto in questo caso trasmette il timestamp della data precisa o i millisecondi dall’accensione della scheda.
-
-Così è possibile che i dispositivi possano risalire all’ora in cui le misurazioni sono state compiute.
-
-**N.B.** Tale comunicazione è completamente slegata dall’handshake iniziale e può essere effettuata in qualsiasi momento opportuno, anche alla riaccensione di uno dei due dispositivi.
-
 ## Tipologie di comunicazione
 Ogni messaggio inviato viene associato un valore che indica il tipo di informazione che il dispositivo vuole trasmettere. 
 Questi valori appartengono ad un enumeatore della libreria `niagara.h` e sono:
