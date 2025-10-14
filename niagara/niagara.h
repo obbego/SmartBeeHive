@@ -6,6 +6,8 @@
 #include <RadioLib.h>
 //Used for display.println
 #include <heltec_unofficial.h>
+//Used for printf
+#include <stdarg.h>
 #else
 // include the library
 #include <RadioLib/RadioLib.h>
@@ -15,8 +17,6 @@
 #endif
 
 #include <optional>
-//Used for printf
-#include <stdarg.h>
 
 #define BROADCAST "BROAD"
 #define NIAGARA_RETRANSMISSIONS 10
