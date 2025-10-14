@@ -1,11 +1,63 @@
 #include "niagara.h"
 #include "Timer.h"
 
-std::optional<SX1262> NiagaraPi::init_radio() {
+#if defined(ARDUINO)
+bool isValidInteger(String input) {
+  boolean isNum=false;
+  for(byte i=0;i<str.length();i++) {
+    isNum = isDigit(str.charAt(i)) || str.charAt(i) == '+' || str.charAt(i) == '.' || str.charAt(i) == '-';
+    if(!isNum) return false;
+  }
+  return isNum;
+}
+#endif
+
+#if defined(ARDUINO)
+void Niagara::display_printf(const char* format, ...) {
+  char buffer[1024];  // Puoi aumentare se ti serve più spazio
+
+  va_list args;
+  va_start(args, format);
+  vsnprintf(buffer, sizeof(buffer), format, args);  // formatta nel buffer
+  va_end(args);
+
+  display.print(buffer);  // stampa sul display
+}
+
+void Niagara::display_print(String text) {
+  display.print(text);
+}
+#endif
+
+#if defined(ARDUINO)
+std::optional<SX1262> NiagaraESP::init_radio() {
+  // SX1262 has the following connections on this board:
+  // NSS pin:   8
+  // DIO1 pin:  14
+  // NRST pin:  12
+  // BUSY pin:  13
+  SX1262 radio = new Module(8, 14, 12, 13);
+
+  if(Niagara::display_log) display.print("[SX1262] Initializing... ");
+  int state = radio.begin(868.0);
+  if(state != RADIOLIB_ERR_NONE) {
+    if(Niagara::display_log) display_printf("\nInitialization Failed!\nError code: %d\n", state);
+    return std::nullopt;
+  }
+  state = radio.setCRC(2);
+  if(state != RADIOLIB_ERR_NONE) {
+    if(Niagara::display_log) display_printf("\nCRC Initialization Failed!\nError code: %d\n", state);
+    return std::nullopt;
+  }
+  if(Niagara::display_log) display.println("OK");
+  return radio;
+}
+#else
+std::optional<SX1262> Niagara::init_radio() {
   // now we can create the radio module
   SX1262 radio = new Module(hal, 21, 16, 18, 20 /*The BUSY pin of the module MUST be specified, otherwise error -2 is thrown*/);
   
-  if(NiagaraPi::display_log) fprintf(stderr, "[SX1262] Initializing... ");
+  if(Niagara::display_log) fprintf(stderr, "[SX1262] Initializing... ");
   /* The module is being initialized with all the default begin() settings
    * The only settings changed are the following:
    * - The frequency, according to the EU868 standard must be 868MHz, the default frequency is 434MHz
@@ -14,54 +66,69 @@ std::optional<SX1262> NiagaraPi::init_radio() {
    */
   int state = radio.begin(868.0 /*EU868 frequency*/, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0 /*This is not the default value*/, false);
   if(state != RADIOLIB_ERR_NONE) {
-    if(NiagaraPi::display_log) fprintf(stderr, "Initialization Failed!\nError code: %d\n", state);
+    if(Niagara::display_log) fprintf(stderr, "Initialization Failed!\nError code: %d\n", state);
     return std::nullopt;
   }
-  if(NiagaraPi::display_log) fprintf(stderr, "Initialization successful!\n");
+  if(Niagara::display_log) fprintf(stderr, "Initialization successful!\n");
   return radio;
 }
+#endif
 
-NiagaraPi::NiagaraPi(std::string _identifier, bool log = true) {
+Niagara::Niagara(str _identifier, bool log = true) {
   //Save the log flag the user specified
-  display_log = log;
+  Niagara::display_log = log;
   
+  #if defined(ARDUINO)
+  //Initialise the display and heltec library
+  heltec_setup();
+  display.init();
+  display.setFont(ArialMT_Plain_10);
+  #else
   // use SPI channel 1, because on Waveshare LoRaWAN Hat,
   // the SX1261 CS is connected to CE1
-  NiagaraPi::hal = new PiHal(1);
+  Niagara::hal = new PiHal(1);
+  #endif
 
   //Initialize the radio module
   std::optional<SX1262> radio_return = init_radio();
   if(!radio_return.has_value()) return;
-  *NiagaraPi::lora = radio_return.value();
+  *Niagara::lora = radio_return.value();
 
   //Save identifier
-  NiagaraPi::identifier = _identifier;
+  Niagara::identifier = _identifier;
 }
 
-NiagaraPi::NiagaraPi(std::string identifier) {
+Niagara::Niagara(str identifier) {
   //Save the log flag the user specified
-  display_log = true;
+  Niagara::display_log = true;
   
+  #if defined(ARDUINO)
+  //Initialise the display and heltec library
+  heltec_setup();
+  display.init();
+  display.setFont(ArialMT_Plain_10);
+  #else
   // use SPI channel 1, because on Waveshare LoRaWAN Hat,
   // the SX1261 CS is connected to CE1
-  NiagaraPi::hal = new PiHal(1);
+  Niagara::hal = new PiHal(1);
+  #endif
 
   //Initialize the radio module
   std::optional<SX1262> radio_return = init_radio();
   if(!radio_return.has_value()) return;
-  *NiagaraPi::lora = radio_return.value();
+  *Niagara::lora = radio_return.value();
 
   //Save identifier
-  NiagaraPi::identifier = _identifier;
+  Niagara::identifier = _identifier;
 }
 
-Niagara_Ret NiagaraPi::listen() {
+Niagara_Ret Niagara::listen() {
   //Contains the ID of the first device whose first SYN was received
-  std::string device;
+  str device;
   //Saves the received control signals
   Niagara_Control control;
   //Saves the output of the receivings, unused
-  std::string output;
+  str output;
   //Contains the status of the operations
   Niagara_Ret status;
   //Amount of retransmissions done during the handshake
@@ -73,7 +140,7 @@ Niagara_Ret NiagaraPi::listen() {
   //Wait until a receive has completed
   while(true) {
     //Try to receive data
-    status = NiagaraPi::receive(&source, &control, &output)
+    status = Niagara::receive(&source, &control, &output)
     //If it timed out, then retry
     if(status == NIAGARA_TIMEOUT)
       continue;
@@ -94,13 +161,13 @@ Niagara_Ret NiagaraPi::listen() {
     if(retransmit) {
       retransmit = true;
       //Send the first acknowledgement
-      if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+      if(Niagara::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
         return NIAGARA_SEND_ERROR;
     }
       
     //Try to receive new data, check the source
-    std::string source;
-    status NiagaraPi::receive(&source, &control, &output);
+    str source;
+    status Niagara::receive(&source, &control, &output);
     if(status == NIAGARA_TIMEOUT) {
       retransmission_counter++;
       continue;
@@ -128,13 +195,13 @@ Niagara_Ret NiagaraPi::listen() {
   return NIAGARA_OK;
 }
 
-Niagara_Ret NiagaraPi::connect(std::string identifier) {
+Niagara_Ret Niagara::connect(str identifier) {
   //Source of the receivings
-  std::string source;
+  str source;
   //Received control message
   Niagara_Control control_msg;
   //Buffer to save the payload
-  std::string message;
+  str message;
   //Timer to keep track of retransmissions
   Timer retransmission_timer;
   //Retransmission counter
@@ -150,12 +217,12 @@ Niagara_Ret NiagaraPi::connect(std::string identifier) {
     if(retransmit) {
       retransmit = true;
       //Send SYN to establish connection
-      if(NiagaraPi::send(identifier, HANDSHAKE_SYN, "") != NIAGARA_OK)
+      if(Niagara::send(identifier, HANDSHAKE_SYN, "") != NIAGARA_OK)
         return NIAGARA_SEND_ERROR;
     }
 
     //Wait for acknowledgement
-    status = NiagaraPi::receive(&source, &control_msg, &message);
+    status = Niagara::receive(&source, &control_msg, &message);
     if(status == NIAGARA_TIMEOUT) {
       retransmission_counter++;
       continue;
@@ -181,21 +248,28 @@ Niagara_Ret NiagaraPi::connect(std::string identifier) {
     return NIAGARA_TIMEOUT;
 
   //Send the last acknowledgement and exit
-  if(NiagaraPi::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+  if(Niagara::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
     return NIAGARA_SEND_ERROR;
 
   return NIAGARA_OK;
 }
 
-Niagara_Ret NiagaraPi::receive(std::string* source, Niagara_Control* control_output, std::string* message_output, int timeout = 0) {
-  std::string receive_output;
-  int status = NiagaraPi::lora->receive(receive_output, timeout);
+Niagara_Ret Niagara::receive(str* source, Niagara_Control* control_output, str* message_output, int timeout = 0) {
+  str receive_output;
+  int status = Niagara::lora->receive(receive_output, timeout);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
-  std::string* processed_output = NiagaraPi::process_message(receive_output);
+  str* processed_output = Niagara::process_message(receive_output);
   if(processed_output == nullptr) return NIAGARA_NOT_DESTINATION;
   
   int control_value;
+  #if defined(ARDUINO)
+  if(!isValidInteger(processed_output[1]))
+    return NIAGARA_INVALID_DATA;
+  control_value = processed_output[1].toInt();
+  if(control_value < 0 || control_value >= END)
+    return NIAGARA_INVALID_DATA;
+  #else
   try {
     control_value = std::stoi(processed_output[1]);
     if(control_value < 0 || control_value >= END)
@@ -203,19 +277,20 @@ Niagara_Ret NiagaraPi::receive(std::string* source, Niagara_Control* control_out
   } catch(...) {
     return NIAGARA_INVALID_DATA;
   }
+  #endif
   *source = processed_output[0];
   *control_output = static_cast<Niagara_Control>(control_value);
   *message_output = processed_output[2];
   return NIAGARA_OK;
 }
 
-std::string* NiagaraPi::process_message(std::string message) {
+str* Niagara::process_message(str message) {
   //In case the message destination isn't this board then exit
   int separatorIndex = message.indexOf('|');
   if(separatorIndex <= 0) return nullptr;
-  std::string callsign = message.substring(0, separatorIndex - 1);
+  str callsign = message.substring(0, separatorIndex - 1);
   //Separate the destination id in source and destination id
-  std::string sourceID, destinationID;
+  str sourceID, destinationID;
   int identifierSeparator = callsign.indexOf('.');
   if(identifierSeparator <= 0) return nullptr;
   if(callsign.length() <= identifierSeparator) return nullptr;
@@ -226,27 +301,28 @@ std::string* NiagaraPi::process_message(std::string message) {
   int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|');
   if(secondSeparatorIndex <= 0) return nullptr;
 
-  //Separate the std::string into the control sequence and the message itself
-  std::string separated[2];
-  separated[0] = message.substring(separatorIndex + 1, secondSeparatorIndex - 1);
+  //Separate the str into the control sequence and the message itself
+  str separated[3];
+  separated[0] = sourceID;
+  separated[1] = message.substring(separatorIndex + 1, secondSeparatorIndex - 1);
   if(message.length() > secondSeparatorIndex + 1)
-    separated[1] = message.substring(secondSeparatorIndex + 1);
-  else separated[1] = "";
+    separated[2] = message.substring(secondSeparatorIndex + 1);
+  else separated[2] = "";
 
   return separated;
 }
 
-Niagara_Ret NiagaraPi::send(std::string destination, Niagara_Control control, std::string message) {
-  std::string formattedMessage = NiagaraPi::format_message(destination, control, message);
+Niagara_Ret Niagara::send(str destination, Niagara_Control control, str message) {
+  str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
-  int status = NiagaraPi::lora->transmit(formattedMessage);
+  int status = Niagara::lora->transmit(formattedMessage);
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
     return RADIOLIB_ERROR;
   return NIAGARA_OK;
 }
 
-std::string NiagaraPi::format_message(std::string destination, Niagara_Control control, std::string message) {
+str Niagara::format_message(str destination, Niagara_Control control, str message) {
   if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0 || control.indexOf('|') >= 0) return "";
-  return (NiagaraPi::identifier + "." + destination + "|" + static_cast<int>(control) + "|" + message);
+  return (Niagara::identifier + "." + destination + "|" + static_cast<int>(control) + "|" + message);
 }
