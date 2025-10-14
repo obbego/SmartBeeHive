@@ -109,7 +109,7 @@ Niagara::Niagara(str identifier) {
   display.setFont(ArialMT_Plain_10);
   #else
   // use SPI channel 1, because on Waveshare LoRaWAN Hat,
-  // the SX1261 CS is connected to CE1
+  // the SX1262 CS is connected to CE1
   Niagara::hal = new PiHal(1);
   #endif
 
