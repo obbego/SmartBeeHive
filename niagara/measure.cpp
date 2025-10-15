@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /**
  * Class to collect a measure with a specific
@@ -13,7 +14,11 @@ private:
     unsigned long timestamp;
 
 public:
-    static const int MAX_LENGTH_JSON_STRING = 100;
+    /**
+     * Constant value for the maximum length of the string
+     * that contains the JSON format of the measure
+     */
+    static const int MAX_LENGTH_JSON_STRING = 50;
 
     /**
      * Constructor for a measure
@@ -47,12 +52,37 @@ public:
     const char *toJSON()
     {
         static char buffer[MAX_LENGTH_JSON_STRING];
-        sprintf(buffer, "{%s: %f, \"timestamp\": %lu}", measureType, value, timestamp);
+        sprintf(buffer, "{\"ts\":%lu, \"values\"={%s=%f}}", timestamp, measureType, value);
         return buffer;
     }
 };
 
-const char *formatMeasures(Measure array[], int size)
+/**
+ * Function to format an array of measures as a JSON string. 
+ * 
+ * Remember to free the returned string after use.
+ * @param array array of measures
+ * @param size size of the array
+ * @return JSON string with the data of the measures
+ */
+const char *formatMeasuresJSON(Measure array[], int size)
 {
-    //static char buffer[Measure::MAX_LENGTH_JSON_STRING * size + 2];
+    char *output = (char *)malloc(Measure::MAX_LENGTH_JSON_STRING * size + 2); // +2 for brackets
+    /* if the array is null or empty return empty brackets
+    for the JSON format */
+    if(array==nullptr || size == 0){
+        strcpy(output, "[]");
+        return output;
+    }
+
+    /* start to concatenate strings */
+    strcpy(output, "[");
+    for(int i=0;i<size;i++){
+        strcat(output, array[i].toJSON()); //add the JSON format for the data
+        if(i<size-1) // if it's not the last element, add a comma
+            strcat(output, ",");
+    }
+    strcat(output, "]"); // end with the closing bracket
+
+    return output; // return the string
 }
