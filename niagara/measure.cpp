@@ -35,6 +35,38 @@ public:
     }
 
     /**
+     * Function to return the physical type of measure
+     * @return string with the type of measure
+     */
+    char* getMeasureType(){
+        return this->measureType;
+    }
+
+    /**
+     * Return the value of measure
+     * @return value of the measure
+     */
+    float getValue(){
+        return this->value;
+    }
+
+    /**
+     * Return the timestamp of the measure
+     * @return timestamp of the measure
+     */
+    unsigned long getTimestamp(){
+        return this->timestamp;
+    }
+
+    /**
+     * Set a new value for the measure
+     * @param v new value for the measure
+     */
+    void setValue(float v){
+        this->value = v;
+    }
+
+    /**
      * Equals to compare two measures.
      * Two measures are equal if they have the same timestamp and measure type.
      * @param otherMeasure Measure to compare with
@@ -52,7 +84,7 @@ public:
     const char *toJSON()
     {
         static char buffer[MAX_LENGTH_JSON_STRING];
-        sprintf(buffer, "{\"ts\":%lu, \"values\"={%s=%f}}", timestamp, measureType, value);
+        sprintf(buffer, "{\"ts\":%lu, \"values\"={\"%s\"=%f}}", timestamp, measureType, value);
         return buffer;
     }
 };
