@@ -1,5 +1,6 @@
 #include "niagara.h"
 #include "Timer.h"
+#include "Hash.h"
 
 #if defined(ARDUINO)
 bool isValidInteger(String input) {
@@ -98,36 +99,15 @@ Niagara::Niagara(str _identifier, bool log = true) {
   Niagara::identifier = _identifier;
 }
 
-Niagara::Niagara(str identifier) {
-  //Save the log flag the user specified
-  Niagara::display_log = true;
-  
-  #if defined(ARDUINO)
-  //Initialise the display and heltec library
-  heltec_setup();
-  display.init();
-  display.setFont(ArialMT_Plain_10);
-  #else
-  // use SPI channel 1, because on Waveshare LoRaWAN Hat,
-  // the SX1262 CS is connected to CE1
-  Niagara::hal = new PiHal(1);
-  #endif
+/* If the boolean for the log variable isn't defined, just set it to true */
+Niagara::Niagara(str _identifier) : Niagara(_identifier, true) {}
 
-  //Initialize the radio module
-  std::optional<SX1262> radio_return = init_radio();
-  if(!radio_return.has_value()) return;
-  *Niagara::lora = radio_return.value();
-
-  //Save identifier
-  Niagara::identifier = _identifier;
-}
-
-Niagara_Ret Niagara::listen() {
+Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
   //Contains the ID of the first device whose first SYN was received
   str device;
   //Saves the received control signals
   Niagara_Control control;
-  //Saves the output of the receivings, unused
+  //Saves the output of the receivings
   str output;
   //Contains the status of the operations
   Niagara_Ret status;
@@ -140,7 +120,7 @@ Niagara_Ret Niagara::listen() {
   //Wait until a receive has completed
   while(true) {
     //Try to receive data
-    status = Niagara::receive(&source, &control, &output)
+    status = Niagara::receive_raw(&source, &control, &output)
     //If it timed out, then retry
     if(status == NIAGARA_TIMEOUT)
       continue;
@@ -152,6 +132,9 @@ Niagara_Ret Niagara::listen() {
     if(control != HANDSHAKE_SYN)
       continue;
   }
+
+  //Compute hashed data for error check
+  str hashed_data = crc32(output);
   
   //While cycle for retransmissions
   retransmission_timer.start();
@@ -161,19 +144,19 @@ Niagara_Ret Niagara::listen() {
     if(retransmit) {
       retransmit = true;
       //Send the first acknowledgement
-      if(Niagara::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+      if(Niagara::send_raw(device, HANDSHAKE_ACK, hashed_data) != NIAGARA_OK)
         return NIAGARA_SEND_ERROR;
     }
       
     //Try to receive new data, check the source
     str source;
-    status Niagara::receive(&source, &control, &output);
+    status Niagara::receive_raw(&source, &control, &output);
     if(status == NIAGARA_TIMEOUT) {
       retransmission_counter++;
       continue;
     }
     if(status != NIAGARA_OK && status != NIAGARA_TIMEOUT) {
-      if(retransmission_timer.elapsed() > 10000) {
+      if(retransmission_timer.elapsed() > NIAGARA_TIMEOUT) {
         retransmission_timer.start();
         retransmission_counter++;
         continue;
@@ -184,7 +167,14 @@ Niagara_Ret Niagara::listen() {
     }
     
     //If the source isn't the device which is handshaking or the control message isn't a ping then ignore
-    if(source != device || control != HANDSHAKE_ACK)
+    if(source != device)
+      continue;
+
+    if(control == HANDSHAKE_ERROR)
+      break; //Reperform the receiving and increase the retransmission count
+
+    //If the control message is different then ignore the message
+    if(control != HANDSHAKE_ACK)
       continue;
   }
 
@@ -195,13 +185,13 @@ Niagara_Ret Niagara::listen() {
   return NIAGARA_OK;
 }
 
-Niagara_Ret Niagara::connect(str identifier) {
+Niagara_Ret Niagara::send(str identifier, str message) {
   //Source of the receivings
   str source;
   //Received control message
   Niagara_Control control_msg;
   //Buffer to save the payload
-  str message;
+  str crc_buffer;
   //Timer to keep track of retransmissions
   Timer retransmission_timer;
   //Retransmission counter
@@ -217,12 +207,12 @@ Niagara_Ret Niagara::connect(str identifier) {
     if(retransmit) {
       retransmit = true;
       //Send SYN to establish connection
-      if(Niagara::send(identifier, HANDSHAKE_SYN, "") != NIAGARA_OK)
+      if(Niagara::send_raw(identifier, HANDSHAKE_SYN, message) != NIAGARA_OK)
         return NIAGARA_SEND_ERROR;
     }
 
     //Wait for acknowledgement
-    status = Niagara::receive(&source, &control_msg, &message);
+    status = Niagara::receive_raw(&source, &control_msg, &crc_buffer);
     if(status == NIAGARA_TIMEOUT) {
       retransmission_counter++;
       continue;
@@ -231,8 +221,8 @@ Niagara_Ret Niagara::connect(str identifier) {
       return NIAGARA_RECEIVE_ERROR;
 
     //Check that source and received parameters match with an acknowledgement
-    if(source != identifier || control_msg != HANDSHAKE_ACK) {
-      if(retransmission_timer.elapsed() > 10000)
+    if(source != identifier || (control_msg != HANDSHAKE_ACK && control_msg != HANDSHAKE_ERROR)) {
+      if(retransmission_timer.elapsed() > NIAGARA_TIMEOUT)
       {
         retransmission_timer.start();
         retransmission_counter++;
@@ -248,13 +238,13 @@ Niagara_Ret Niagara::connect(str identifier) {
     return NIAGARA_TIMEOUT;
 
   //Send the last acknowledgement and exit
-  if(Niagara::send(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+  if(Niagara::send_raw(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
     return NIAGARA_SEND_ERROR;
 
   return NIAGARA_OK;
 }
 
-Niagara_Ret Niagara::receive(str* source, Niagara_Control* control_output, str* message_output, int timeout = 0) {
+Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, str* message_output, int timeout = 0) {
   str receive_output;
   int status = Niagara::lora->receive(receive_output, timeout);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
@@ -312,7 +302,7 @@ str* Niagara::process_message(str message) {
   return separated;
 }
 
-Niagara_Ret Niagara::send(str destination, Niagara_Control control, str message) {
+Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str message) {
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
   int status = Niagara::lora->transmit(formattedMessage);
