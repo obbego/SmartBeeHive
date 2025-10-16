@@ -194,7 +194,7 @@ Ecco come inviare dati al server ThingsBoard tramite HTTP POST.
 
 Un esempio di comando curl per inviare i dati:
 ```http
-curl -v -X POST -d @telemetry-data-with-ts.json https://demo.thingsboard.io/api/v1/$ACCESS_TOKEN/telemetry --header "Content-Type:application/json"
+curl -v -X POST -d @telemetry-data-with-ts.json https://$THINGSBOARD_HOST_NAME/api/v1/$ACCESS_TOKEN/telemetry --header "Content-Type:application/json"
 ```
 Il parametro `@telemetry-data-with-ts.json` indica il file JSON che contiene i dati da inviare.
 
@@ -217,6 +217,7 @@ I dati possono essere inviati con un timestamp già specificato (scelta consigli
   }
 }
 ```
+**N.B.** Per il timestamp è consigliato inserire anche i millisecondi, visti gli esempi forniti dalla documentazione.
 
 oppure è possibile omettere il timestamp e lasciare che il server lo assegni automaticamente:
 ```json
@@ -236,28 +237,23 @@ oppure è possibile omettere il timestamp e lasciare che il server lo assegni au
 **N.B.** *È possibile inviare i dati in formato JSON con i comandi di POST, ma risulta più comodo utilizzare un file JSON per dati complessi con molte chiavi o oggetti. La soluzione adottata con il file JSON è ottimale per le necessità del progetto.*
 
 #### GET via HTTP
-Per ottenere attributi dal server ThingsBoard è possibile eseguire la seguente richiesta:
+Per ottenere una serie di dati telemetria occorre digitare la seguente richiesta HTTP sfruttando le chiamate API di ThingsBoard:
 ```http
-curl -v -X GET http(s)://$THINGSBOARD_HOST_NAME/api/v1/$ACCESS_TOKEN/attributes?clientKeys=attribute1,attribute2&sharedKeys=shared1,shared2
+curl -X GET "http://192.168.60.150:8080/api/plugins/telemetry/DEVICE/<deviceId>/values/timeseries?keys=temperature&startTs=1697000000000&endTs=1697600000000&limit=10" -H "X-Authorization: Bearer <JWT_TOKEN>"
 ```
 dove:
-- *$THINGSBOARD_HOST_NAME*: hostname o indirizzo IP del server
-- *$ACCESS_TOKEN*: token del dispositivo
-- *clientKeys*: attributi client da recuperare
-- *sharedKeys*: attributi condivisi da recuperare
+- *deviceId* è il nome del dispositivo, ricavabile dal server ThingsBoard
+- *startTs* timestamp con il momento iniziale da cui ottenere la telemetria
+- *endTs* timestamp con il momento finale con il quale terminare la ricezione della telemetria
+- *JWT_TOKEN* token web per l'utente ottenibile sempre dal server ThingsBoard
+- *limit* numero di telemetrie massime da ottenere
+
+Per utilizzare solo l'intervallo o solo il numero di telemetrie è possibile omettere l'indicazione dei timestamp o del limite. 
 
 L'output tipico di una richiesta simile è il seguente:
 ```json
-{"client":{"attribute1":"value1","attribute2":true}}
+{"key":{"timestamp":1451649600512,"value":"value"}}
 ```
-
-#### Update via HTTP
-Per ricevere aggiornamenti sugli attributi è possibile effettuare la seguente richiesta:
-```http
-curl -v -X GET https://$THINGSBOARD_HOST_NAME/api/v1/$ACCESS_TOKEN/attributes/updates?timeout=20000
-```
-dove `timeout` indica il tempo in millisecondi per attendere un aggiornamento; trascorso il timeout la richiesta viene chiusa senza risultati.
-Il formato di output è lo stesso di una normale richiesta GET.
 
 
 ## Link utili
@@ -265,3 +261,4 @@ Il formato di output è lo stesso di una normale richiesta GET.
 - [Entità e relazioni](https://thingsboard.io/docs/user-guide/entities-and-relations/)
 - [Comunicazione con ThingsBoard](https://thingsboard.io/docs/reference/protocols/)
 - [HTTP API](https://thingsboard.io/docs/reference/http-api/)
+- [REST API](https://thingsboard.io/docs/user-guide/telemetry/#data-query-rest-api)
