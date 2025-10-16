@@ -2,4 +2,6 @@
 
 int main(void) {
 	Niagara device("RASPI");
+
+	device.send(BROADCAST, "Ciao");
 }

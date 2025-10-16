@@ -20,6 +20,7 @@
 
 #define BROADCAST "BROAD"
 #define NIAGARA_RETRANSMISSIONS 10
+#define NIAGARA_TIMEOUT 10000
 
 #if defined(ARDUINO)
 typedef str String;
@@ -75,10 +76,9 @@ enum Niagara_Ret {
 enum Niagara_Control {
     HANDSHAKE_SYN,
     HANDSHAKE_ACK,
-    CONTROL_PING,
+    HANDSHAKE_ERROR,
     CONTROL_REQUEST_DATA,
     CONTROL_RESPONSE,
-    TIME_SYNC,
     END //This must be the last element
 }
 
@@ -97,26 +97,25 @@ class Niagara {
      * Waits for an incoming connection from a device and
      * accepts it.
      */
-    Niagara_Ret listen();
+    Niagara_Ret receive(str* output, str* source);
     /**
      * Sends a connection request to another specified
      * device.
      */
-    Niagara_Ret connect(str identifier);
-    /**
-     * Closes an established connection with the device
-     */
-    Niagara_Ret end();
+    Niagara_Ret send(str identifier, str message);
     
   private:
-    /*Receives a message from the LoRa device*/
-    Niagara_Ret receive(str* source, Niagara_Control* control_output, str* message_output);
+    /*Receives a raw message from the LoRa device */
+    Niagara_Ret receive_raw(str* source, Niagara_Control* control_output, str* message_output);
 
-    /*Sends a message to a specific destination*/
-    Niagara_Ret send(str destination, Niagara_Control control, str message);
+    /*Sends a raw message to a specific destination */
+    Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
 
+    /* RadioLib pointer to the LoRa chip */
     SX1262* lora;
+    /* Niagara identifier for this device */
     str identifier;
+    /* Whether to log radio initialization or not */
     bool display_log;
     
     // instance of the HAL class
