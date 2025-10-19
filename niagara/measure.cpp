@@ -9,16 +9,15 @@
 class Measure
 {
 private:
-    char measureType[50];
+    char measureType[20];
     float value;
     unsigned long timestamp;
-
 public:
     /**
      * Constant value for the maximum length of the string
      * that contains the JSON format of the measure
      */
-    static const int MAX_LENGTH_JSON_STRING = 50;
+    static const int MAX_LENGTH_JSON_STRING = 60;
 
     /**
      * Constructor for a measure
