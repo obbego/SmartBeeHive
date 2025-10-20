@@ -119,17 +119,18 @@ Si prevede di integrare il protocollo con le seguenti funzionalità:
 - Fare in modo che la funzione di invio dati costruisca direttamente il JSON da inviare nel corpo del messaggio destinato al gateway, in modo da passare direttamente le letture dei sensori e lasciare che essa si occupi della loro formattazione  
 
 # Specifiche protocollo
+## Sistema di comunicazione
+Ogni pacchetto ha al suo interno i seguenti dati:
+- **identificativo mittente**
+- **identificativo destinatario**
+- **messaggio di controllo** valore che indica il tipo di pacchetto che viene inviato (sincronizzazione, ricezione, errore ecc.)
+- **payload** contenuto del pacchetto con dati da trasmettere
 
-## Handshake di inizio connessione
+Per la comunicazione di ogni informazione verrà effettuata l'operazione di sincronizzazione, acknowledgenment e conferma dell'acknowledgement. Nella fase di sincronizzazione viene inviato anche il payload, mentre nell'acknowledgement l'hash del messaggio precedente. Se ciò non combacia viene mandato un messaggio di errore e viene effettuata la ritrasmissione del pacchetto. 
 
-Per instaurare una connessione da un dispositivo A (possibilmente il gateway) a un dispositivo B (il ricevitore della scheda sensori):
+**N.B.** Ogni pacchetto con lora ha una dimensione massima di 255 byte, quindi potranno essere inviati poche telemetrie alla volta, oppure gestire la frammentazione di pacchetti. 
 
-1. **Richiesta di sincronizzazione** fatta dal dispositivo che desidera iniziare la connessione. 
-2. **Conferma della sincronizzazione** da parte del dispositivo che riceve la richiesta, quindi accetta la connessione.
-3. **Conferma della connessione** da parte del dispositivo che aveva inviato la richiesta di sincronizzazione. La connessione ora può partire.
-
-Tale operazione verrà ripetuta ogni qualvolta si instaura una connessione tra due dispositivi.
-
+## Funzioni per la comunicazione
 Le funzioni che la libreria dovrebbe prevedere sono:
 
 - `connect()` per il dispositivo che instaura una connessione ed eseguire l'handshake a tre vie 
@@ -137,12 +138,10 @@ Le funzioni che la libreria dovrebbe prevedere sono:
 - `end()` utilizzato per terminare la connessione
 
 ## Tipologie di comunicazione
-Ogni messaggio inviato viene associato un valore che indica il tipo di informazione che il dispositivo vuole trasmettere. 
+Ogni messaggio inviato viene associato un messaggio di controllo che indica il tipo di informazione che il dispositivo vuole trasmettere. 
 Questi valori appartengono ad un enumeatore della libreria `niagara.h` e sono:
 - `HANSHAKE_SYN` valore di controllo inviato all'inizio dell'handshake in fase di connessione
 - `HANDSHAKE_ACK` valore che indica la conferma del dispositivo ricevente all'interno del processo di handshake
-- `CONTROL_PING` invio ping di controllo
-- `CONTROL_REQUEST_DATA` richiesta dei dati rilevati dai sensori
-- `CONTROL_RESPONSE` risposta alla richiesta di invio dati
+- `HANSHAKE ERROR` invio errore se il pacchetto non è stato ricevuto perchè gli hash dei pacchetti non combaciano
 - `TIME_SYNC` invio del tempo (millisecondi o data) da parte di uno dei dispositivi per potersi sincronizzare. 
 - `END` fine della connessione tra i due dispositivi
