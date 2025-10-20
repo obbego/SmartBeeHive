@@ -113,74 +113,92 @@ Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
   Niagara_Ret status;
   //Amount of retransmissions done during the handshake
   int retransmission_counter = 0;
+  //Flag to receive the message a second time since the hash didn't match
+  bool reperform_receive;
 
   //Timer to check for retransmissions
   Timer retransmission_timer;
 
   //Wait until a receive has completed
-  while(true) {
-    //Try to receive data
-    status = Niagara::receive_raw(&source, &control, &output)
-    //If it timed out, then retry
-    if(status == NIAGARA_TIMEOUT)
-      continue;
-    //In case an error occurred then return an error
-    if(status != NIAGARA_OK)
-      return NIAGARA_RECEIVE_ERROR;
-    
-    //If not a syn req, skip
-    if(control != HANDSHAKE_SYN)
-      continue;
-  }
+  do {
+    //Reset the flag to reperform the receive
+    reperform_receive = false;
 
-  //Compute hashed data for error check
-  str hashed_data = crc32(output);
-  
-  //While cycle for retransmissions
-  retransmission_timer.start();
-  //Set to false when a retransmission is not necessary
-  bool retransmit = true;
-  while(retransmission_counter < NIAGARA_RETRANSMISSIONS) {
-    if(retransmit) {
-      retransmit = true;
-      //Send the first acknowledgement
-      if(Niagara::send_raw(device, HANDSHAKE_ACK, hashed_data) != NIAGARA_OK)
-        return NIAGARA_SEND_ERROR;
-    }
+    /* If the receiving is being reperformed then don't handle
+     * it again, work on the output of the last receive call.
+    */
+    if(!reperform_receive) {
+      //Try to receive data
+      status = Niagara::receive_raw(&source, &control, &output)
+      //In case an error occurred then return an error
+      if(status != NIAGARA_OK)
+        return NIAGARA_RECEIVE_ERROR;
       
-    //Try to receive new data, check the source
-    str source;
-    status Niagara::receive_raw(&source, &control, &output);
-    if(status == NIAGARA_TIMEOUT) {
-      retransmission_counter++;
-      continue;
+      //If not a syn req, skip
+      if(control != SYN)
+        continue;
     }
-    if(status != NIAGARA_OK && status != NIAGARA_TIMEOUT) {
-      if(retransmission_timer.elapsed() > NIAGARA_TIMEOUT) {
-        retransmission_timer.start();
+
+    //Compute hashed data for error check
+    str hashed_data = crc32(output);
+    
+    //While cycle for retransmissions
+    retransmission_timer.start();
+    //Set to false when a retransmission is not necessary
+    bool retransmit = true;
+    while(retransmission_counter < NIAGARA_RETRANSMISSIONS) {
+      if(retransmit) {
+        retransmit = true;
+        //Send the first acknowledgement
+        if(Niagara::send_raw(device, ACK, hashed_data) != NIAGARA_OK)
+          return NIAGARA_SEND_ERROR;
+      }
+        
+      //Try to receive new data, check the source
+      str source;
+      status Niagara::receive_raw(&source, &control, &output);
+      if(status == NIAGARA_TIMEOUT) {
         retransmission_counter++;
         continue;
       }
+      if(status != NIAGARA_OK ) {
+        if(retransmission_timer.elapsed() > NIAGARA_TIMEOUT) {
+          retransmission_timer.start();
+          retransmission_counter++;
+          continue;
+        }
 
-      retransmit = false;
-      continue;
+        retransmit = false;
+        continue;
+      }
+      if(control == RETRANSMISSION_TIMEOUT)
+        return NIAGARA_RECEIVE_ERROR;
+      
+      //If the source isn't the device which is handshaking or the control message isn't a ping then ignore
+      if(source != device)
+        continue;
+
+      /* If another syn request was sent, then
+       * reperform the receiving to handle the message that
+       * has been resent.
+       */
+      if(control == SYN) {
+        //Perform the receive again
+        reperform_receive = true;
+        break;
+      }
+
+      //If the control message is different then ignore the message
+      if(control != ACK)
+        continue;
     }
-    
-    //If the source isn't the device which is handshaking or the control message isn't a ping then ignore
-    if(source != device)
-      continue;
 
-    if(control == HANDSHAKE_ERROR)
-      break; //Reperform the receiving and increase the retransmission count
+    //If the max retransmission amount was reached then ignore
+    if(retransmission_counter == NIAGARA_RETRANSMISSIONS)
+      return NIAGARA_TIMEOUT;
+    else if(!reperform_receive) break; //If everything went well, then restart the cycle
+  } while(reperform_receive);
 
-    //If the control message is different then ignore the message
-    if(control != HANDSHAKE_ACK)
-      continue;
-  }
-
-  //If the max retransmission amount was reached then ignore
-  if(retransmission_counter == NIAGARA_RETRANSMISSIONS)
-    return NIAGARA_TIMEOUT;
   
   return NIAGARA_OK;
 }
@@ -207,7 +225,7 @@ Niagara_Ret Niagara::send(str identifier, str message) {
     if(retransmit) {
       retransmit = true;
       //Send SYN to establish connection
-      if(Niagara::send_raw(identifier, HANDSHAKE_SYN, message) != NIAGARA_OK)
+      if(Niagara::send_raw(identifier, SYN, message) != NIAGARA_OK)
         return NIAGARA_SEND_ERROR;
     }
 
@@ -221,7 +239,7 @@ Niagara_Ret Niagara::send(str identifier, str message) {
       return NIAGARA_RECEIVE_ERROR;
 
     //Check that source and received parameters match with an acknowledgement
-    if(source != identifier || (control_msg != HANDSHAKE_ACK && control_msg != HANDSHAKE_ERROR)) {
+    if(source != identifier || control_msg != ACK) {
       if(retransmission_timer.elapsed() > NIAGARA_TIMEOUT)
       {
         retransmission_timer.start();
@@ -232,13 +250,25 @@ Niagara_Ret Niagara::send(str identifier, str message) {
       retransmit = false;
       continue;
     }
+
+    //Compare the crc with the one received from the receiving device
+    str computed_crc = crc32(message);
+    if(computed_crc != crc_buffer) {
+      //Retransmit the message
+      retransmission_timer.start();
+      retransmission_counter++;
+      continue;
+    } 
   }
 
-  if(retransmission_counter == NIAGARA_RETRANSMISSIONS)
+  //Check if the amount of retransmissions got exceeded
+  if(retransmission_counter == NIAGARA_RETRANSMISSIONS) {
+    Niagara::send_raw(device, RETRANSMISSION_TIMEOUT, ""); //Send a message indicating maximum amount of retransmissions reached
     return NIAGARA_TIMEOUT;
+  }
 
-  //Send the last acknowledgement and exit
-  if(Niagara::send_raw(device, HANDSHAKE_ACK, "") != NIAGARA_OK)
+  //Send the last acknowledgement to finalize the handshake
+  if(Niagara::send_raw(device, ACK, "") != NIAGARA_OK)
     return NIAGARA_SEND_ERROR;
 
   return NIAGARA_OK;

@@ -63,6 +63,11 @@ enum Niagara_Ret {
      */
     NIAGARA_RECEIVE_ERROR,
     /*
+     * Returned by the receive method when the maximum amount 
+     * of retransmissions was reached by the sending device.
+    */
+    NIAGARA_RETRANSMISSION_ERROR,
+    /*
      * When an error occurred while sending
      */
     NIAGARA_SEND_ERROR
@@ -74,11 +79,9 @@ enum Niagara_Ret {
  * The enumerator's elements must all be ascending constantly from zero.
  */
 enum Niagara_Control {
-    HANDSHAKE_SYN,
-    HANDSHAKE_ACK,
-    HANDSHAKE_ERROR,
-    CONTROL_REQUEST_DATA,
-    CONTROL_RESPONSE,
+    SYN,
+    ACK,
+    RETRANSMISSION_TIMEOUT,
     END //This must be the last element
 }
 
