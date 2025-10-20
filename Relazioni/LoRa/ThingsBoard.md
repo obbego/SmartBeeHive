@@ -37,6 +37,11 @@ Il linguaggio utilizzato per il *Rule Node* è:
 #### Tipi predefiniti di messaggi
 Esistono dei tipi predefiniti di messaggi intercettabili configurati in ThingsBoard raggiungibili tramite [questo link](https://thingsboard.io/docs/user-guide/rule-engine-2-0/overview/#predefined-message-types).
 
+#### Rule chains e root
+Ogni serie di istruzioni condizionali all'interno del server ThingsBoard assume il nome di ***Rule chain***. Tra queste identifichiamo:
+- **Rule chain root** set di istruzioni principali che parte con l'avvio del server.
+- **Rule chain secondarie** set di istruzioni specifiche che andranno poi collegate in uno specifico punto del root.
+
 ### Database
 Tutti i dati inviati su ThingsBoard vengono salvati nei database, che contengono:
 - **entities** come dispositivi, clienti, dashboard, ecc. Contengono quindi la parte di configurazione dell'ambiente ThinhsBoard. 
@@ -254,6 +259,68 @@ L'output tipico di una richiesta simile è il seguente:
 ```json
 {"key":{"timestamp":1451649600512,"value":"value"}}
 ```
+
+Per ottenere invece informazioni relative agli allarmi di un gruppo di dispositivi è possibile utilizzare la seguente richiesta: 
+```http
+curl -X GET "https://<tuo-dominio>/api/alarms?startTime=1729400000000&endTime=1729600000000&pageSize=50&page=0&sortOrder=DESC" -H "X-Authorization: Bearer <JWT_TOKEN>"
+```
+dove:
+- *startTime* e *endTime* indicano l'intervallo in millisecondi
+- *pageSize* quante righe per pagina
+- *page* numero della pagina da cui iniziare
+- *sortOrder* di tipo ASC o DESC
+- *sortProperty* campo su cui ordinare
+
+Il risultato atteso è il seguente:
+```json
+{
+  "data": [
+    {
+      "id": {"id": "e8d96f30-6fd1-11ee-a3b2-2b3f5b743d8e"},
+      "type": "HighTemperature",
+      "severity": "CRITICAL",
+      "status": "ACTIVE_UNACK",
+      "originator": {
+        "entityType": "DEVICE",
+        "id": "e50d2f20-5a6a-11ee-b3f1-2f3c3d4479cc"
+      },
+      "createdTime": 1729433823000,
+      "details": {
+        "temperature": 82.5
+      }
+    }
+  ],
+  "totalPages": 1,
+  "totalElements": 1,
+  "hasNext": false
+}
+```
+
+**N.B.** Tali richieste sono degli esempi di come inviare o ricevere dati collegandosi al server ThingsBoard. Ciò non esclude che possano essere presenti altre informazioni da inserire nelle richieste per inviare dati o filtrarli secondo altre specifiche. Tali informazioni è possibile trovarle consultando la documentazione a fine pagina.
+
+
+## Funzionamento per l'alveare
+### Utilizzo del Rule Engine
+Stando alla documentazione precedente è possibile salvare telemetrie per ogni dispositivo utilizzando il sever ThingsBoard.
+Tuttavia, oltre a raccogliere semplicemente i dati, il sistema dell'alveare dovrebbe poter:
+- segnalare lo stato dell'alveare (come quando è ora di raccogliere il miele)
+- segnalare possibili anomalia del sistema di sensori
+- controllare la validità del dato trasmesso
+
+Per questo occorrerà interagire con le Rule Engine e impostare delle Rule chains che possano controllare queste condizioni e segnalarle. 
+
+L'obiettivo è quello di mostrare questi messaggi come allarmi in modo che possano essere letti e mostrati anche nel frontend previsto per il progetto dell'alveare. 
+
+### Asset comune
+Tutti i dispositivi collegati alle arnie dovranno essere raggruppati in un asset comune. 
+Potrebbe essere utile infatti poter confrontare dati tra arnie diverse e notare la presenza di possibili anomalie.
+
+### Rule chains da creare
+Per far sì che il sistema sia completo e possa segnalare informazioni o problemi del sistema occorre che siano implementate le seguenti Rule Chain:
+- **controllo registrazione dato** se il dispositivo indicato non è stato trovato nel server occorre inserire un allarme di errore.
+- **controllo dato** una volta passato il controllo del dispositivo occorre che il dato venga controllato, ossia che la grandezza da misurare sia già stata registrata e che il dato non sia fuori dal range previsto, possibile segnale di un'anomalia dei sensori o di un errore nella trasmissione del dato. In base a quello sarà possibile scegliere se o meno archiviare la telemetria o sostituirla con una già presente. In quel caso è possibile segnalare la cosa con un semplice allarme di rilevanza minore.
+- **controllo dispositivo** deve essere controllato che il dispositivo abbia effettivamente ricevuto misurazioni nell'ultimo intervallo di tempo e che gli ultimi dati raccolti non sforino con la media dei dispositivi vicini. Per questo tipo di dato occorrerebbe inserire un warning. 
+- **controllo alveare** per il controllo dell'alveare è possibile inserire un allarme che indica alcune informazioni relative all'alveare. Ad esempio con un warning si potrebbe indicare il momento in cui raccogliere il miele.
 
 
 ## Link utili
