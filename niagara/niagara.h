@@ -12,6 +12,7 @@
 // include the library
 #include <RadioLib/RadioLib.h>
 #include <string>
+#include <cctype>
 // include the hardware abstraction layer
 #include "hal/RPi/PiHal.h"
 #endif
@@ -37,6 +38,11 @@ enum Niagara_Ret {
      * No error encountered
      */
     NIAGARA_OK,    
+    /*
+     * Returned by a method when it's called when no identifier
+     * has yet been set for this device using set_identifier(str)
+     */
+    NIAGARA_NO_IDENTIFIER,
     /*
      * Returned by the transmit method when the
      * destination device string or the control message are
@@ -87,8 +93,12 @@ enum Niagara_Control {
 
 class Niagara {
   public:    
-    Niagara(str _identifier, bool log);
-    Niagara(str _identifier);
+    /**
+     * Initialises this device with the passed identifier,
+     * which must be an alphanumeric string with 6-12 characters.
+     */
+    Niagara(bool log);
+    Niagara();
 
     #if defined(ARDUINO)
     /*Custom display print methods */
@@ -105,7 +115,13 @@ class Niagara {
      * Sends a connection request to another specified
      * device.
      */
-    Niagara_Ret send(str identifier, str message);
+    Niagara_Ret send(str destination, str message);
+
+    /**
+     * Sets the identifier for this device, this method must 
+     * be called before calling any send or receive method.
+     */
+    bool set_identifier(str identifier);
     
   private:
     /*Receives a raw message from the LoRa device */
@@ -138,6 +154,19 @@ class Niagara {
      * or control message.
     */
     str format_message(str destination, str control, str message);
+
+    /**
+     * Given the destination parameter of a message received,
+     * this method checks if the destination parameter matches
+     * this device.
+     */
+    bool check_destination(str destination);
+
+    /**
+     * Method used to check the validity of the identifier
+     * given to the constructor
+     */
+    bool check_identifier(str identifier);
 };
 
 #endif

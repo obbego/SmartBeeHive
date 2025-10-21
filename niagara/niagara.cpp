@@ -75,7 +75,7 @@ std::optional<SX1262> Niagara::init_radio() {
 }
 #endif
 
-Niagara::Niagara(str _identifier, bool log = true) {
+Niagara::Niagara(bool log = true) {
   //Save the log flag the user specified
   Niagara::display_log = log;
   
@@ -95,14 +95,26 @@ Niagara::Niagara(str _identifier, bool log = true) {
   if(!radio_return.has_value()) return;
   *Niagara::lora = radio_return.value();
 
-  //Save identifier
-  Niagara::identifier = _identifier;
+  //Initialise the identifier as empty
+  Niagara::identifier = "";
 }
 
 /* If the boolean for the log variable isn't defined, just set it to true */
-Niagara::Niagara(str _identifier) : Niagara(_identifier, true) {}
+Niagara::Niagara() : Niagara(true) {}
+
+bool Niagara::set_identifier(str _identifier) {
+  if(!check_identifier(_identifier))
+    return false;
+
+  Niagara::identifier = _identifier;
+  return true;
+}
 
 Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
+  //If the identifier is empty and not yet initialized then return an error
+  if(Niagara::identifier.length() == 0)
+    return NIAGARA_NO_IDENTIFIER;
+
   //Contains the ID of the first device whose first SYN was received
   str device;
   //Saves the received control signals
@@ -203,7 +215,11 @@ Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
   return NIAGARA_OK;
 }
 
-Niagara_Ret Niagara::send(str identifier, str message) {
+Niagara_Ret Niagara::send(str destination, str message) {
+  //If the identifier is empty and not yet initialized then return an error
+  if(Niagara::identifier.length() == 0)
+    return NIAGARA_NO_IDENTIFIER;
+
   //Source of the receivings
   str source;
   //Received control message
@@ -225,7 +241,7 @@ Niagara_Ret Niagara::send(str identifier, str message) {
     if(retransmit) {
       retransmit = true;
       //Send SYN to establish connection
-      if(Niagara::send_raw(identifier, SYN, message) != NIAGARA_OK)
+      if(Niagara::send_raw(destination, SYN, message) != NIAGARA_OK)
         return NIAGARA_SEND_ERROR;
     }
 
@@ -239,7 +255,7 @@ Niagara_Ret Niagara::send(str identifier, str message) {
       return NIAGARA_RECEIVE_ERROR;
 
     //Check that source and received parameters match with an acknowledgement
-    if(source != identifier || control_msg != ACK) {
+    if(source != destination || control_msg != ACK) {
       if(retransmission_timer.elapsed() > NIAGARA_TIMEOUT)
       {
         retransmission_timer.start();
@@ -275,6 +291,10 @@ Niagara_Ret Niagara::send(str identifier, str message) {
 }
 
 Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, str* message_output, int timeout = 0) {
+  //If the identifier is empty and not yet initialized then return an error
+  if(Niagara::identifier.length() == 0)
+    return NIAGARA_NO_IDENTIFIER;
+
   str receive_output;
   int status = Niagara::lora->receive(receive_output, timeout);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
@@ -305,6 +325,10 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
 }
 
 str* Niagara::process_message(str message) {
+  //If the identifier is empty and not yet initialized then return an error
+  if(Niagara::identifier.length() == 0)
+    return nullptr;
+
   //In case the message destination isn't this board then exit
   int separatorIndex = message.indexOf('|');
   if(separatorIndex <= 0) return nullptr;
@@ -316,7 +340,7 @@ str* Niagara::process_message(str message) {
   if(callsign.length() <= identifierSeparator) return nullptr;
   sourceID = callsign.substring(0, identifierSeparator - 1);
   destinationID = callsign.substring(identifierSeparator + 1);
-  if(destinationID != BROADCAST && destinationID != identifier) return nullptr;
+  if(!valid_destination(destinationID)) return nullptr;
   if(message.length() <= separatorIndex + 1) return nullptr;
   int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|');
   if(secondSeparatorIndex <= 0) return nullptr;
@@ -333,6 +357,10 @@ str* Niagara::process_message(str message) {
 }
 
 Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str message) {
+  //If the identifier is empty and not yet initialized then return an error
+  if(Niagara::identifier.length() == 0)
+    return NIAGARA_NO_IDENTIFIER;
+
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
   int status = Niagara::lora->transmit(formattedMessage);
@@ -345,4 +373,49 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 str Niagara::format_message(str destination, Niagara_Control control, str message) {
   if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0 || control.indexOf('|') >= 0) return "";
   return (Niagara::identifier + "." + destination + "|" + static_cast<int>(control) + "|" + message);
+}
+
+bool Niagara::valid_destination(str destination) {
+  //Check for broadcast destination
+  if(destination == BROADCAST)
+    return true;
+
+  //Check if the two strings match in size, if they don't then skip
+  if(Niagara::identifier.length() != destination.length()) return false;
+
+  #if defined(ARDUINO)
+  for (size_t i = 0; i < Niagara::identifier.length(); ++i) {
+      if (tolower(Niagara::identifier.charAt(i)) != tolower(destination.charAt(i))) return false;
+  }
+  #else
+  for (size_t i = 0; i < Niagara::identifier.size(); ++i) {
+      if (std::tolower(static_cast<unsigned char>(Niagara::identifier[i])) !=
+          std::tolower(static_cast<unsigned char>(destination[i]))) {
+          return false;
+      }
+  }
+  #endif
+
+  return true;
+}
+
+bool Niagara::check_identifier(str identifier) {
+  //The identifier should be between 6 and 12 characters long
+  size_t len = identifier.length();
+  if (len < 6 || len > 12) return false;
+  if(identifier == BROADCAST) return false;
+
+  //Check if the identifier contains only alphanumeric values
+  #if defined(ARDUINO)
+  for (int i = 0; i < len; ++i) {
+      char c = identifier.charAt(i);
+      if (!isAlphaNumeric(c)) return false;
+  }
+  return true;
+  #else
+  for (char c : identifier) {
+      if (!std::isalnum(static_cast<unsigned char>(c))) return false;
+  }
+  return true;
+  #endif
 }
