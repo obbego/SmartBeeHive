@@ -1,0 +1,168 @@
+{
+  "ruleChain": {
+    "name": "Check telemetry validity",
+    "type": "CORE",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null,
+    "additionalInfo": {
+      "description": "Set of instructions to check if the data of a telemetry has to be added for the first time or has to be changed if the same value is different due to error correction and it's closer to the average"
+    }
+  },
+  "metadata": {
+    "version": 5,
+    "firstNodeIndex": 0,
+    "nodes": [
+      {
+        "type": "org.thingsboard.rule.engine.metadata.TbGetAttributesNode",
+        "name": "get_device-attributes",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "tellFailureIfAbsent": true,
+          "fetchTo": "METADATA",
+          "clientAttributeNames": [],
+          "sharedAttributeNames": [
+            "*"
+          ],
+          "serverAttributeNames": [],
+          "latestTsKeyNames": [],
+          "getLatestValueWithTs": false
+        },
+        "additionalInfo": {
+          "description": "get the attributes of the device",
+          "layoutX": 364,
+          "layoutY": 152
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "check_telemetry-attributes-validity",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* get the attributes of the devices as a key */\nvar validKeys = Object.keys(metadata).filter(k => k.startsWith('shared_')).map(k => k.replace('shared_', ''));\n\n/* get the attributes inside the message to check as keys */\nvar incomingKeys = Object.keys(msg);\n\n/* check if the keys are included, \notherwise add them to the list */\nvar wrongTelemetryAttributes = [];\nfor(var currenKey in incomingKeys){\n    if(!validKeys.includes(currenKey))\n        wrongTelemetryAttributes.push(currenKey);\n}\n\n/* add a new field to metadata */\nmetadata.wrongTelemetryAttributes = JSON.stringify(wrongTelemetryAttributes);\n\nreturn {msg:msg,metadata:metadata,msgType:msgType}; // return the changed message",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "this node checks the keys that don't match with the attributes configured in the device",
+          "layoutX": 679,
+          "layoutY": 155
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsSwitchNode",
+        "name": "switch_telemetry-attributes-validity",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "var wrongTelemetryAttributes = JSON.parse(metadata.wrongTelemetryAttributes); // get the wrong attributes\n\n/* if the metadata attribute exists and the list is empty the message is valid */\nif(wrongTelemetryAttributes && wrongTelemetryAttributes.length === 0)\n    return ['valid'];\n\nreturn ['invalid']; //otherwise it's invalid",
+          "tbelScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType == 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);"
+        },
+        "additionalInfo": {
+          "description": "Switch that does a selection based on the presence of wrong keys in the message",
+          "layoutX": 975,
+          "layoutY": 161
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_wrong-telemetry-attributes",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var wrongKeysList = JSON.parse(metadata\n    .wrongTelemetryAttributes); // get the attributes\nvar wrongKeysString = \"\";\n\nfor(var i=0;i<wrongKeysList.length;i++){\n    wrongKeysString += wrongKeysList[i]; // add the key\n    if(i!=wrongKeysList.length-1) // check if it's possibile to add a comma\n        wrongKeysString += \",\"\n    \n    wrongKeysString += \" \"; // add a space\n}\n\nreturn 'Telemetry attributes ' + wrongKeysString + 'not found in device '+metadata.deviceName;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "General Alarm",
+          "severity": "CRITICAL",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "alarm that informs that some of the keys in the message are wrong when posting a telemetry",
+          "layoutX": 1296,
+          "layoutY": 294
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "remove_invalidKeys",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "var invalidKeys = JSON.parse(metadata.wrongTelemetryKeys); // get wrong keys \nvar newMessage = {}; // create new new message \nvar messageKeys = Object.keys(msg); // get the keys of the message\n\n/* copy only the keys that are not \nin the list of invalid keys */\nfor(var currentKey in messageKeys){\n    if(!invalidKeys.includes(currentKey))\n        newMessage[currentKey] = msg[currentKey];\n}\n\ndelete metadata.wrongTelemetryKeys; // delete the attribute after the transformation\n\n/* return the new formatted message */\nreturn {msg:newMessage, metadata:metadata, msgType:msgType};",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "function to remove invalid keys in the message if present",
+          "layoutX": 1295,
+          "layoutY": 163
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.flow.TbRuleChainOutputNode",
+        "name": "output",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "version": 0
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1589,
+          "layoutY": 162
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 0,
+        "toIndex": 1,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 1,
+        "toIndex": 2,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 3,
+        "type": "invalid"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 4,
+        "type": "invalid"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 4,
+        "type": "valid"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}
