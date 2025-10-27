@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 5,
+    "version": 7,
     "firstNodeIndex": 0,
     "nodes": [
       {
@@ -110,7 +110,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "var invalidKeys = JSON.parse(metadata.wrongTelemetryKeys); // get wrong keys \nvar newMessage = {}; // create new new message \nvar messageKeys = Object.keys(msg); // get the keys of the message\n\n/* copy only the keys that are not \nin the list of invalid keys */\nfor(var currentKey in messageKeys){\n    if(!invalidKeys.includes(currentKey))\n        newMessage[currentKey] = msg[currentKey];\n}\n\ndelete metadata.wrongTelemetryKeys; // delete the attribute after the transformation\n\n/* return the new formatted message */\nreturn {msg:newMessage, metadata:metadata, msgType:msgType};",
+          "jsScript": "var invalidKeys = JSON.parse(metadata.wrongTelemetryKeys); // get wrong keys \nvar newMessage = {}; // create new new message \nvar messageKeys = Object.keys(msg); // get the keys of the message\n\n/* copy only the keys that are not \nin the list of invalid keys */\nfor(var currentKey in messageKeys){\n    if(!invalidKeys.includes(currentKey))\n        newMessage[currentKey] = msg[currentKey];\n}\n\n/* delete metadata attributes created\nduring the control */\ndelete metadata.wrongTelemetryKeys;\nvar metadataKeys = Object.keys(metadata);\nfor(var i=0;i<metadataKeys.length;i++){\n    metadataKeys[i].startsWith(\"shared_\");\n    delete metadata[metadataKeys[i]];\n}\n\n/* return the new formatted message */\nreturn {msg:newMessage, metadata:metadata, msgType:msgType};",
           "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
         },
         "additionalInfo": {
@@ -131,7 +131,87 @@
         },
         "additionalInfo": {
           "description": "",
-          "layoutX": 1589,
+          "layoutX": 1247,
+          "layoutY": 542
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.metadata.TbGetRelatedAttributeNode",
+        "name": "get_common-devices",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "relationsQuery": {
+            "fetchLastLevelOnly": false,
+            "direction": "FROM",
+            "maxLevel": 1,
+            "filters": [
+              {
+                "relationType": "Contains",
+                "entityTypes": [
+                  "DEVICE"
+                ]
+              }
+            ]
+          },
+          "dataToFetch": "ATTRIBUTES",
+          "fetchTo": "METADATA",
+          "dataMapping": {
+            "$[*]": "$[*]"
+          }
+        },
+        "additionalInfo": {
+          "description": "method to get related device connected to the same asset",
+          "layoutX": 1633,
+          "layoutY": 163
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "change_originator-message",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* list of devices where to find related entities */\r\nvar devices = metadata.relatedEntities || [];\r\ndelete metadata.relatedEntities;\r\n\r\n/* create a new list of messages */\r\nvar messages = devices.map(function(d) {\r\n    return {\r\n        msg: {},                  // message you want to send\r\n        metadata: {},             // possible metadata\r\n        msgType: 'POST_TELEMETRY', // optional\r\n        originator: {\r\n            id: d.id,\r\n            entityType: 'DEVICE'\r\n        }\r\n    };\r\n});\r\n\r\n/* return message output */\r\nreturn messages;",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "this script read the relations and generates a message for every single device",
+          "layoutX": 1927,
+          "layoutY": 162
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.metadata.TbGetTelemetryNode",
+        "name": "get_last-telemetry-values",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 2,
+        "configuration": {
+          "latestTsKeyNames": [
+            "$[*]"
+          ],
+          "aggregation": "NONE",
+          "fetchMode": "FIRST",
+          "orderBy": "ASC",
+          "limit": 1000,
+          "useMetadataIntervalPatterns": false,
+          "startIntervalPattern": "",
+          "endIntervalPattern": "",
+          "startInterval": 5,
+          "startIntervalTimeUnit": "DAYS",
+          "endInterval": 1,
+          "endIntervalTimeUnit": "MINUTES"
+        },
+        "additionalInfo": {
+          "description": "function to get telemetry attributes of the previous 5 days",
+          "layoutX": 2212,
           "layoutY": 162
         }
       }
@@ -161,6 +241,21 @@
         "fromIndex": 2,
         "toIndex": 4,
         "type": "valid"
+      },
+      {
+        "fromIndex": 4,
+        "toIndex": 6,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 7,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 8,
+        "type": "Success"
       }
     ],
     "ruleChainConnections": null
