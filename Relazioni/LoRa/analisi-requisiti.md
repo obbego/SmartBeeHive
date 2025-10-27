@@ -13,6 +13,7 @@ I dati da rilevare all’interno di ogni arnia sono i seguenti:
 - **TEMPERATURA**
 - **UMIDITÀ**
 - **RUMORE**, per misurare l’attività delle api
+- **PESO** peso dell'alveare + api
 
 Tali dati dovranno essere rilevati seguendo una specifica scansione oraria, che potrà essere stabilita in seguito.
 
