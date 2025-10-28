@@ -2,12 +2,13 @@
 #define HASH_H
 
 #include <stdint.h>
+#include "str.h"
 
 // Define the CRC32 polynomial used for the hash calculation
 #define CRC32_POLYNOMIAL 0xEDB88320
 
 // Function to compute CRC32 for a given data buffer
-static char* crc32(const uint8_t *data, unsigned int length) {
+static uint32_t crc32(const str data, unsigned int length = 32) {
     uint32_t crc = 0xFFFFFFFF;  // Initial value of CRC is all 1's (0xFFFFFFFF)
 
     // Process each byte in the data buffer
@@ -25,7 +26,7 @@ static char* crc32(const uint8_t *data, unsigned int length) {
 
     crc = ~crc; // Final inversion of CRC (as per CRC32 standard)
     //Convert the crc 32bit value into a char array
-    return (char*)&crc;
+    return crc;
 }
 
 #endif // CRC32_H

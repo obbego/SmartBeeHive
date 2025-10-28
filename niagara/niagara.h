@@ -17,17 +17,12 @@
 #include "hal/RPi/PiHal.h"
 #endif
 
+#include "str.h"
+
 #include <optional>
 
 #define BROADCAST "BROAD"
 #define NIAGARA_RETRANSMISSIONS 10
-#define NIAGARA_TIMEOUT 10000
-
-#if defined(ARDUINO)
-typedef str String;
-#else
-typedef str std::string;
-#endif
 
 /**
  * This enumerator is returned by any method of the
@@ -77,7 +72,7 @@ enum Niagara_Ret {
      * When an error occurred while sending
      */
     NIAGARA_SEND_ERROR
-}
+};
 
 /**
  * This contains the possible control messages.
@@ -89,7 +84,7 @@ enum Niagara_Control {
     ACK,
     RETRANSMISSION_TIMEOUT,
     END //This must be the last element
-}
+};
 
 class Niagara {
   public:    
@@ -125,10 +120,10 @@ class Niagara {
     
   private:
     /*Receives a raw message from the LoRa device */
-    Niagara_Ret receive_raw(str* source, Niagara_Control* control_output, str* message_output);
+    Niagara_Ret receive_raw(str* source, Niagara_Control* control_output, str* message_output, int timeout);
 
     /*Sends a raw message to a specific destination */
-    Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
+    Niagara_Ret send_raw(str destination, Niagara_Control control, str message, int timeout);
 
     /* RadioLib pointer to the LoRa chip */
     SX1262* lora;
