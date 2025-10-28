@@ -322,6 +322,8 @@ Per far sì che il sistema sia completo e possa segnalare informazioni o problem
 - **controllo dispositivo** deve essere controllato che il dispositivo abbia effettivamente ricevuto misurazioni nell'ultimo intervallo di tempo e che gli ultimi dati raccolti non sforino con la media dei dispositivi vicini. Per questo tipo di dato occorrerebbe inserire un warning. 
 - **controllo alveare** per il controllo dell'alveare è possibile inserire un allarme che indica alcune informazioni relative all'alveare. Ad esempio con un warning si potrebbe indicare il momento in cui raccogliere il miele.
 
+**N.B.** *Per i controlli periodici non è possibile farlo direttamente con le rule chains di ThingsBoard, ma utilizzare uno scheduler esterno che periodicamente invii la richiesta al server*
+
 
 ## Link utili
 - [Architettura ThingsBoard](https://thingsboard.io/docs/reference/)
