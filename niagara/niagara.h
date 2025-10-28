@@ -17,11 +17,7 @@
 #include "hal/RPi/PiHal.h"
 #endif
 
-#if defined(ARDUINO)
-    #define str String
-#else
-    #define str std::string
-#endif
+#include "str.h"
 
 #include <optional>
 

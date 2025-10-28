@@ -2,12 +2,7 @@
 #define HASH_H
 
 #include <stdint.h>
-
-#if defined(ARDUINO)
-    #define str String
-#else
-    #define str std::string
-#endif
+#include "str.h"
 
 // Define the CRC32 polynomial used for the hash calculation
 #define CRC32_POLYNOMIAL 0xEDB88320
