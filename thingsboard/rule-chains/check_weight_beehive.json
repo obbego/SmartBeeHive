@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 3,
+    "version": 4,
     "firstNodeIndex": 0,
     "nodes": [
       {
@@ -52,7 +52,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "var data = JSON.parse(metadata.weight);\r\n/* calculate slope (linear regression) */\r\nvar n = data.length;\r\nvar sumX=0, sumY=0, sumXY=0, sumX2=0;\r\n\r\nfor (var i=0; i<n; i++) {\r\n    var x = data[i].ts / (1000 * 60 * 60); // time in hours\r\n    var y = data[i].value;\r\n    sumX += x; sumY += y; sumXY += x*y; sumX2 += x*x;\r\n}\r\n\r\nvar slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);\r\n\r\n/* if the slop is close to 0 it \r\nmeans that the weight is stable */\r\nreturn Math.abs(slope) < 0.01; // 0.01 kg/h is the threshold\r\n",
+          "jsScript": "var data = JSON.parse(metadata.weight);\r\n/* calculate slope (linear regression) */\r\nvar n = data.length;\r\nvar sumX=0, sumY=0, sumXY=0, sumX2=0;\r\n\r\nfor (var i=0; i<n; i++) {\r\n    var x = data[i].ts / (1000 * 60 * 60); // time in hours\r\n    var y = data[i].value;\r\n    sumX += x; sumY += y; sumXY += x*y; sumX2 += x*x;\r\n}\r\n\r\nvar slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);\r\n\r\n/* if the slop is close to 0 it \r\nmeans that the weight is stable */\r\nreturn Math.abs(slope) < 0.05; // 0.01 kg/h is the threshold\r\n",
           "tbelScript": "return msg.temperature > 20;"
         },
         "additionalInfo": {
@@ -133,6 +133,46 @@
           "layoutX": 623,
           "layoutY": 234
         }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.rpc.TbSendRPCReplyNode",
+        "name": "reply_rpc",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "serviceIdMetaDataAttribute": "serviceId",
+          "sessionIdMetaDataAttribute": "sessionId",
+          "requestIdMetaDataAttribute": "requestId"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1297,
+          "layoutY": 157
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.rpc.TbSendRPCReplyNode",
+        "name": "reply_rpc",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "serviceIdMetaDataAttribute": "serviceId",
+          "sessionIdMetaDataAttribute": "sessionId",
+          "requestIdMetaDataAttribute": "requestId"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1222,
+          "layoutY": 245
+        }
       }
     ],
     "connections": [
@@ -155,6 +195,31 @@
         "fromIndex": 1,
         "toIndex": 3,
         "type": "False"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 5,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 5,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 5,
+        "type": "False"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 5,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 3,
+        "toIndex": 6,
+        "type": "Cleared"
       }
     ],
     "ruleChainConnections": null
