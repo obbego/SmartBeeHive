@@ -120,13 +120,18 @@ Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
   //Saves the received control signals
   Niagara_Control control;
   //Saves the output of the receivings
-  str output;
+  str output_internal;
   //Contains the status of the operations
   Niagara_Ret status;
   //Amount of retransmissions done during the handshake
   int retransmission_counter = 0;
   //Flag to receive the message a second time since the hash didn't match
   bool reperform_receive;
+  //In case the source contains a null pointer then save it somewhere to avoid a null pointer exception
+  str source_temp;
+  if(source == nullptr) {
+    source = &source_temp;
+  }
 
   //Timer to check for retransmissions
   Timer retransmission_timer;
@@ -141,7 +146,7 @@ Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
     */
     if(!reperform_receive) {
       //Try to receive data
-      status = Niagara::receive_raw(&source, &control, &output)
+      status = Niagara::receive_raw(source, &control, &output_internal);
       //In case an error occurred then return an error
       if(status != NIAGARA_OK)
         return NIAGARA_RECEIVE_ERROR;
@@ -152,7 +157,8 @@ Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
     }
 
     //Compute hashed data for error check
-    str hashed_data = crc32(output);
+    uint32_t hashed_data_int = crc32(output_internal);
+    str hashed_data = (char*)&hashed_data_int;
     
     //While cycle for retransmissions
     retransmission_timer.start();
@@ -168,7 +174,7 @@ Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
         
       //Try to receive new data, check the source
       str source;
-      status Niagara::receive_raw(&source, &control, &output);
+      status = Niagara::receive_raw(&source, &control, &output_internal);
       if(status == NIAGARA_TIMEOUT) {
         retransmission_counter++;
         continue;
@@ -210,6 +216,9 @@ Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
       return NIAGARA_TIMEOUT;
     else if(!reperform_receive) break; //If everything went well, then restart the cycle
   } while(reperform_receive);
+  
+  //Save the internal output in the actual output
+  *output = output_internal;
 
   
   return NIAGARA_OK;
@@ -268,7 +277,8 @@ Niagara_Ret Niagara::send(str destination, str message) {
     }
 
     //Compare the crc with the one received from the receiving device
-    str computed_crc = crc32(message);
+    uint32_t computed_crc_num = crc32(message);
+    str computed_crc = (char*)&computed_crc_num;
     if(computed_crc != crc_buffer) {
       //Retransmit the message
       retransmission_timer.start();
@@ -279,12 +289,12 @@ Niagara_Ret Niagara::send(str destination, str message) {
 
   //Check if the amount of retransmissions got exceeded
   if(retransmission_counter == NIAGARA_RETRANSMISSIONS) {
-    Niagara::send_raw(device, RETRANSMISSION_TIMEOUT, ""); //Send a message indicating maximum amount of retransmissions reached
+    Niagara::send_raw(destination, RETRANSMISSION_TIMEOUT, ""); //Send a message indicating maximum amount of retransmissions reached
     return NIAGARA_TIMEOUT;
   }
 
   //Send the last acknowledgement to finalize the handshake
-  if(Niagara::send_raw(device, ACK, "") != NIAGARA_OK)
+  if(Niagara::send_raw(destination, ACK, "") != NIAGARA_OK)
     return NIAGARA_SEND_ERROR;
 
   return NIAGARA_OK;

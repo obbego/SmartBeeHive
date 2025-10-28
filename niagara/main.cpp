@@ -1,7 +1,7 @@
 #include "niagara.h"
 
 int main(void) {
-	Niagara device();
+	Niagara device;
 	device.set_identifier("RASPI");
 	device.send("ESP32", "Hello!");
 
