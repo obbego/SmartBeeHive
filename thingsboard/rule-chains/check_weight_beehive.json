@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 16,
+    "version": 17,
     "firstNodeIndex": 0,
     "nodes": [
       {
@@ -147,7 +147,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "var data = JSON.parse(metadata.weight);\r\n/* calculate slope (linear regression) */\r\nvar n = data.length;\r\nvar sumX=0, sumY=0, sumXY=0, sumX2=0;\r\n\r\nfor (var i=0; i<n; i++) {\r\n    var x = data[i].ts / (1000 * 60 * 60); // time in hours\r\n    var y = data[i].value;\r\n    sumX += x; sumY += y; sumXY += x*y; sumX2 += x*x;\r\n}\r\n\r\nvar slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);\r\n\r\n/* if the slop is close to 0 it \r\nmeans that the weight is stable */\r\nmsg.honeyReady = Math.abs(slope) < 0.10; // 0.01 kg/h is the threshold\r\n\r\ndelete metadata.weight; // delete the weight data\r\n\r\nreturn {msg:msg, metadata:metadata, msgType:msgType};",
+          "jsScript": "/* define  constants for the \r\ncorrect execution of the script */\r\nconst SLOPETHRESHOLD = 0.05;\r\nconst MINIMUMTIMESERIES = 2;\r\n\r\nvar data = JSON.parse(metadata.weight);\r\n/* calculate slope (linear regression) */\r\nvar n = data.length;\r\nvar sumX=0, sumY=0, sumXY=0, sumX2=0;\r\n\r\n/* first check if the number of data\r\nis correct, otherwise return immediately \r\nthe message with a negative result */\r\nif(n<MINIMUMTIMESERIES){\r\n    msg.honeyReady = false;\r\n    return {msg:msg, metadata:metadata, msgType:msgType};\r\n}\r\n\r\nfor (var i=0; i<n; i++) {\r\n    var x = data[i].ts / (1000 * 60 * 60); // time in hours\r\n    var y = data[i].value;\r\n    sumX += x; sumY += y; sumXY += x*y; sumX2 += x*x;\r\n}\r\n\r\nvar slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);\r\n\r\n/* if the slop is close to 0 it \r\nmeans that the weight is stable */\r\nmsg.honeyReady = Math.abs(slope) < SLOPETHRESHOLD;\r\n\r\ndelete metadata.weight; // delete the weight data\r\n\r\nreturn {msg:msg, metadata:metadata, msgType:msgType};",
           "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
         },
         "additionalInfo": {
