@@ -200,6 +200,26 @@ Il risultato atteso è il seguente:
 
 **N.B.** Tali richieste sono degli esempi di come inviare o ricevere dati collegandosi al server ThingsBoard. Ciò non esclude che possano essere presenti altre informazioni da inserire nelle richieste per inviare dati o filtrarli secondo altre specifiche. Tali informazioni è possibile trovarle consultando la documentazione a fine pagina.
 
+#### Richiesta RPC
+Una richiesta RPC (Remote Procedure Call) è chiamata che viene effettuata da un dispositivo client per eseguire istruzioni su un dispositivo remoto. 
+In questo caso ThingsBoard supporta le chiamate RPC da dispositivi per poter eseguire istruzioni definibili nelle rule chain.
+
+Tale richiesta può essere sempre fatta in HTTP ed è la seguente:
+```http
+curl -v -X POST -d @telemetry-data-with-ts.json https://$THINGSBOARD_HOST_NAME/api/v1/$ACCESS_TOKEN/rpc --header "Content-Type:application/json"
+```
+I dati da inserire nel file json devono attenersi a questo formato:
+```json
+{
+    "method":"METHOD_NAME",
+    "params":{
+      "param1":"PARAM"
+    }
+}
+```
+
+Ogni richiesta RPC in ThingsBoard è sincrona, quindi il server dovrà inviare una risposta per il corretto completamento della procedura.
+
 
 ## Funzionamento per l'alveare
 ### Utilizzo del Rule Engine
