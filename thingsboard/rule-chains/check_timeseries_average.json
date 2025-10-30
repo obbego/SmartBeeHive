@@ -1,0 +1,187 @@
+{
+  "ruleChain": {
+    "name": "Check timeseries average",
+    "type": "CORE",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null,
+    "additionalInfo": {
+      "description": "Check the status of the device and the timeseries average in the last period chosen by the user"
+    }
+  },
+  "metadata": {
+    "version": 18,
+    "firstNodeIndex": 2,
+    "nodes": [
+      {
+        "type": "org.thingsboard.rule.engine.rpc.TbSendRPCReplyNode",
+        "name": "RPC reply",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "serviceIdMetaDataAttribute": "serviceId",
+          "sessionIdMetaDataAttribute": "sessionId",
+          "requestIdMetaDataAttribute": "requestId"
+        },
+        "additionalInfo": {
+          "description": "reply to RPC command",
+          "layoutX": 1241,
+          "layoutY": 223
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.metadata.TbGetTelemetryNode",
+        "name": "get_latest-telemetries",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 2,
+        "configuration": {
+          "latestTsKeyNames": [
+            "temperature",
+            "humidity",
+            "weight",
+            "noise"
+          ],
+          "aggregation": "NONE",
+          "fetchMode": "ALL",
+          "orderBy": "ASC",
+          "limit": 1000,
+          "useMetadataIntervalPatterns": false,
+          "startIntervalPattern": "",
+          "endIntervalPattern": "",
+          "startInterval": 7,
+          "startIntervalTimeUnit": "DAYS",
+          "endInterval": 1,
+          "endIntervalTimeUnit": "MINUTES"
+        },
+        "additionalInfo": {
+          "description": "node to recover the last telemetries for each key to calculate the average for each one",
+          "layoutX": 604,
+          "layoutY": 148
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "edit_previous-keys",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "msg.metadataKeys = JSON.stringify(Object.keys(metadata)); // register current metadata keys\n/* remove current msg keys */\ndelete msg.method;\ndelete msg.params;\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "node to save old metadata keys and move it to message one, in place of others. ",
+          "layoutX": 298,
+          "layoutY": 150
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "calculate_average-timeseries",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/**\n * Function to calculate the average of an array\n * @param array array to calculate the average\n * @return decimal result of the average\n */\nfunction calculateAverage(array){\n    var sum = 0; // declare sum\n    \n    for(var i=0;i<array.length;i++)\n        sum += array[i].value;\n    \n    return sum/array.length;\n}\n\n/* get the old keys and the current keys of metadata */\nvar oldKeys = JSON.parse(msg.metadataKeys);\ndelete msg.metadataKeys;\nvar currentKeys = Object.keys(metadata);\n\n/* check if it's a timeseries key\nand calculate the average of the values in the array */\nfor(const singleKey of currentKeys){\n    if(!oldKeys.includes(singleKey)){ // if the key it's not included it means it's a telemetry one\n        msg[\"average_\"+singleKey]=calculateAverage(JSON.parse(metadata[singleKey])); // calculate and save the average\n        delete metadata[singleKey]; // delete the metadata key\n    }\n}\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "node to calculate average for each telemetry device and save it into the message",
+          "layoutX": 912,
+          "layoutY": 145
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_error-device-timeseries",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = \"Error in getting timeseries from device \"+metadata.deviceName;\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "ErrorDeviceTimeseries",
+          "severity": "MINOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "alarm to inform that has been an error in getting the timeseries from the device",
+          "layoutX": 916,
+          "layoutY": 229
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
+        "name": "save-attributes_average-telemetry",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 3,
+        "configuration": {
+          "processingSettings": {
+            "type": "ON_EVERY_MESSAGE"
+          },
+          "scope": "SERVER_SCOPE",
+          "notifyDevice": false,
+          "sendAttributesUpdatedNotification": false,
+          "updateAttributesOnlyOnValueChange": true
+        },
+        "additionalInfo": {
+          "description": "save average telemetry values as server attributes for the device",
+          "layoutX": 1227,
+          "layoutY": 146
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 1,
+        "toIndex": 3,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 1,
+        "toIndex": 4,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 1,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 3,
+        "toIndex": 0,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 3,
+        "toIndex": 0,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 3,
+        "toIndex": 5,
+        "type": "Success"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}
