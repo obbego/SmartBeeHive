@@ -65,6 +65,7 @@ La rule chain segue quindi i seguenti passaggi:
 3. **Calcolo medie e verifica** viene calcolata per ogni grandezza separatamente la media del dispositivo interessato e quella degli altri. Viene quindi verificato se le due medie differiscono oltre una certa percentuale di soglia. Tale risultato viene salvato per ogni grandezza attraverso un flag all'interno del messaggio. 
 4. **Switch risultati** lo switch legge quindi i risultati della fase di calcolo e suddivide la rule chain in vari casi, tenendo conto che ci potrebbe essere anche più di una grandezza fisica fuori dalla media.
 5. **Allarmi** per ogni segnalazione va generato un allarme. Sarà presente un allarme personalizzato per grandezze prospettate più uno per grandezze aggiuntive configurabili in futuro. In caso in cui l'esito sia negativo, l'allarme stesso va cancellato. Gli allarmi configurati dovranno rispettare la sintassi `Device_<measure type>_outOfAverage`.
+6. **Response RPC** in qualsiasi caso ritornare un messaggio con risposta RPC. 
 
 
 ## Scheduler
