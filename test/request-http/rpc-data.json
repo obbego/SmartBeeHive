@@ -1,4 +1,4 @@
 {
-    "method":"check-device-status",
+    "method":"check-timeseries-average",
     "params":{}
 }

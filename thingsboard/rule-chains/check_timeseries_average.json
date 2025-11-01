@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 18,
+    "version": 28,
     "firstNodeIndex": 2,
     "nodes": [
       {
@@ -28,8 +28,8 @@
         },
         "additionalInfo": {
           "description": "reply to RPC command",
-          "layoutX": 1241,
-          "layoutY": 223
+          "layoutX": 2027,
+          "layoutY": 219
         }
       },
       {
@@ -91,13 +91,13 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "/**\n * Function to calculate the average of an array\n * @param array array to calculate the average\n * @return decimal result of the average\n */\nfunction calculateAverage(array){\n    var sum = 0; // declare sum\n    \n    for(var i=0;i<array.length;i++)\n        sum += array[i].value;\n    \n    return sum/array.length;\n}\n\n/* get the old keys and the current keys of metadata */\nvar oldKeys = JSON.parse(msg.metadataKeys);\ndelete msg.metadataKeys;\nvar currentKeys = Object.keys(metadata);\n\n/* check if it's a timeseries key\nand calculate the average of the values in the array */\nfor(const singleKey of currentKeys){\n    if(!oldKeys.includes(singleKey)){ // if the key it's not included it means it's a telemetry one\n        msg[\"average_\"+singleKey]=calculateAverage(JSON.parse(metadata[singleKey])); // calculate and save the average\n        delete metadata[singleKey]; // delete the metadata key\n    }\n}\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "jsScript": "/**\n * Function to calculate the average of an array\n * @param array array to calculate the average\n * @return decimal result of the average\n */\nfunction calculateAverage(array){\n    var sum = 0; // declare sum\n    \n    for(var i=0;i<array.length;i++)\n        sum += array[i].value;\n    \n    return sum/array.length;\n}\n\n/* get the telemetry keys */\nvar telemetryKeys = Object.keys(msg);\n\n/* calculate the average, \ndelete the telemetry key \nand add an average one */\nfor(const singleKey of telemetryKeys){\n    msg[\"average_\"+singleKey] = calculateAverage(JSON.parse(msg[singleKey]));\n    delete msg.singleKey;\n}\n\nreturn {msg: msg, metadata: metadata, msgType: \"POST_ATTRIBUTES_REQUEST\"};",
           "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
         },
         "additionalInfo": {
           "description": "node to calculate average for each telemetry device and save it into the message",
-          "layoutX": 912,
-          "layoutY": 145
+          "layoutX": 1708,
+          "layoutY": 157
         }
       },
       {
@@ -123,7 +123,7 @@
         },
         "additionalInfo": {
           "description": "alarm to inform that has been an error in getting the timeseries from the device",
-          "layoutX": 916,
+          "layoutX": 844,
           "layoutY": 229
         }
       },
@@ -141,25 +141,181 @@
           "scope": "SERVER_SCOPE",
           "notifyDevice": false,
           "sendAttributesUpdatedNotification": false,
-          "updateAttributesOnlyOnValueChange": true
+          "updateAttributesOnlyOnValueChange": false
         },
         "additionalInfo": {
           "description": "save average telemetry values as server attributes for the device",
-          "layoutX": 1227,
-          "layoutY": 146
+          "layoutX": 2023,
+          "layoutY": 158
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "move_telemetry-attributes",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* get the old keys and the current keys of metadata */\nvar oldKeys = JSON.parse(msg.metadataKeys);\ndelete msg.metadataKeys;\nvar currentKeys = Object.keys(metadata);\n\n/* check if it's a timeseries key\nand move it to the msg*/\nfor(const singleKey of currentKeys){\n    if(!oldKeys.includes(singleKey)){ // if the key it's not included it means it's a telemetry one\n        msg[singleKey]=metadata[singleKey]; // move to msg part\n        delete metadata[singleKey]; // delete the metadata key\n    }\n}\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "tbelScript": ""
+        },
+        "additionalInfo": {
+          "description": "node used to move telemetry attributes from the metadata to the msg",
+          "layoutX": 888,
+          "layoutY": 151
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsSwitchNode",
+        "name": "switch_alarms-timeseries-last-time",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "var errorList = []; // create the list for errors\nconst TIMETHRESHOLD = 24; // it maximum hours of difference from the last telemetry of that measure type \n\n/**\n * Function to establish if the last time of that\n * specific measure was taken before the threshold\n * @param timestamp timestamp of the measure\n * @return TRUE if the difference of time is lower than the threshold, FALSE otherwise\n */\nfunction getHourDifference(timestamp){\n    return (Date.now() - timestamp) / 1000 / 60 / 60 < TIMETHRESHOLD;\n}\n\n/* get the keys and\ninitialise the variables */\nvar measures = Object.keys(msg);\nvar telemetryList;\n\n/* check for each telemetry the\nlast save of a value */\nfor(const singleMeasure of measures){\n    telemetryList = JSON.parse(msg[singleMeasure]); // get the list of telemetry\n    /* check the difference in hours. \n    If the distance exceeds the threshold add an error */\n    if(getHourDifference(telemetryList[telemetryList.length-1].ts))\n        errorList.push(\"error_\"+singleMeasure);\n}\n\nreturn errorList;",
+          "tbelScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType == 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);"
+        },
+        "additionalInfo": {
+          "description": "node to check if the last time a telemetry was registered is before a specific threshold. In this case a condition to display an alarm will be created",
+          "layoutX": 1188,
+          "layoutY": 148
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_old-temperature",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceOldTemperature",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "indicate alarm that has an old latest telemetry about temperature",
+          "layoutX": 1509,
+          "layoutY": 233
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_old-humidity",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceOldHumidity",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "indicate alarm that has an old latest telemetry about humidity",
+          "layoutX": 1510,
+          "layoutY": 298
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_old-weight",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceOldWeight",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "indicate alarm that has an old latest telemetry about weight",
+          "layoutX": 1509,
+          "layoutY": 358
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_old-noise",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceOldNoise",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "indicate alarm that has an old latest telemetry about noise",
+          "layoutX": 1506,
+          "layoutY": 427
         }
       }
     ],
     "connections": [
       {
         "fromIndex": 1,
-        "toIndex": 3,
-        "type": "Success"
+        "toIndex": 4,
+        "type": "Failure"
       },
       {
         "fromIndex": 1,
-        "toIndex": 4,
-        "type": "Failure"
+        "toIndex": 6,
+        "type": "Success"
       },
       {
         "fromIndex": 2,
@@ -180,6 +336,56 @@
         "fromIndex": 3,
         "toIndex": 5,
         "type": "Success"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 7,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 3,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 3,
+        "type": "error_humidity"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 3,
+        "type": "error_noise"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 3,
+        "type": "error_temperature"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 3,
+        "type": "error_weight"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 8,
+        "type": "error_temperature"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 9,
+        "type": "error_humidity"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 10,
+        "type": "error_weight"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 11,
+        "type": "error_noise"
       }
     ],
     "ruleChainConnections": null
