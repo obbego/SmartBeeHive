@@ -7,11 +7,11 @@
     "debugMode": false,
     "configuration": null,
     "additionalInfo": {
-      "description": "Check the status of the device and the timeseries average in the last period chosen by the user"
+      "description": "check the average of the timeseries in the last period and check whether they're too old"
     }
   },
   "metadata": {
-    "version": 30,
+    "version": 31,
     "firstNodeIndex": 2,
     "nodes": [
       {
