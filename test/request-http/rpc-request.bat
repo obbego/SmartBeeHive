@@ -2,10 +2,10 @@ SET DEVICE_ACCESS_TOKEN=tevWRCdJC7IYUPl3ha4F
 SET DEVICE_ID=04de50a0-b27d-11f0-86b8-4d4474c0a366
 SET THINGSBOARD_HOST_NAME=demo.thingsboard.io
 SET DATA_FILE=rpc-data.json
-SET JWT_TOKEN=eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJkYW5pZWxlLmNoaWFyaW9uQGlpc3Zpb2xhbWFyY2hlc2luaS5lZHUuaXQiLCJ1c2VySWQiOiI0MWFjOTVjMC1iMjc2LTExZjAtODZiOC00ZDQ0NzRjMGEzNjYiLCJzY29wZXMiOlsiVEVOQU5UX0FETUlOIl0sInNlc3Npb25JZCI6IjA1NTdmMzc5LTU5NjQtNGU1Yi04ZWYwLTk2NDIwY2E0YzlkMCIsImV4cCI6MTc2MzgxMTczNywiaXNzIjoidGhpbmdzYm9hcmQuaW8iLCJpYXQiOjE3NjIwMTE3MzcsImZpcnN0TmFtZSI6ImlsIGRlbmllbCIsImVuYWJsZWQiOnRydWUsInByaXZhY3lQb2xpY3lBY2NlcHRlZCI6dHJ1ZSwiaXNQdWJsaWMiOmZhbHNlLCJ0ZW5hbnRJZCI6IjQxOTM0MTYwLWIyNzYtMTFmMC04NmI4LTRkNDQ3NGMwYTM2NiIsImN1c3RvbWVySWQiOiIxMzgxNDAwMC0xZGQyLTExYjItODA4MC04MDgwODA4MDgwODAifQ.HpqdAgm8Sqk3fWASCIUu1WjFo5ZjPzrIj7jDWvurk6YSsBnfw_8NOxZDKeFwicihqhB3U7iA8_M58oAq7lTXpg
+SET JWT_TOKEN=Your_Token
 
 REM Send RPC request
 curl.exe -X POST -d @%DATA_FILE% https://%THINGSBOARD_HOST_NAME%/api/v1/%DEVICE_ACCESS_TOKEN%/rpc --header "Content-Type:application/json"
 
 REM view the server attributes of the device
-curl.exe -s -X GET "https://%THINGSBOARD_HOST_NAME%/api/plugins/telemetry/DEVICE/%DEVICE_ID%/values/attributes?scope=SERVER_SCOPE" -H "Content-Type: application/json" -H "X-Authorization: Bearer %JWT_TOKEN%"
+REM curl.exe -s -X GET "https://%THINGSBOARD_HOST_NAME%/api/plugins/telemetry/DEVICE/%DEVICE_ID%/values/attributes?scope=SERVER_SCOPE" -H "Content-Type: application/json" -H "X-Authorization: Bearer %JWT_TOKEN%"

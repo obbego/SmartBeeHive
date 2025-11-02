@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 28,
+    "version": 30,
     "firstNodeIndex": 2,
     "nodes": [
       {
@@ -28,8 +28,8 @@
         },
         "additionalInfo": {
           "description": "reply to RPC command",
-          "layoutX": 2027,
-          "layoutY": 219
+          "layoutX": 2142,
+          "layoutY": 226
         }
       },
       {
@@ -91,13 +91,13 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "/**\n * Function to calculate the average of an array\n * @param array array to calculate the average\n * @return decimal result of the average\n */\nfunction calculateAverage(array){\n    var sum = 0; // declare sum\n    \n    for(var i=0;i<array.length;i++)\n        sum += array[i].value;\n    \n    return sum/array.length;\n}\n\n/* get the telemetry keys */\nvar telemetryKeys = Object.keys(msg);\n\n/* calculate the average, \ndelete the telemetry key \nand add an average one */\nfor(const singleKey of telemetryKeys){\n    msg[\"average_\"+singleKey] = calculateAverage(JSON.parse(msg[singleKey]));\n    delete msg.singleKey;\n}\n\nreturn {msg: msg, metadata: metadata, msgType: \"POST_ATTRIBUTES_REQUEST\"};",
+          "jsScript": "/**\n * Function to calculate the average of an array\n * @param array array to calculate the average\n * @return decimal result of the average\n */\nfunction calculateAverage(array){\n    var sum = 0; // declare sum\n    \n    for(var i=0;i<array.length;i++)\n        sum += array[i].value;\n    \n    return sum/array.length;\n}\n\n/* get the telemetry keys */\nvar telemetryKeys = Object.keys(msg);\n\n/* calculate the average, \ndelete the telemetry key \nand add an average one */\nfor(const singleKey of telemetryKeys){\n    msg[\"average_\"+singleKey] = calculateAverage(JSON.parse(msg[singleKey]));\n    delete msg[singleKey];\n}\n\nreturn {msg: msg, metadata: metadata, msgType: \"POST_ATTRIBUTES_REQUEST\"};",
           "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
         },
         "additionalInfo": {
           "description": "node to calculate average for each telemetry device and save it into the message",
-          "layoutX": 1708,
-          "layoutY": 157
+          "layoutX": 1903,
+          "layoutY": 159
         }
       },
       {
@@ -145,8 +145,8 @@
         },
         "additionalInfo": {
           "description": "save average telemetry values as server attributes for the device",
-          "layoutX": 2023,
-          "layoutY": 158
+          "layoutX": 2154,
+          "layoutY": 163
         }
       },
       {
@@ -176,7 +176,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "var errorList = []; // create the list for errors\nconst TIMETHRESHOLD = 24; // it maximum hours of difference from the last telemetry of that measure type \n\n/**\n * Function to establish if the last time of that\n * specific measure was taken before the threshold\n * @param timestamp timestamp of the measure\n * @return TRUE if the difference of time is lower than the threshold, FALSE otherwise\n */\nfunction getHourDifference(timestamp){\n    return (Date.now() - timestamp) / 1000 / 60 / 60 < TIMETHRESHOLD;\n}\n\n/* get the keys and\ninitialise the variables */\nvar measures = Object.keys(msg);\nvar telemetryList;\n\n/* check for each telemetry the\nlast save of a value */\nfor(const singleMeasure of measures){\n    telemetryList = JSON.parse(msg[singleMeasure]); // get the list of telemetry\n    /* check the difference in hours. \n    If the distance exceeds the threshold add an error */\n    if(getHourDifference(telemetryList[telemetryList.length-1].ts))\n        errorList.push(\"error_\"+singleMeasure);\n}\n\nreturn errorList;",
+          "jsScript": "var errorList = []; // create the list for errors\nconst TIMETHRESHOLD = 24; // it maximum hours of difference from the last telemetry of that measure type \n\n/**\n * Function to establish if the last time of that\n * specific measure was taken before the threshold\n * @param timestamp timestamp of the measure\n * @return TRUE if the difference of time is lower than the threshold, FALSE otherwise\n */\nfunction isLastTelemetryRecent(timestamp){\n    return (Date.now() - timestamp) / 1000 / 60 / 60 < TIMETHRESHOLD;\n}\n\n/* get the keys and\ninitialise the variables */\nvar measures = Object.keys(msg);\nvar telemetryList;\n\n/* check for each telemetry the\nlast save of a value */\nfor(const singleMeasure of measures){\n    telemetryList = JSON.parse(msg[singleMeasure]); // get the list of telemetry\n    /* check the difference in hours. \n    If the distance exceeds the threshold add an error */\n    if(!isLastTelemetryRecent(telemetryList[telemetryList.length-1].ts))\n        errorList.push(\"error_\"+singleMeasure);\n}\n\n/* if the list has no error found, \npopulate the array with a single value */\nif(errorList.length === 0)\n    errorList.push(\"values_ok\");\n\nreturn errorList;",
           "tbelScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType == 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);"
         },
         "additionalInfo": {
@@ -366,6 +366,11 @@
         "fromIndex": 7,
         "toIndex": 3,
         "type": "error_weight"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 3,
+        "type": "values_ok"
       },
       {
         "fromIndex": 7,
