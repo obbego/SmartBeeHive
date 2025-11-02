@@ -1,0 +1,81 @@
+{
+  "ruleChain": {
+    "name": "Check device status",
+    "type": "CORE",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null,
+    "additionalInfo": {
+      "description": "Function to check status of device. In particular, it controls whether the measures of the sensors are too different from devices of the same environment."
+    }
+  },
+  "metadata": {
+    "version": 14,
+    "firstNodeIndex": 1,
+    "nodes": [
+      {
+        "type": "org.thingsboard.rule.engine.rpc.TbSendRPCReplyNode",
+        "name": "rpc reply",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "serviceIdMetaDataAttribute": "serviceId",
+          "sessionIdMetaDataAttribute": "sessionId",
+          "requestIdMetaDataAttribute": "requestId"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 884,
+          "layoutY": 154
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.metadata.TbGetRelatedAttributeNode",
+        "name": "get_sever-attributes_common-devices",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "relationsQuery": {
+            "fetchLastLevelOnly": false,
+            "direction": "TO",
+            "maxLevel": "2",
+            "filters": [
+              {
+                "relationType": "Contains",
+                "entityTypes": [
+                  "ASSET"
+                ]
+              }
+            ]
+          },
+          "dataToFetch": "ATTRIBUTES",
+          "fetchTo": "DATA",
+          "dataMapping": {
+            "average_temperature": "average_temperatute",
+            "average_weight": "average_weight",
+            "average_humidity": "average_humidity",
+            "average_noise": "average_noise"
+          }
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 367,
+          "layoutY": 150
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 1,
+        "toIndex": 0,
+        "type": "Success"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}
