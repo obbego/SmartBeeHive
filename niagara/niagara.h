@@ -120,10 +120,9 @@ class Niagara {
     
   private:
     /*Receives a raw message from the LoRa device */
-    Niagara_Ret receive_raw(str* source, Niagara_Control* control_output, str* message_output, int timeout);
-
+    Niagara_Ret receive_raw(str* source, Niagara_Control* control_output, str* message_output);
     /*Sends a raw message to a specific destination */
-    Niagara_Ret send_raw(str destination, Niagara_Control control, str message, int timeout);
+    Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
 
     /* RadioLib pointer to the LoRa chip */
     SX1262* lora;

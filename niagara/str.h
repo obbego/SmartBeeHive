@@ -38,6 +38,16 @@ public:
         s += other.s;
         return *this;
     }
+    
+    char operator[](size_t index) const {
+        #if defined(ARDUINO)
+            if(index < s.length()) return s[index];
+            return '\0';
+        #else
+            if(index < s.size()) return s[index];
+            return '\0';
+        #endif
+    }
 
     // Length
     size_t length() const {

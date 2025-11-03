@@ -110,7 +110,7 @@ bool Niagara::set_identifier(str _identifier) {
   return true;
 }
 
-Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
+Niagara_Ret Niagara::receive(str* output, str* source) {
   //If the identifier is empty and not yet initialized then return an error
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
@@ -127,11 +127,6 @@ Niagara_Ret Niagara::receive(str* output, str* source = nullptr) {
   int retransmission_counter = 0;
   //Flag to receive the message a second time since the hash didn't match
   bool reperform_receive;
-  //In case the source contains a null pointer then save it somewhere to avoid a null pointer exception
-  str source_temp;
-  if(source == nullptr) {
-    source = &source_temp;
-  }
 
   //Timer to check for retransmissions
   Timer retransmission_timer;
@@ -300,13 +295,13 @@ Niagara_Ret Niagara::send(str destination, str message) {
   return NIAGARA_OK;
 }
 
-Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, str* message_output, int timeout = 0) {
+Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, str* message_output) {
   //If the identifier is empty and not yet initialized then return an error
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
 
   str receive_output;
-  int status = Niagara::lora->receive(receive_output, timeout);
+  int status = Niagara::lora->receive(receive_output, 0);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
   str* processed_output = Niagara::process_message(receive_output);
@@ -350,7 +345,7 @@ str* Niagara::process_message(str message) {
   if(callsign.length() <= identifierSeparator) return nullptr;
   sourceID = callsign.substring(0, identifierSeparator - 1);
   destinationID = callsign.substring(identifierSeparator + 1);
-  if(!valid_destination(destinationID)) return nullptr;
+  if(!check_destination(destinationID)) return nullptr;
   if(message.length() <= separatorIndex + 1) return nullptr;
   int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|');
   if(secondSeparatorIndex <= 0) return nullptr;
@@ -373,7 +368,7 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
-  int status = Niagara::lora->transmit(formattedMessage);
+  int status = Niagara::lora->transmit(formattedMessage, 0);
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
     return RADIOLIB_ERROR;
