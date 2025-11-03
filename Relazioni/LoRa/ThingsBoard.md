@@ -1,103 +1,5 @@
 # ThingsBoard
 ## Cos'è
-ThingsBoard è la piattaforma scelta per la raccolta dati delle varie arnie. Tale software dovrà essere configurato sul server prescelto per poter poi usufruire delle informazioni salvate
-Il server configurato potrà disporre anche di un'interfaccia predefinita per mostrare i dati raccolti, selezionando quali e come esporli. 
-
-**N.B.** *Dal momento che rientra tra i progetti della scuola realizzare l'interfaccia grafica per i dati dell'alveare, questa relazione affronterà solo il punto di vista tecnico del server, approfondendo cosa è utile per interagire con esso e inserire/estrapolare dati.*
-
-
-## Architettura della piattaforma
-![Architettura ThingsBoard](img/thingsboard-structure.jpg)
-
-L'architettura di ThingsBoard è costituita da vari elementi, di seguito riportiamo i principali. 
-
-### Core
-Il ***Core*** di ThingsBoard è come dice, il nome, la parte centrale della piattaforma. Essa serve a:
-- Gestire le chiamate API da altri dispositivi
-- Agire su attributi e dati di telemetria
-- Processare messaggi provenienti da [*Rule engine*](#rule-engine)
-- Monitorare lo stato di connettività (attivo/disattivo)
-
-### Rule engine
-Il ***Rule engine*** è una parte di ThingsBoard che stabilisce le regole, le condizioni e le azioni da compiere per uno specifico dato. È possibile eseguire confronti, stabilire se salvare o meno il dato o lanciare degli allarmi.
-
-Il rule engine è costituito dai seguenti elementi:
-- **Message** è qualsiasi evento. Può essere un dato come una richiesta, una chiamata API ecc.
-- **Rule node** funzione che agisce su un messaggio, quindi può compiere trasformazioni, lavorazioni del dato ecc.
-- **Rule chain** connessione tra nodi che permette di trasferire l'output di un nodo come input di un altro. 
-
-![*rule engine*](img/rule-engine.png)
-*Esempio di rule engine configutarabile in ThingsBoard*
-
-#### Linguaggio per Rule Node
-Il linguaggio utilizzato per il *Rule Node* è:
-- **TBEL** linguaggio di ThingsBoard con struttura java-like
-- **Javascript** linguaggio java-like maggiormente conosciuto e compatibile per i nodi di ThingsBoard
-
-#### Tipi predefiniti di messaggi
-Esistono dei tipi predefiniti di messaggi intercettabili configurati in ThingsBoard raggiungibili tramite [questo link](https://thingsboard.io/docs/user-guide/rule-engine-2-0/overview/#predefined-message-types).
-
-#### Rule chains e root
-Ogni serie di istruzioni condizionali all'interno del server ThingsBoard assume il nome di ***Rule chain***. Tra queste identifichiamo:
-- **Rule chain root** set di istruzioni principali che parte con l'avvio del server.
-- **Rule chain secondarie** set di istruzioni specifiche che andranno poi collegate in uno specifico punto del root.
-
-### Database
-Tutti i dati inviati su ThingsBoard vengono salvati nei database, che contengono:
-- **entities** come dispositivi, clienti, dashboard, ecc. Contengono quindi la parte di configurazione dell'ambiente ThinhsBoard. 
-- **telemetries** rilevazioni sensori, tempi, statistiche, eventi. 
-
-Tali informazioni possono essere salvate attraverso due tipi di database:
-- **SQL** di default. Viene consigliato l'utilizzo di PostgreSQL in quanto viene ampiamente supportato da ThingsBoard.
-- **Ibridi** salvando le *entities* in PostgreSQL e i dati dei sensori utilizzando Cassandra o TimescaleDB. 
-
-
-## Entità e relazioni
-### Tipologie di entità
-Come è possibile vedere nella parte precedente, ThingsBoard contiene una serie di entità utili al funzionamento della piattaforma. Essi sono:
-- **Tenant** profilo che identifica un singolo o un'organizzazione che compra o possiede dispositivi e asset. Associato al tenant possiamo avere una serie di clienti che possono visualizzare quanto predisposto dal tenant. 
-- **Customer** profilo che consente l'accesso in visualizzazione ai dispositivi già configurati dal Tenant. Un cliente può quindi avere più utenti che può creare e più dispositivi e asset da visualizzare. 
-- **User** profilo che accede solo a dashboard e gestisce entità.
-- **Dispositivi** entità che producono dati in telemetria e che gestiscono comandi RPC.
-- **Asset** entità astratte che possono essere collegate a dispositivi o altri asset *(veicolo, campo, ecc.)*
-- **Entity View** da configurare se si vuole far visualizzare solo una parte di dispositivi e asset al profilo Costumer.
-- **Alarms** eventi che notificano problemi / informazioni con dispositivi, asset o entità.
-- **Dashboard** visualizzazione dei dispositivi IoT per la loro configurazione e la costruzione dell'interfaccia grafica.
-
-### Tipologie di relazioni
-Le relazioni collegano dispositivi, asset e altre entità presenti all'interno dello stesso profilo Tenant.
-I tipi di relazione sono arbitrari, come:
-- *Contiene*
-- *Gestisce*
-- *ecc.*
-
-Queste relazioni vengo poi salvate nella parte di database ThingsBoard dedicata alle entità. 
-
-![Entità/Relazioni](img/entita-relazioni.svg) 
-*Esempio di schema entità/relazione utilizzato in ThingsBoard*
-
-## Comunicazione con ThingsBoard
-### Protocolli supportati per salvataggio
-Per il salvataggio di dati su server ThingsBoard è possibile utilizzare chiamate API possibili con vari protocolli, come:
-- **HTTP**
-- **MQTT**
-- **CoAP**
-- **LwM2M**
-
-### Esempio con HTTP
-Di seguito vengono riportate alcune istruzioni per comunicare con il server ThingsBoard per il salvataggio e la richiesta dei dati.
-
-#### URL del server
-L'URL da utilizzare per la comunicazione con il server ThingsBoard è:
-```http
-http(s)://$THINGSBOARD_HOST_NAME/api/v1/$ACCESS_TOKEN/telemetry
-```
-dove:
-- *$THINGSBOARD_HOST_NAME* è l'hostname o l'indirizzo IP. 
-- *$ACCESS_TOKEN* token del dispositivo (presente una volta creato su ThingsBoard)
-
-# ThingsBoard
-## Cos'è
 ThingsBoard è la piattaforma scelta per la raccolta dei dati delle varie arnie. Il software dovrà essere configurato sul server prescelto per poter poi utilizzare le informazioni salvate.
 Il server configurato potrà disporre di un'interfaccia predefinita per mostrare i dati raccolti, scegliendo quali informazioni esporre e come visualizzarle.
 
@@ -298,6 +200,26 @@ Il risultato atteso è il seguente:
 
 **N.B.** Tali richieste sono degli esempi di come inviare o ricevere dati collegandosi al server ThingsBoard. Ciò non esclude che possano essere presenti altre informazioni da inserire nelle richieste per inviare dati o filtrarli secondo altre specifiche. Tali informazioni è possibile trovarle consultando la documentazione a fine pagina.
 
+#### Richiesta RPC
+Una richiesta RPC (Remote Procedure Call) è chiamata che viene effettuata da un dispositivo client per eseguire istruzioni su un dispositivo remoto. 
+In questo caso ThingsBoard supporta le chiamate RPC da dispositivi per poter eseguire istruzioni definibili nelle rule chain.
+
+Tale richiesta può essere sempre fatta in HTTP ed è la seguente:
+```http
+curl -v -X POST -d @telemetry-data-with-ts.json https://$THINGSBOARD_HOST_NAME/api/v1/$ACCESS_TOKEN/rpc --header "Content-Type:application/json"
+```
+I dati da inserire nel file json devono attenersi a questo formato:
+```json
+{
+    "method":"METHOD_NAME",
+    "params":{
+      "param1":"PARAM"
+    }
+}
+```
+
+Ogni richiesta RPC in ThingsBoard è sincrona, quindi il server dovrà inviare una risposta per il corretto completamento della procedura.
+
 
 ## Funzionamento per l'alveare
 ### Utilizzo del Rule Engine
@@ -321,6 +243,8 @@ Per far sì che il sistema sia completo e possa segnalare informazioni o problem
 - **controllo dato** una volta passato il controllo del dispositivo occorre che il dato venga controllato, ossia che la grandezza da misurare sia già stata registrata e che il dato non sia fuori dal range previsto, possibile segnale di un'anomalia dei sensori o di un errore nella trasmissione del dato. In base a quello sarà possibile scegliere se o meno archiviare la telemetria o sostituirla con una già presente. In quel caso è possibile segnalare la cosa con un semplice allarme di rilevanza minore.
 - **controllo dispositivo** deve essere controllato che il dispositivo abbia effettivamente ricevuto misurazioni nell'ultimo intervallo di tempo e che gli ultimi dati raccolti non sforino con la media dei dispositivi vicini. Per questo tipo di dato occorrerebbe inserire un warning. 
 - **controllo alveare** per il controllo dell'alveare è possibile inserire un allarme che indica alcune informazioni relative all'alveare. Ad esempio con un warning si potrebbe indicare il momento in cui raccogliere il miele.
+
+**N.B.** *Per i controlli periodici non è possibile farlo direttamente con le rule chains di ThingsBoard, ma utilizzare uno scheduler esterno che periodicamente invii la richiesta al server*
 
 
 ## Link utili

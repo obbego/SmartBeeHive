@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 3,
+    "version": 20,
     "firstNodeIndex": 0,
     "nodes": [
       {
@@ -26,7 +26,7 @@
             "weight"
           ],
           "aggregation": "NONE",
-          "fetchMode": "FIRST",
+          "fetchMode": "ALL",
           "orderBy": "ASC",
           "limit": 1000,
           "useMetadataIntervalPatterns": false,
@@ -44,24 +44,6 @@
         }
       },
       {
-        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
-        "name": "calculate_weight-stabilty",
-        "debugSettings": null,
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 0,
-        "configuration": {
-          "scriptLang": "JS",
-          "jsScript": "var data = JSON.parse(metadata.weight);\r\n/* calculate slope (linear regression) */\r\nvar n = data.length;\r\nvar sumX=0, sumY=0, sumXY=0, sumX2=0;\r\n\r\nfor (var i=0; i<n; i++) {\r\n    var x = data[i].ts / (1000 * 60 * 60); // time in hours\r\n    var y = data[i].value;\r\n    sumX += x; sumY += y; sumXY += x*y; sumX2 += x*x;\r\n}\r\n\r\nvar slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);\r\n\r\n/* if the slop is close to 0 it \r\nmeans that the weight is stable */\r\nreturn Math.abs(slope) < 0.01; // 0.01 kg/h is the threshold\r\n",
-          "tbelScript": "return msg.temperature > 20;"
-        },
-        "additionalInfo": {
-          "description": "Calculate if the weight is stable during the selected days",
-          "layoutX": 635,
-          "layoutY": 157
-        }
-      },
-      {
         "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
         "name": "alarm_get-honey",
         "debugSettings": null,
@@ -70,7 +52,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "alarmDetailsBuildJs": "return \"The weight of the beehive \"+metadata.deviceName+\" is stable. It's time to gather some honey!\";",
+          "alarmDetailsBuildJs": "var details = {\n    \"message\":\"The weight of the beehive \"+metadata.deviceName+\" is stable. It's time to gather some honey!\"\n};\n\nreturn details;",
           "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
           "useMessageAlarmData": false,
           "overwriteAlarmDetails": false,
@@ -84,7 +66,7 @@
         },
         "additionalInfo": {
           "description": "alarm informing that the weight of the beehive is stable and it's suggested to gather some honey",
-          "layoutX": 939,
+          "layoutX": 1295,
           "layoutY": 158
         }
       },
@@ -103,7 +85,7 @@
         },
         "additionalInfo": {
           "description": "node to clear the previous alarm of the honey ready",
-          "layoutX": 950,
+          "layoutX": 1306,
           "layoutY": 248
         }
       },
@@ -133,28 +115,106 @@
           "layoutX": 623,
           "layoutY": 234
         }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.rpc.TbSendRPCReplyNode",
+        "name": "reply_rpc",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "serviceIdMetaDataAttribute": "serviceId",
+          "sessionIdMetaDataAttribute": "sessionId",
+          "requestIdMetaDataAttribute": "requestId"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1087,
+          "layoutY": 326
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "calculate_slope-weight",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* define  constants for the \r\ncorrect execution of the script */\r\nconst SLOPETHRESHOLD = 0.01;\r\nconst MINIMUMTIMESERIES = 2;\r\n\r\nvar data = JSON.parse(metadata.weight);\r\n/* calculate slope (linear regression) */\r\nvar n = data.length;\r\nvar sumX=0, sumY=0, sumXY=0, sumX2=0;\r\n\r\n/* first check if the number of data\r\nis correct, otherwise return immediately \r\nthe message with a negative result */\r\nif(n<MINIMUMTIMESERIES){\r\n    msg.honeyReady = false;\r\n    return {msg:msg, metadata:metadata, msgType:msgType};\r\n}\r\n\r\nfor (var i=0; i<n; i++) {\r\n    var x = data[i].ts / (1000 * 60 * 60); // time in hours\r\n    var y = data[i].value;\r\n    sumX += x; sumY += y; sumXY += x*y; sumX2 += x*x;\r\n}\r\n\r\nvar slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);\r\n\r\n/* if the slop is close to 0 it \r\nmeans that the weight is stable */\r\nmsg.honeyReady = Math.abs(slope) < SLOPETHRESHOLD;\r\n\r\ndelete metadata.weight; // delete the weight data\r\n\r\nreturn {msg:msg, metadata:metadata, msgType:msgType};",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "node that calculates how the slop can change and adds a new data to the message",
+          "layoutX": 616,
+          "layoutY": 160
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsSwitchNode",
+        "name": "switch_honey-ready",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "jsScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType === 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);",
+          "tbelScript": "if(msg.honeyReady)\n    return \"honey-ready\";\n\nreturn \"weight-increasing\";"
+        },
+        "additionalInfo": {
+          "description": "switch that checks if honey is ready",
+          "layoutX": 882,
+          "layoutY": 167
+        }
       }
     ],
     "connections": [
       {
         "fromIndex": 0,
-        "toIndex": 1,
-        "type": "Success"
+        "toIndex": 3,
+        "type": "Failure"
       },
       {
         "fromIndex": 0,
+        "toIndex": 5,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 5,
+        "toIndex": 6,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 1,
+        "type": "honey-ready"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 2,
+        "type": "weight-increasing"
+      },
+      {
+        "fromIndex": 6,
         "toIndex": 4,
         "type": "Failure"
       },
       {
-        "fromIndex": 1,
-        "toIndex": 2,
-        "type": "True"
+        "fromIndex": 6,
+        "toIndex": 4,
+        "type": "honey-ready"
       },
       {
-        "fromIndex": 1,
-        "toIndex": 3,
-        "type": "False"
+        "fromIndex": 6,
+        "toIndex": 4,
+        "type": "weight-increasing"
       }
     ],
     "ruleChainConnections": null
