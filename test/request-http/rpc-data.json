@@ -1,4 +1,17 @@
 {
     "method":"check-device-status",
-    "params":{}
+    "params":{
+        "timeseriesAverage":[
+            {
+                "key":"average_weight",
+                "value":55.8,
+                "deviceName":"beehive1"
+            },
+            {
+                "key":"average_weight",
+                "value":35.8,
+                "deviceName":"beehive2"
+            }
+        ]
+    }
 }
