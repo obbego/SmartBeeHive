@@ -11,8 +11,8 @@
     }
   },
   "metadata": {
-    "version": 14,
-    "firstNodeIndex": 1,
+    "version": 24,
+    "firstNodeIndex": null,
     "nodes": [
       {
         "type": "org.thingsboard.rule.engine.rpc.TbSendRPCReplyNode",
@@ -28,54 +28,30 @@
         },
         "additionalInfo": {
           "description": "",
-          "layoutX": 884,
-          "layoutY": 154
+          "layoutX": 1469,
+          "layoutY": 156
         }
       },
       {
-        "type": "org.thingsboard.rule.engine.metadata.TbGetRelatedAttributeNode",
-        "name": "get_sever-attributes_common-devices",
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "calculate_device-averages",
         "debugSettings": null,
         "singletonMode": false,
         "queueName": null,
-        "configurationVersion": 1,
+        "configurationVersion": 0,
         "configuration": {
-          "relationsQuery": {
-            "fetchLastLevelOnly": false,
-            "direction": "TO",
-            "maxLevel": "2",
-            "filters": [
-              {
-                "relationType": "Contains",
-                "entityTypes": [
-                  "ASSET"
-                ]
-              }
-            ]
-          },
-          "dataToFetch": "ATTRIBUTES",
-          "fetchTo": "DATA",
-          "dataMapping": {
-            "average_temperature": "average_temperatute",
-            "average_weight": "average_weight",
-            "average_humidity": "average_humidity",
-            "average_noise": "average_noise"
-          }
+          "scriptLang": "JS",
+          "jsScript": "/* get the deviceList and \nthe attributes of the message */\nvar averageList = JSON.parse(msg.params.timeseriesAverage);\ndelete msg.method;\ndelete msg.params;\n\n/* variable declaration for \nthe counting of the average */\nvar sumTemperature = 0, sumWeight = 0, sumHumidity = 0, sumNoise = 0;\nvar temperatureCounter = 0, weightCounter = 0, humidityCounter = 0, noiseCounter = 0;\n\nfor(const singleAverage of averageList){\n    /* if it's the measure of another device add it to \n    the sum so as to do the average later */\n    if(singleAverage.key === \"temperature\" && singleAverage.deviceName!=metadata.deviceName){\n        sumTemperature += singleAverage.value;\n        temperatureCounter++;\n    }\n    /* if it's the value of the device \n    add it to the message directly */\n    else if(singleAverage.key === \"temperature\")\n        msg.device_temperature = singleAverage.value;\n    /* do the rest for the other averages types */\n    else if(singleAverage.key === \"humidity\" && singleAverage.deviceName!=metadata.deviceName){\n        sumHumidity += singleAverage.value;\n        humidityCounter++;\n    }\n    else if(singleAverage.key === \"humidity\")\n        msg.device_humidity = singleAverage.value;\n    else if(singleAverage.key === \"weight\" && singleAverage.deviceName!=metadata.deviceName){\n        sumWeight += singleAverage.value;\n        weightCounter++;\n    }\n    else if(singleAverage.key === \"weight\")\n        msg.device_weight = singleAverage.value;\n    else if(singleAverage.key === \"noise\" && singleAverage.deviceName!=metadata.deviceName){\n        sumNoise += singleAverage.value;\n        noiseCounter++;\n    }\n    else if(singleAverage.key === \"noise\")\n        msg.device_noise = singleAverage.value;\n}\n\n/* finally calculate the averages of the\nmeasures checking if it has some values to gather */\nif(temperatureCounter != 0)\n    msg.other_temperature = sumTemperature / temperatureCounter;\nelse\n    msg.other_temperature = -1;\n    \nif(humidityCounter != 0)\n    msg.other_humidity = sumHumidity / humidityCounter;\nelse\n    msg.other_humidity = -1;\n    \nif(weightCounter != 0)\n    msg.other_weight = sumWeight / weightCounter;\nelse\n    msg.other_weight = -1;\n    \nif(temperatureCounter != 0)\n    msg.other_temperature = sumTemperature / temperatureCounter;\nelse\n    msg.other_temperature = -1;\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "tbelScript": ""
         },
         "additionalInfo": {
-          "description": "",
-          "layoutX": 367,
-          "layoutY": 150
+          "description": "node to calculate averages of current device and the others to compare them and give possible alarms",
+          "layoutX": 333,
+          "layoutY": 151
         }
       }
     ],
-    "connections": [
-      {
-        "fromIndex": 1,
-        "toIndex": 0,
-        "type": "Success"
-      }
-    ],
+    "connections": null,
     "ruleChainConnections": null
   }
 }

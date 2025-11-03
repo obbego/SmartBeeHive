@@ -1,3 +1,5 @@
+@echo off
+
 SET DEVICE_ACCESS_TOKEN=BhP1QobnPngCTa3qjo6Z
 SET THINGSBOARD_HOST_NAME=demo.thingsboard.io
 SET DATA_FILE=telemetry-data.json
