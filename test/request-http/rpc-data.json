@@ -1,16 +1,12 @@
 {
-    "method":"check-device-status",
+    "method":"check-telemetry-validity",
     "params":{
-        "timeseriesAverage":[
+        "content":[
             {
-                "key":"average_weight",
-                "value":55.8,
-                "deviceName":"beehive1"
-            },
-            {
-                "key":"average_weight",
-                "value":35.8,
-                "deviceName":"beehive2"
+                "ts":1762271975000,
+                "values":{
+                    "weight":78.5
+                }
             }
         ]
     }
