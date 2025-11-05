@@ -38,15 +38,6 @@ In questa sezione occorre applicare le seguenti modifiche:
 2. **POST TELEMETRY** in questo ramo dopo il `Message Type Switch` bisogna agganciare il nodo per il controllo della validità del dato. Se tale nodo restituirà esito positivo, il dato verrà salvato nel database con l'apposito nodo. 
 3. **RPC REQUEST FROM DEVICE** nel ramo della richiesta RPC da dispositivo, sempre dopo il `Message Type Switch`, si deve fare un controllo del testo del messaggio, che indicherà se attivare il controllo del peso dell'arnia, se effettuare un controllo del dispositivo o nessuna delle due. 
 
-#### Check telemetry validity
-Questa rule chain viene attivata ogni qualvolta si desideri salvare una telemetria nel server ThingsBoard. 
-Tale rule chain verifica la validità del dato con una logica che tenta di ridurre al minimo il margine di errore nella misurazione:
-1. **Ottenimento telemetrie** il messaggio input di partenza viene arricchito con le recenti telemetrie di tutti i dispositivi facenti parte dello stesso asset in quel determinato orario. 
-2. **Controllo inserimento dato** se il dato era già stato precedentemente inserito, viene impostato un flag pari a `true` all'interno del messaggio. 
-3. **Confronto con dato in input** se il dato inserito è il primo, questo verrà salvato nel database. Se invece il dato era stato già precedentemente salvato, esso verrà sostituito con quello attuale solo se si avvicina maggiormente alla media delle telemetrie di tutti i dispositivi in quell'orario. Questo viene fatto perchè ci potrebbero essere errori nella trasmissione del dato e questo potrebbe arrivare corrotto e quindi errato.
-Il risultato viene salvato all'interno del messaggio con un apposito flag. 
-4. **Switch risultato** leggendo il messaggio aggiornato suddividerà la rule chain in esito positivo o negativo, in caso di esito positivo, il messaggio tornerà nella ***Root rule chain*** dove sarà presente il nodo di salvataggio nel database.
-
 #### Check weight beehive
 Il seguente nodo si attiva dopo che viene determinata la natura di una richiesta RPC da un dispositivo.
 La rule chain ha il compito di verificare se il peso è stabile nel tempo e indicare quindi se è possibile raccogliere il miele o meno:
@@ -56,6 +47,23 @@ La rule chain ha il compito di verificare se il peso è stabile nel tempo e indi
 4. **Allarmi** in caso di esito positivo viene attivato l'allarme `HoneyReady`, in caso contrario viene disattivato se presente in precedenza.
 5. **Response RPC** in qualsiasi caso verrà effettuata una risposta RPC contenente il messaggio aggiornato, per la corretta terminazione della richiesta effettuata. 
 
+#### Check timeseries average
+Questa rule chain azionata tramite apposita richiesta RPC ha lo scopo di calcolare per ogni dispositivo la media delle telemetrie fatte nell'ultimo periodo (indicativamente l'ultima settimana).
+La rule chain sarà quindi composta da:
+1. **Ottenimento telemetrie** dal dispositivo si ricavano tutte le telemetrie appartenenti all'intervallo scelto. 
+2. **Valutazione telemetrie** se l'ultima telemetria per quella grandezza supera un certo intervallo di tempo (un giorno) viene segnalato un errore su quel dispositivo. 
+3. **Calcolo media** viene calcolata la media per ogni grandezza trovata. 
+4. **Salvataggio attributi** i dati vengono salvati su quel dispositivo.
+ 
+#### Check telemetry validity
+Questa rule chain viene attivata ogni qualvolta si desideri salvare una telemetria nel server ThingsBoard. 
+Tale rule chain verifica la validità del dato con una logica che tenta di ridurre al minimo il margine di errore nella misurazione:
+1. **Ottenimento medie misurazioni** dall'asset che contiene i dispositivi viene ricavata la media di tutte la grandezze disponibili.  
+2. **Controllo inserimento dato** se il dato era già stato precedentemente inserito, verrà utilizzato nella valutazione della telemetria appena inserita. 
+3. **Confronto con dato in input** se il dato inserito è il primo, questo verrà salvato nel database. Se invece il dato era stato già precedentemente salvato, esso verrà sostituito con quello attuale solo se si avvicina maggiormente alla media delle telemetrie di tutti i dispositivi in quell'orario. Questo viene fatto perchè ci potrebbero essere errori nella trasmissione del dato e questo potrebbe arrivare corrotto e quindi errato.
+Il risultato viene salvato all'interno del messaggio con un apposito flag. 
+4. **Aggiornamento messaggio** vengono eliminate le misurazioni considerate non valide e il messaggio verrà ritornato nella ***Root rule chain*** dove sarà presente il nodo di salvataggio nel database.
+
 #### Check device status
 Il dispositivo necessita in oltre controlli per verificare se il suo stato (ossia quello dei sensori) è ottimale, o ci sono dei dati che sono molto diversi rispetto alla media. 
 La rule chain si occupa quindi di verificare tutte le grandezze fisiche misurate dal dispositivo e verificare su tutte se sono in linea con quelle degli altri dispositivi, a seguito di una richiesta RPC da un dispositivo.
@@ -64,8 +72,29 @@ La rule chain segue quindi i seguenti passaggi:
 2. **Ottenimento telemetrie** vengono estrapolati le telemetrie di tutte le grandezze fisiche di tutte le arnie nell'ultimo periodo (indicativamente l'ultima settimana). Queste verranno aggiunte al messaggio. 
 3. **Calcolo medie e verifica** viene calcolata per ogni grandezza separatamente la media del dispositivo interessato e quella degli altri. Viene quindi verificato se le due medie differiscono oltre una certa percentuale di soglia. Tale risultato viene salvato per ogni grandezza attraverso un flag all'interno del messaggio. 
 4. **Switch risultati** lo switch legge quindi i risultati della fase di calcolo e suddivide la rule chain in vari casi, tenendo conto che ci potrebbe essere anche più di una grandezza fisica fuori dalla media.
-5. **Allarmi** per ogni segnalazione va generato un allarme. Sarà presente un allarme personalizzato per grandezze prospettate più uno per grandezze aggiuntive configurabili in futuro. In caso in cui l'esito sia negativo, l'allarme stesso va cancellato. Gli allarmi configurati dovranno rispettare la sintassi `Device_<measure type>_outOfAverage`.
+5. **Allarmi** per ogni segnalazione va generato un allarme. Sarà presente un allarme personalizzato per grandezze prospettate più uno per grandezze aggiuntive configurabili in futuro. In caso in cui l'esito sia negativo, l'allarme stesso va cancellato.
 6. **Response RPC** in qualsiasi caso ritornare un messaggio con risposta RPC. 
+7. **Salvataggio asset** la rule chain esegue il calcolo di una media generale tra il dispositivo corrente e gli altri dispositivi da salvare come attributo nell'asset contenitore dei dispositivi.
+
+### Allarmi
+La seguente sezione indica i possibili allarmi che potrebbero essere generati dal server ThingsBoard a seguito di richieste HTTP per invio telemetrie o RPC sempre controllate mediante Rule Chains.
+
+| Nome allarme | Tipologia | Descrizione |
+|------------|------------|------------|
+| `DeviceNotFound` | Critical | Il dispositivo non viene trovato e la fase di autenticazione viene interrotta. |
+| `DeviceDifferentTemperature` | Major | Il dispositivo ha una temperatura media molto diversa rispetto a quella degli altri dispositivi. |
+| `DeviceDifferentHumidity` | Major | Il dispositivo ha un'umidità media molto diversa rispetto a quella degli altri dispositivi. |
+| `DeviceDifferentWeight` | Major | Il dispositivo ha un peso medio molto diverso rispetto a quella degli altri dispositivi. |
+| `DeviceDifferentNoise` | Major | Il dispositivo ha un rumore medio molto diverso rispetto a quella degli altri dispositivi. |
+| `ChangeOriginatorToAsset` | Minor | Il cambio di originatore del messaggio da dispositivo ad asset non è riuscito. |
+| `ErrorDeviceTimeseries` | Minor | L'arricchimento del messaggio con le telemetrie del dispositivo non è riuscito.|
+| `DeviceOldTemperature` | Major | L'ultima temperatura registrata supera un certo intervallo di tempo. |
+| `DeviceOldHumidity` | Major | L'ultima umidità registrata supera un certo intervallo di tempo. |
+| `DeviceOldWeight` | Major | L'ultimo peso registrato supera un certo intervallo di tempo. |
+| `DeviceOldNoise` | Major | L'ultimo rumore registrato supera un certo intervallo di tempo. |
+| `ErrorTimeseriesWeightDevice` | Minor | L'arricchimento con le telemetrie di peso del dispositivo non è riuscito. |
+| `HoneyReady` | Warning | Avviso che è possibile raccogliere il miele |
+| `FailedAssetAttributes` | Minor | Recupero degli attributi dell'asset non riuscito. |
 
 
 ## Scheduler
