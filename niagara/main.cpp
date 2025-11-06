@@ -9,7 +9,7 @@ int main(void) {
 	str source;
 	device.receive(&source, &receive);
 
-	printf("Received: %s", receive);
+	printf("Received: %s\n", receive);
 
 	return 0;
 }

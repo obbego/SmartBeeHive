@@ -93,7 +93,7 @@ Niagara::Niagara(bool log = true) {
   //Initialize the radio module
   std::optional<SX1262> radio_return = init_radio();
   if(!radio_return.has_value()) return;
-  Niagara::lora = radio_return.value();
+  Niagara::lora = &radio_return.value();
 
   //Initialise the identifier as empty
   Niagara::identifier = "";
@@ -301,7 +301,7 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
     return NIAGARA_NO_IDENTIFIER;
 
   str receive_output;
-  int status = Niagara::lora.receive((uint8_t*)receive_output.c_str(), 0);
+  int status = Niagara::lora->receive((uint8_t*)receive_output.c_str(), 0);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
   str processed_output[3];
@@ -354,7 +354,7 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
-  int status = Niagara::lora.transmit((uint8_t*)formattedMessage.c_str(), 0);
+  int status = Niagara::lora->transmit((uint8_t*)formattedMessage.c_str(), 0);
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
     return RADIOLIB_ERROR;
