@@ -125,7 +125,7 @@ class Niagara {
     Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
 
     /* RadioLib pointer to the LoRa chip */
-    SX1262* lora;
+    SX1262 lora;
     /* Niagara identifier for this device */
     str identifier;
     /* Whether to log radio initialization or not */
