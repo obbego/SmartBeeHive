@@ -404,8 +404,9 @@ bool Niagara::check_identifier(str identifier) {
   }
   return true;
   #else
-  for (char c : identifier) {
-      if (!std::isalnum(static_cast<unsigned char>(c))) return false;
+  const char* identifier_array = identifier.c_str();
+  for (int i = 0; i < identifier.length(); i++) {
+      if (!std::isalnum(static_cast<unsigned char>(identifier_array[i]))) return false;
   }
   return true;
   #endif
