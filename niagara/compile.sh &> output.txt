@@ -301,11 +301,10 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
     return NIAGARA_NO_IDENTIFIER;
 
   str receive_output;
-  int status = Niagara::lora->receive((uint8_t*)receive_output.c_str(), 0);
+  int status = Niagara::lora->receive((uint8_t*)(receive_output.c_str()), 0);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
-  str processed_output[3];
-  Niagara::process_message(processed_output, receive_output);
+  str* processed_output = Niagara::process_message(receive_output);
   if(processed_output == nullptr) return NIAGARA_NOT_DESTINATION;
   
   int control_value = processed_output[1].toInt();
@@ -316,35 +315,36 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
   return NIAGARA_OK;
 }
 
-bool Niagara::process_message(str* output, str message) {
+str* Niagara::process_message(str message) {
   //If the identifier is empty and not yet initialized then return an error
   if(Niagara::identifier.length() == 0)
-    return false;
+    return nullptr;
 
   //In case the message destination isn't this board then exit
   int separatorIndex = message.indexOf('|');
-  if(separatorIndex <= 0) return false;
+  if(separatorIndex <= 0) return nullptr;
   str callsign = message.substring(0, separatorIndex - 1);
   //Separate the destination id in source and destination id
   str sourceID, destinationID;
   int identifierSeparator = callsign.indexOf('.');
-  if(identifierSeparator <= 0) return false;
-  if(callsign.length() <= identifierSeparator) return false;
+  if(identifierSeparator <= 0) return nullptr;
+  if(callsign.length() <= identifierSeparator) return nullptr;
   sourceID = callsign.substring(0, identifierSeparator - 1);
   destinationID = callsign.substring(identifierSeparator + 1);
-  if(!valid_destination(destinationID)) return false;
-  if(message.length() <= separatorIndex + 1) return false; 
+  if(!check_destination(destinationID)) return nullptr;
+  if(message.length() <= separatorIndex + 1) return nullptr;
   int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|');
-  if(secondSeparatorIndex <= 0) return false;
+  if(secondSeparatorIndex <= 0) return nullptr;
 
   //Separate the str into the control sequence and the message itself
-  output[0] = sourceID;
-  output[1] = message.substring(separatorIndex + 1, secondSeparatorIndex - 1);
+  str separated[3];
+  separated[0] = sourceID;
+  separated[1] = message.substring(separatorIndex + 1, secondSeparatorIndex - 1);
   if(message.length() > secondSeparatorIndex + 1)
-    output[2] = message.substring(secondSeparatorIndex + 1);
-  else output[2] = "";
+    separated[2] = message.substring(secondSeparatorIndex + 1);
+  else separated[2] = "";
 
-  return true;
+  return separated;
 }
 
 Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str message) {
@@ -354,7 +354,7 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
-  int status = Niagara::lora->transmit((uint8_t*)formattedMessage.c_str(), 0);
+  int status = Niagara::lora->transmit(formattedMessage, 0);
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
     return RADIOLIB_ERROR;
@@ -362,8 +362,8 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 }
 
 str Niagara::format_message(str destination, Niagara_Control control, str message) {
-  if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0) return "";
-  return (Niagara::identifier + "." + destination + "|" + str(static_cast<int>(control)) + "|" + message);
+  if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0 || control.indexOf('|') >= 0) return "";
+  return (Niagara::identifier + "." + destination + "|" + static_cast<int>(control) + "|" + message);
 }
 
 bool Niagara::valid_destination(str destination) {
@@ -379,7 +379,7 @@ bool Niagara::valid_destination(str destination) {
       if (tolower(Niagara::identifier.charAt(i)) != tolower(destination.charAt(i))) return false;
   }
   #else
-  for (size_t i = 0; i < Niagara::identifier.length(); ++i) {
+  for (size_t i = 0; i < Niagara::identifier.size(); ++i) {
       if (std::tolower(static_cast<unsigned char>(Niagara::identifier[i])) !=
           std::tolower(static_cast<unsigned char>(destination[i]))) {
           return false;
