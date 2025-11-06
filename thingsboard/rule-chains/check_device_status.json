@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 14,
+    "version": 34,
     "firstNodeIndex": 1,
     "nodes": [
       {
@@ -27,23 +27,182 @@
           "requestIdMetaDataAttribute": "requestId"
         },
         "additionalInfo": {
-          "description": "",
-          "layoutX": 884,
-          "layoutY": 154
+          "description": "reply to the initial request",
+          "layoutX": 944,
+          "layoutY": 296
         }
       },
       {
-        "type": "org.thingsboard.rule.engine.metadata.TbGetRelatedAttributeNode",
-        "name": "get_sever-attributes_common-devices",
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "calculate_device-averages",
         "debugSettings": null,
         "singletonMode": false,
         "queueName": null,
-        "configurationVersion": 1,
+        "configurationVersion": 0,
         "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* get the deviceList and \nthe attributes of the message */\nvar averageList = msg.params.timeseriesAverage;\ndelete msg.method;\ndelete msg.params;\n\n/* variable declaration for \nthe counting of the average */\nvar sumTemperature = 0, sumWeight = 0, sumHumidity = 0, sumNoise = 0;\nvar temperatureCounter = 0, weightCounter = 0, humidityCounter = 0, noiseCounter = 0;\n\nfor(const singleAverage of averageList){\n    /* if it's the measure of another device add it to \n    the sum so as to do the average later */\n    if(singleAverage.key === \"average_temperature\" && singleAverage.deviceName!=metadata.deviceName){\n        sumTemperature += singleAverage.value;\n        temperatureCounter++;\n    }\n    /* if it's the value of the device \n    add it to the message directly */\n    else if(singleAverage.key === \"average_temperature\")\n        msg.device_temperature = singleAverage.value;\n    /* do the rest for the other averages types */\n    else if(singleAverage.key === \"average_humidity\" && singleAverage.deviceName!=metadata.deviceName){\n        sumHumidity += singleAverage.value;\n        humidityCounter++;\n    }\n    else if(singleAverage.key === \"average_humidity\")\n        msg.device_humidity = singleAverage.value;\n    else if(singleAverage.key === \"average_weight\" && singleAverage.deviceName!=metadata.deviceName){\n        sumWeight += singleAverage.value;\n        weightCounter++;\n    }\n    else if(singleAverage.key === \"average_weight\")\n        msg.device_weight = singleAverage.value;\n    else if(singleAverage.key === \"average_noise\" && singleAverage.deviceName!=metadata.deviceName){\n        sumNoise += singleAverage.value;\n        noiseCounter++;\n    }\n    else if(singleAverage.key === \"average_noise\")\n        msg.device_noise = singleAverage.value;\n}\n\n/* finally calculate the averages of the\nmeasures checking if it has some values to gather */\nif(temperatureCounter != 0)\n    msg.other_temperature = sumTemperature / temperatureCounter;\n    \nif(humidityCounter != 0)\n    msg.other_humidity = sumHumidity / humidityCounter;\n    \nif(weightCounter != 0)\n    msg.other_weight = sumWeight / weightCounter;\n    \nif(noiseCounter != 0)\n    msg.other_noise = sumNoise / noiseCounter;\n    \n/* then check if there is both \naverage of the single measure and average of other devices \nin order to make a general_average */\nif('device_temperature' in msg && 'other_temperature' in msg)\n    msg.general_temperature = (sumTemperature + msg.device_temperature) / (temperatureCounter+1);\nif('device_humidity' in msg && 'other_humidity' in msg)\n    msg.general_humidity = (sumHumidity + msg.device_humidity) / (humidityCounter+1);\nif('device_weight' in msg && 'other_weight' in msg)\n    msg.general_weight = (sumWeight + msg.device_weight) / (weightCounter+1);\nif('device_noise' in msg && 'other_noise' in msg)\n    msg.general_noise = (sumNoise + msg.device_noise) / (noiseCounter+1);\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "tbelScript": ""
+        },
+        "additionalInfo": {
+          "description": "node to calculate averages of current device and the others to compare them and give possible alarms",
+          "layoutX": 352,
+          "layoutY": 150
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsSwitchNode",
+        "name": "switch_measure-difference",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* define constants as thresholds\nfor measures tolerance */\nconst DIFFERENCETEMPERATURE_THRESHOLD =\n    5; // difference of temperature in °C\nconst DIFFERENCEWEIGHT_THRESHOLD =\n    3; // difference of weight in kg \nconst DIFFERENCEHUMIDITY_THRESHOLD =\n    20; // difference of humidity in %\nconst DIFFERENCENOISE_THRESHOLD =\n    0.20; // relative difference of noise between the measures\n\n/* define variables and lists for the execution\nof the script */\nvar errors = [];\n\n/* do the controls and check if the averages\nare too different between them. \nIn that case add an error */\nif ('device_temperature' in msg && 'other_temperature' in\n    msg && Math.abs(msg.device_temperature - msg\n        .other_temperature) >=\n    DIFFERENCETEMPERATURE_THRESHOLD)\n    errors.push(\"different_temperature\");\nif ('device_humidity' in msg && 'other_humidity' in msg &&\n    Math.abs(msg.device_humidity - msg.other_humidity) >=\n    DIFFERENCEHUMIDITY_THRESHOLD)\n    errors.push(\"different_humidity\");\nif ('device_weight' in msg && 'other_weight' in\n    msg && Math.abs(msg.device_weight - msg\n        .other_weight) >= DIFFERENCEWEIGHT_THRESHOLD)\n    errors.push(\"different_weight\");\nif ('device_noise' in msg && 'other_noise' in\n    msg && Math.abs(1 - msg.device_noise / msg\n        .other_noise) >= DIFFERENCENOISE_THRESHOLD)\n    errors.push(\"different_noise\");\n    \n/* if no error has been added,\nreturn an ok condition */\nif(errors.length === 0)\n    errors.push(\"ok\");\n    \nreturn errors;",
+          "tbelScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType == 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);"
+        },
+        "additionalInfo": {
+          "description": "node to evaluate if there is a consistent difference between the averages of all the other devices and the average of the current one",
+          "layoutX": 633,
+          "layoutY": 151
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_device-different-temperature",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceDifferentTemperature",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "send alarm if the device has different temperature from the rest of the devices",
+          "layoutX": 924,
+          "layoutY": 360
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_device-different-humidity",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceDifferentHumidity",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "send alarm if the device has different humidity from the rest of the devices",
+          "layoutX": 923,
+          "layoutY": 417
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_device-different-weight",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceDifferentWeight",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "send alarm if the device has different weight from the rest of the devices",
+          "layoutX": 930,
+          "layoutY": 478
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_device-different-noise",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceDifferentNoise",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "send alarm if the device has different noise from the rest of the devices",
+          "layoutX": 930,
+          "layoutY": 535
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbChangeOriginatorNode",
+        "name": "change-originator_asset",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "originatorSource": "RELATED",
+          "entityType": null,
+          "entityNamePattern": null,
           "relationsQuery": {
             "fetchLastLevelOnly": false,
             "direction": "TO",
-            "maxLevel": "2",
+            "maxLevel": 1,
             "filters": [
               {
                 "relationType": "Contains",
@@ -52,27 +211,176 @@
                 ]
               }
             ]
-          },
-          "dataToFetch": "ATTRIBUTES",
-          "fetchTo": "DATA",
-          "dataMapping": {
-            "average_temperature": "average_temperatute",
-            "average_weight": "average_weight",
-            "average_humidity": "average_humidity",
-            "average_noise": "average_noise"
           }
         },
         "additionalInfo": {
-          "description": "",
-          "layoutX": 367,
-          "layoutY": 150
+          "description": "change originator to add general average to the asset as a server attribute",
+          "layoutX": 1442,
+          "layoutY": 152
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "edit_message-asset",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* delete all the keys that are not essential \nto be posted in the attributes of the asset */\nfor(const singleKey of Object.keys(msg)){\n    if(!singleKey.startsWith(\"general_\"))\n        delete msg[singleKey];\n}\n\nreturn {msg: msg, metadata: metadata, msgType: \"POST_ATTRIBUTES_REQUEST\"};",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "edit message as a request to post attributes leaving only the essential elements for that target",
+          "layoutX": 1756,
+          "layoutY": 152
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_error-change-originator",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "ChangeOriginatorToAsset",
+          "severity": "MINOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "error reported when there is a failure in changing the originator into the asset which contains the devices",
+          "layoutX": 1756,
+          "layoutY": 222
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
+        "name": "save_asset-attributes",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 3,
+        "configuration": {
+          "processingSettings": {
+            "type": "ON_EVERY_MESSAGE"
+          },
+          "scope": "SERVER_SCOPE",
+          "notifyDevice": false,
+          "sendAttributesUpdatedNotification": false,
+          "updateAttributesOnlyOnValueChange": true
+        },
+        "additionalInfo": {
+          "description": "save the attributes that should be useful for that asset",
+          "layoutX": 2017,
+          "layoutY": 153
         }
       }
     ],
     "connections": [
       {
         "fromIndex": 1,
+        "toIndex": 2,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 2,
         "toIndex": 0,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 0,
+        "type": "different_humidity"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 0,
+        "type": "different_noise"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 0,
+        "type": "different_temperature"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 0,
+        "type": "different_weight"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 0,
+        "type": "ok"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 3,
+        "type": "different_temperature"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 4,
+        "type": "different_humidity"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 5,
+        "type": "different_weight"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 6,
+        "type": "different_noise"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 7,
+        "type": "different_humidity"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 7,
+        "type": "different_noise"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 7,
+        "type": "different_temperature"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 7,
+        "type": "different_weight"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 7,
+        "type": "ok"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 8,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 9,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 8,
+        "toIndex": 10,
         "type": "Success"
       }
     ],

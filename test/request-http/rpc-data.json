@@ -1,4 +1,13 @@
 {
-    "method":"check-device-status",
-    "params":{}
+    "method":"check-telemetry-validity",
+    "params":{
+        "content":[
+            {
+                "ts":1762271975000,
+                "values":{
+                    "weight":68.5
+                }
+            }
+        ]
+    }
 }
