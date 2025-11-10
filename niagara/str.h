@@ -9,6 +9,17 @@
   typedef std::string BaseString;
 #endif
 
+#if defined(ARDUINO)
+bool isValidInteger(String input) {
+  boolean isNum=false;
+  for(byte i=0;i<input.length();i++) {
+    isNum = isDigit(input[i]) || input[i] == '+' || input[i] == '.' || input[i] == '-';
+    if(!isNum) return false;
+  }
+  return isNum;
+}
+#endif
+
 class str {
 private:
     BaseString s;
@@ -96,6 +107,7 @@ public:
 
     int toInt() {
 	#ifdef ARDUINO
+        if(!isValidInteger(s)) return -1;
 		return s.toInt();
 	#else
 		int output;

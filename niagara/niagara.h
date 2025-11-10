@@ -131,8 +131,10 @@ class Niagara {
     /* Whether to log radio initialization or not */
     bool display_log;
     
+    #ifndef ARDUINO
     // instance of the HAL class
     PiHal* hal;
+    #endif
 
     /*
     * This method handles all needed initializations to create the

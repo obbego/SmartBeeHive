@@ -3,17 +3,6 @@
 #include "Hash.h"
 
 #if defined(ARDUINO)
-bool isValidInteger(String input) {
-  boolean isNum=false;
-  for(byte i=0;i<str.length();i++) {
-    isNum = isDigit(str.charAt(i)) || str.charAt(i) == '+' || str.charAt(i) == '.' || str.charAt(i) == '-';
-    if(!isNum) return false;
-  }
-  return isNum;
-}
-#endif
-
-#if defined(ARDUINO)
 void Niagara::display_printf(const char* format, ...) {
   char buffer[1024];  // Puoi aumentare se ti serve più spazio
 
@@ -31,7 +20,7 @@ void Niagara::display_print(String text) {
 #endif
 
 #if defined(ARDUINO)
-std::optional<SX1262> NiagaraESP::init_radio() {
+std::optional<SX1262> Niagara::init_radio() {
   // SX1262 has the following connections on this board:
   // NSS pin:   8
   // DIO1 pin:  14
@@ -75,7 +64,7 @@ std::optional<SX1262> Niagara::init_radio() {
 }
 #endif
 
-Niagara::Niagara(bool log = true) {
+Niagara::Niagara(bool log) {
   //Save the log flag the user specified
   Niagara::display_log = log;
   
@@ -93,7 +82,8 @@ Niagara::Niagara(bool log = true) {
   //Initialize the radio module
   std::optional<SX1262> radio_return = init_radio();
   if(!radio_return.has_value()) return;
-  Niagara::lora = &radio_return.value();
+  SX1262 return_value = radio_return.value();
+  Niagara::lora = &return_value;
 
   //Initialise the identifier as empty
   Niagara::identifier = "";
@@ -376,7 +366,7 @@ bool Niagara::valid_destination(str destination) {
 
   #if defined(ARDUINO)
   for (size_t i = 0; i < Niagara::identifier.length(); ++i) {
-      if (tolower(Niagara::identifier.charAt(i)) != tolower(destination.charAt(i))) return false;
+      if (tolower(Niagara::identifier[i]) != tolower(destination[i])) return false;
   }
   #else
   for (size_t i = 0; i < Niagara::identifier.length(); ++i) {
@@ -399,7 +389,7 @@ bool Niagara::check_identifier(str identifier) {
   //Check if the identifier contains only alphanumeric values
   #if defined(ARDUINO)
   for (int i = 0; i < len; ++i) {
-      char c = identifier.charAt(i);
+      char c = identifier[i];
       if (!isAlphaNumeric(c)) return false;
   }
   return true;
