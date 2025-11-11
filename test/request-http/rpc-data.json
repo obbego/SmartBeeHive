@@ -1,17 +1,11 @@
 {
-    "method":"post-telemetry-device",
+    "method":"check-telemetry-validity",
     "params":{
         "content":[
             {
-                "ts":1762765036000,
+                "ts":1762271975000,
                 "values":{
-                    "weight":30.4
-                }
-            },
-            {
-                "ts":1762765052000,
-                "values":{
-                    "weight":57.2
+                    "weight":68.5
                 }
             }
         ]

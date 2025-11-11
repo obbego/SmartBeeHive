@@ -3,17 +3,6 @@
 #include "Hash.h"
 
 #if defined(ARDUINO)
-bool isValidInteger(String input) {
-  boolean isNum=false;
-  for(byte i=0;i<str.length();i++) {
-    isNum = isDigit(str.charAt(i)) || str.charAt(i) == '+' || str.charAt(i) == '.' || str.charAt(i) == '-';
-    if(!isNum) return false;
-  }
-  return isNum;
-}
-#endif
-
-#if defined(ARDUINO)
 void Niagara::display_printf(const char* format, ...) {
   char buffer[1024];  // Puoi aumentare se ti serve più spazio
 
@@ -31,7 +20,7 @@ void Niagara::display_print(String text) {
 #endif
 
 #if defined(ARDUINO)
-std::optional<SX1262> NiagaraESP::init_radio() {
+std::optional<SX1262> Niagara::init_radio() {
   // SX1262 has the following connections on this board:
   // NSS pin:   8
   // DIO1 pin:  14
@@ -75,7 +64,7 @@ std::optional<SX1262> Niagara::init_radio() {
 }
 #endif
 
-Niagara::Niagara(bool log = true) {
+Niagara::Niagara(bool log) {
   //Save the log flag the user specified
   Niagara::display_log = log;
   
@@ -93,7 +82,8 @@ Niagara::Niagara(bool log = true) {
   //Initialize the radio module
   std::optional<SX1262> radio_return = init_radio();
   if(!radio_return.has_value()) return;
-  *Niagara::lora = radio_return.value();
+  SX1262 return_value = radio_return.value();
+  Niagara::lora = &return_value;
 
   //Initialise the identifier as empty
   Niagara::identifier = "";
@@ -301,64 +291,50 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
     return NIAGARA_NO_IDENTIFIER;
 
   str receive_output;
-  int status = Niagara::lora->receive(receive_output, 0);
+  int status = Niagara::lora->receive((uint8_t*)receive_output.c_str(), 0);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
-  str* processed_output = Niagara::process_message(receive_output);
+  str processed_output[3];
+  Niagara::process_message(processed_output, receive_output);
   if(processed_output == nullptr) return NIAGARA_NOT_DESTINATION;
   
-  int control_value;
-  #if defined(ARDUINO)
-  if(!isValidInteger(processed_output[1]))
-    return NIAGARA_INVALID_DATA;
-  control_value = processed_output[1].toInt();
-  if(control_value < 0 || control_value >= END)
-    return NIAGARA_INVALID_DATA;
-  #else
-  try {
-    control_value = std::stoi(processed_output[1]);
-    if(control_value < 0 || control_value >= END)
-      return NIAGARA_INVALID_DATA;
-  } catch(...) {
-    return NIAGARA_INVALID_DATA;
-  }
-  #endif
+  int control_value = processed_output[1].toInt();
+ 
   *source = processed_output[0];
   *control_output = static_cast<Niagara_Control>(control_value);
   *message_output = processed_output[2];
   return NIAGARA_OK;
 }
 
-str* Niagara::process_message(str message) {
+bool Niagara::process_message(str* output, str message) {
   //If the identifier is empty and not yet initialized then return an error
   if(Niagara::identifier.length() == 0)
-    return nullptr;
+    return false;
 
   //In case the message destination isn't this board then exit
   int separatorIndex = message.indexOf('|');
-  if(separatorIndex <= 0) return nullptr;
+  if(separatorIndex <= 0) return false;
   str callsign = message.substring(0, separatorIndex - 1);
   //Separate the destination id in source and destination id
   str sourceID, destinationID;
   int identifierSeparator = callsign.indexOf('.');
-  if(identifierSeparator <= 0) return nullptr;
-  if(callsign.length() <= identifierSeparator) return nullptr;
+  if(identifierSeparator <= 0) return false;
+  if(callsign.length() <= identifierSeparator) return false;
   sourceID = callsign.substring(0, identifierSeparator - 1);
   destinationID = callsign.substring(identifierSeparator + 1);
-  if(!check_destination(destinationID)) return nullptr;
-  if(message.length() <= separatorIndex + 1) return nullptr;
+  if(!valid_destination(destinationID)) return false;
+  if(message.length() <= separatorIndex + 1) return false; 
   int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|');
-  if(secondSeparatorIndex <= 0) return nullptr;
+  if(secondSeparatorIndex <= 0) return false;
 
   //Separate the str into the control sequence and the message itself
-  str separated[3];
-  separated[0] = sourceID;
-  separated[1] = message.substring(separatorIndex + 1, secondSeparatorIndex - 1);
+  output[0] = sourceID;
+  output[1] = message.substring(separatorIndex + 1, secondSeparatorIndex - 1);
   if(message.length() > secondSeparatorIndex + 1)
-    separated[2] = message.substring(secondSeparatorIndex + 1);
-  else separated[2] = "";
+    output[2] = message.substring(secondSeparatorIndex + 1);
+  else output[2] = "";
 
-  return separated;
+  return true;
 }
 
 Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str message) {
@@ -368,7 +344,7 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
-  int status = Niagara::lora->transmit(formattedMessage, 0);
+  int status = Niagara::lora->transmit((uint8_t*)formattedMessage.c_str(), 0);
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
     return RADIOLIB_ERROR;
@@ -376,8 +352,8 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 }
 
 str Niagara::format_message(str destination, Niagara_Control control, str message) {
-  if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0 || control.indexOf('|') >= 0) return "";
-  return (Niagara::identifier + "." + destination + "|" + static_cast<int>(control) + "|" + message);
+  if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0) return "";
+  return (Niagara::identifier + "." + destination + "|" + str(static_cast<int>(control)) + "|" + message);
 }
 
 bool Niagara::valid_destination(str destination) {
@@ -390,10 +366,10 @@ bool Niagara::valid_destination(str destination) {
 
   #if defined(ARDUINO)
   for (size_t i = 0; i < Niagara::identifier.length(); ++i) {
-      if (tolower(Niagara::identifier.charAt(i)) != tolower(destination.charAt(i))) return false;
+      if (tolower(Niagara::identifier[i]) != tolower(destination[i])) return false;
   }
   #else
-  for (size_t i = 0; i < Niagara::identifier.size(); ++i) {
+  for (size_t i = 0; i < Niagara::identifier.length(); ++i) {
       if (std::tolower(static_cast<unsigned char>(Niagara::identifier[i])) !=
           std::tolower(static_cast<unsigned char>(destination[i]))) {
           return false;
@@ -413,13 +389,14 @@ bool Niagara::check_identifier(str identifier) {
   //Check if the identifier contains only alphanumeric values
   #if defined(ARDUINO)
   for (int i = 0; i < len; ++i) {
-      char c = identifier.charAt(i);
+      char c = identifier[i];
       if (!isAlphaNumeric(c)) return false;
   }
   return true;
   #else
-  for (char c : identifier) {
-      if (!std::isalnum(static_cast<unsigned char>(c))) return false;
+  const char* identifier_array = identifier.c_str();
+  for (int i = 0; i < identifier.length(); i++) {
+      if (!std::isalnum(static_cast<unsigned char>(identifier_array[i]))) return false;
   }
   return true;
   #endif

@@ -22,7 +22,7 @@ Il ***Core*** di ThingsBoard è, come dice il nome, la parte centrale della piat
 Il ***Rule engine*** è la componente di ThingsBoard che stabilisce le regole, le condizioni e le azioni da compiere per uno specifico evento o dato. È possibile eseguire confronti, decidere se salvare un dato o generare allarmi.
 
 Il rule engine è costituito dai seguenti elementi:
-- **Message**: qualsiasi evento. Può essere un dato, una richiesta, una chiamata API, ecc.
+- **Message**: qualsiasi evento. Può essere un dato, una richiesta, una chiamata API, ecc. Esso è composto dal corpo del messaggio (msg), dai dati correlati al messaggio (metadata) e dai tipi di messaggio [msgType](https://thingsboard.io/docs/user-guide/rule-engine-2-0/overview/#predefined-message-types).
 - **Rule node**: funzione che agisce su un messaggio e può compiere trasformazioni o elaborazioni del dato.
 - **Rule chain**: connessione tra nodi che permette di trasferire l'output di un nodo come input di un altro.
 
@@ -33,9 +33,6 @@ Il rule engine è costituito dai seguenti elementi:
 I linguaggi utilizzati per i *Rule Node* sono:
 - **TBEL**: linguaggio di ThingsBoard con struttura simile a Java
 - **JavaScript**: linguaggio ampiamente conosciuto e compatibile per i nodi di ThingsBoard
-
-#### Tipi predefiniti di messaggi
-Esistono tipi predefiniti di messaggi intercettabili in ThingsBoard; sono documentati [qui](https://thingsboard.io/docs/user-guide/rule-engine-2-0/overview/#predefined-message-types).
 
 ### Database
 Tutti i dati inviati a ThingsBoard vengono salvati nei database, che contengono:
@@ -244,7 +241,12 @@ Per far sì che il sistema sia completo e possa segnalare informazioni o problem
 - **controllo dispositivo** deve essere controllato che il dispositivo abbia effettivamente ricevuto misurazioni nell'ultimo intervallo di tempo e che gli ultimi dati raccolti non sforino con la media dei dispositivi vicini. Per questo tipo di dato occorrerebbe inserire un warning. 
 - **controllo alveare** per il controllo dell'alveare è possibile inserire un allarme che indica alcune informazioni relative all'alveare. Ad esempio con un warning si potrebbe indicare il momento in cui raccogliere il miele.
 
-**N.B.** *Per i controlli periodici non è possibile farlo direttamente con le rule chains di ThingsBoard, ma utilizzare uno scheduler esterno che periodicamente invii la richiesta al server*
+### Limitazioni nell'utilizzo
+Durante alcune prove nell'utilizzo di una versione demo del server Thingsboard si sono riscontrati i seguenti problemi, equiparabili alla versione gratuita di cui l'alveare è dotato. 
+
+1. **SCRIPT PERIODICI** non è possibile implementare in alcun modo una rule chain che venga eseguita periodicamente. Per farlo occorre utilizzare una RPC al server Thingsboard lanciata da uno scheduler in attività.
+2. **RILEVAZIONE TELEMETRIE** non è possibile ricavare telemetrie multiple da un dispositivo in relazione con quello che sta eseguendo la rule chain, ma solo l'ultima registrata. Per fare una valutazione su più telemetrie occorre effettuare una media delle misurazioni. 
+3. **RILEVAZIONE ATTRIBUTI** se ci sono attributi con lo stesso nome su più dispositivi, viene solo recuperato il primo trovato. Questo è un lato negativo nel caso in cui si debbano confrontare le medie della stessa grandezza di più dispositivi.
 
 
 ## Link utili

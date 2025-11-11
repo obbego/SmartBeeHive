@@ -131,8 +131,10 @@ class Niagara {
     /* Whether to log radio initialization or not */
     bool display_log;
     
+    #ifndef ARDUINO
     // instance of the HAL class
     PiHal* hal;
+    #endif
 
     /*
     * This method handles all needed initializations to create the
@@ -141,20 +143,20 @@ class Niagara {
     std::optional<SX1262> init_radio();
 
     /*Used to process messages received using the protocol*/
-    str* process_message(str message);
+    bool process_message(str* output, str message);
 
     /*Used to format messages according to the protocol
      * A blank str is returned in case invalid parameters are passed in destination message
      * or control message.
     */
-    str format_message(str destination, str control, str message);
+    str format_message(str destination, Niagara_Control control, str message);
 
     /**
      * Given the destination parameter of a message received,
      * this method checks if the destination parameter matches
      * this device.
      */
-    bool check_destination(str destination);
+    bool valid_destination(str destination);
 
     /**
      * Method used to check the validity of the identifier

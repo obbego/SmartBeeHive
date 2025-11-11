@@ -9,6 +9,17 @@
   typedef std::string BaseString;
 #endif
 
+#if defined(ARDUINO)
+bool isValidInteger(String input) {
+  boolean isNum=false;
+  for(byte i=0;i<input.length();i++) {
+    isNum = isDigit(input[i]) || input[i] == '+' || input[i] == '.' || input[i] == '-';
+    if(!isNum) return false;
+  }
+  return isNum;
+}
+#endif
+
 class str {
 private:
     BaseString s;
@@ -18,6 +29,11 @@ public:
     str(const char* str) : s(str ? str : "") {}
     str(const BaseString& other) : s(other) {}
     str(const str& other) : s(other.s) {}
+	#ifdef ARDUINO
+	str(int input) : s(input) {}
+	#else
+	str(int input) : s(std::to_string(input)) {}
+	#endif
 
     str& operator=(const str& other) {
         s = other.s;
@@ -89,6 +105,21 @@ public:
     #endif
     }
 
+    int toInt() {
+	#ifdef ARDUINO
+        if(!isValidInteger(s)) return -1;
+		return s.toInt();
+	#else
+		int output;
+		try {
+			output = std::stoi(s);
+		} catch(...) {
+			return -1;	
+		}
+		return output;
+	#endif
+	}
+
     // indexOf(string, fromIndex)
     int indexOf(const str& other, size_t fromIndex = 0) const {
     #ifdef ARDUINO
@@ -102,11 +133,7 @@ public:
 
     // c_str()
     const char* c_str() const {
-    #ifdef ARDUINO
         return s.c_str();
-    #else
-        return s.c_str();
-    #endif
     }
 
     // Comparison
