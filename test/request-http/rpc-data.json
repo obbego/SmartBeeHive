@@ -1,4 +1,19 @@
 {
-    "method":"check-device-status",
-    "params":{}
+    "method":"post-telemetry-device",
+    "params":{
+        "content":[
+            {
+                "ts":1762765036000,
+                "values":{
+                    "weight":30.4
+                }
+            },
+            {
+                "ts":1762765052000,
+                "values":{
+                    "weight":57.2
+                }
+            }
+        ]
+    }
 }
