@@ -290,19 +290,21 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
 
-  str receive_output;
-  int status = Niagara::lora->receive((uint8_t*)receive_output.c_str(), 0);
+  char receive_output[512];
+  int status = Niagara::lora->receive((uint8_t*)receive_output, 512);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
+  str receive_output_str(receive_output);
   str processed_output[3];
-  Niagara::process_message(processed_output, receive_output);
+  Niagara::process_message(processed_output, receive_output_str);
   if(processed_output == nullptr) return NIAGARA_NOT_DESTINATION;
-  
+
   int control_value = processed_output[1].toInt();
- 
+
   *source = processed_output[0];
   *control_output = static_cast<Niagara_Control>(control_value);
   *message_output = processed_output[2];
+
   return NIAGARA_OK;
 }
 
@@ -344,7 +346,10 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
-  int status = Niagara::lora->transmit((uint8_t*)formattedMessage.c_str(), 0);
+  printf("Sending data: '%s'\n", (uint8_t*)formattedMessage.c_str());
+//  std::vector<uint8_t> buf(formattedMessage.c_str());
+  int status = Niagara::lora->transmit(formattedMessage.c_str());
+  printf("Done send.\n");
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
     return RADIOLIB_ERROR;
@@ -381,9 +386,9 @@ bool Niagara::valid_destination(str destination) {
 }
 
 bool Niagara::check_identifier(str identifier) {
-  //The identifier should be between 6 and 12 characters long
+  //The identifier should be between 4 and 12 characters long
   size_t len = identifier.length();
-  if (len < 6 || len > 12) return false;
+  if (len < 4 || len > 12) return false;
   if(identifier == BROADCAST) return false;
 
   //Check if the identifier contains only alphanumeric values
