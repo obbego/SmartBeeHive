@@ -20,6 +20,7 @@
 #include "str.h"
 
 #include <optional>
+#include <vector>
 
 #define BROADCAST "BROAD"
 #define NIAGARA_RETRANSMISSIONS 10
