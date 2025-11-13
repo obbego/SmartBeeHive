@@ -34,7 +34,7 @@ SX1262* Niagara::init_radio() {
     if(Niagara::display_log) display_printf("\nInitialization Failed!\nError code: %d\n", state);
     return nullptr;
   }
-  state = radio.setCRC(2);
+  state = radio->setCRC(2);
   if(state != RADIOLIB_ERR_NONE) {
     if(Niagara::display_log) display_printf("\nCRC Initialization Failed!\nError code: %d\n", state);
     return nullptr;
@@ -97,10 +97,12 @@ Niagara::~Niagara() {
     Niagara::lora = nullptr;
   }
   
+  #ifndef ARDUINO
   if(Niagara::hal) {
     delete Niagara::hal;
     Niagara::hal = nullptr;
   }
+  #endif
 }
 
 bool Niagara::set_identifier(str _identifier) {
