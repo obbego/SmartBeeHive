@@ -121,8 +121,8 @@ In particolare il codice per il suo funzionamento dovrà essere composto dai seg
 
 ### Funzioni
 Il programma dovrà implementare principalmente le seguenti funzioni:
-- `sendRequest_checkWeightBeehive(DeviceInfo device)` funzione che invia la richiesta di controllare il controllo del peso. Sarebbe ottimale ritornare l'esito dell'operazione.
-- `sendRequest_checkDeviceStatus(DeviceInfo device)` funzione che invia la richiesta di controllare lo stato del dispositivo. Sarebbe ottimale ritornare l'esito dell'operazione.
+- `scheduler_checkWeightBeehive()` funzione che invia la richiesta di controllare il controllo del peso. Sarebbe ottimale ritornare l'esito dell'operazione.
+- `scheduler_checkDeviceStatus()` funzione che invia la richiesta di controllare lo stato del dispositivo. Sarebbe ottimale ritornare l'esito dell'operazione.
 
 ### Note tecniche
 Tale scheduler potrebbe essere implementato nel ricevitore dei dati dall'alveare, visto che è predisposto per il collegamento al server ThingsBoard. 

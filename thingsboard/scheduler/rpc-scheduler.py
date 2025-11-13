@@ -1,6 +1,7 @@
-from datetime import time, datetime
+from datetime import time, datetime, timedelta
 import threading
 import subprocess
+import json
 
 class DeviceInfo:
     """Class to gather information about
@@ -23,6 +24,7 @@ class DeviceInfo:
 """Define all the constants and the variables 
 to interact with Thingsboard server"""
 THINGSBOARD_HOST_NAME = "localhost" # change this with the real host name
+JSON_FILENAME = "rpc-data.json"
 device_list = (
     DeviceInfo("device1", "dhfghsgdfhsdg"),
     DeviceInfo("device2", "dshjskldfksdfksh")
@@ -30,13 +32,13 @@ device_list = (
 
 # define the hours to do the rpc request
 # change the time if you need it
-times_device-status = {
+timesCheckWeightBeehive = sorted({
     time(1,0)
-}
-times_weight-beehive = {
+})
+timesCheckDeviceStatus = sorted({
     time(2,0)
-}
-last-time_device-status = datetime.now(), last-time_weight-beehive = datetime.now() # create variables to memorize last measure
+})
+lastTimeCheckWeightBeehive = datetime.now(), lastTimeCheckDeviceStatus = datetime.now() # create variables to memorize last measure
 
 
 def send_RPC_request(device, method, params):
@@ -44,4 +46,96 @@ def send_RPC_request(device, method, params):
     related to a specific device with the name of 
     the method and possible params"""
 
-    global THINGSBOARD_HOST_NAME # importing global variables
+    global THINGSBOARD_HOST_NAME, JSON_FILENAME # importing global variables
+
+    # save the method and the params in the file
+    with open(JSON_FILENAME, "w") as file:
+        content = f'{{"method":{method}, "params":{params}}}'
+        json.dump(content, file, indent=4, ensure_ascii=False) # write the converted element into the file
+  
+    # define the command to send
+    command = ["curl", "-v", "-X", "POST", f"@{JSON_FILENAME}", f"https://{THINGSBOARD_HOST_NAME}/api/v1/{device.accessToken}/rpc", "--header", "Content-Type:application/json"]
+
+    return subprocess.run(command, capture_output=True, text=True) # return the result of the rpc request
+
+def isTime(time_list, last_time):
+    """Function to check if the current time corresponds
+    to one of the times indicated, considering last time an action was done"""
+    
+    currentTime = datetime.now() # get the current datetime
+
+    for singleTime in time_list:
+        # control if today the time is passed
+        # or if it's a time not resolved yesterday
+        if (currentTime.time() >= singleTime and datetime.combine(datetime.now().date(), singleTime)>last_time) or (last_time < datetime.combine((datetime.today() - timedelta(days=1)), singleTime)):
+            return True
+        
+    return False
+
+def scheduler_checkWeightBeehive():
+    """Function to schedule the time to send
+    RPC requests to check the weight of the beehive"""
+    while True:
+        try:
+            global timesCheckWeightBeehive, lastTimeCheckWeightBeehive, device_list # importing global variables
+
+            if not isTime(timesCheckWeightBeehive, lastTimeCheckWeightBeehive): # first control if it's time
+                continue
+            
+            # then send request for each device
+            for singleDevice in device_list:
+                send_RPC_request(singleDevice, "check-weight-beehive", {})
+        except Exception as e:
+            print(f"Errore nello scheduler del peso {e}")
+
+def format_device_averages(array, result, device):
+    """Function to format the result come from a device to 
+    the appropriate JSON format established
+    for RPC communication"""
+
+    # get a dictionnaire format
+    if not isinstance(result, dict):
+        result = json.loads(result)
+
+    # get the keys and create an object for each one
+    for singleKey in result.keys():
+        array.append({
+            "deviceName":device.deviceName,
+            "key":singleKey,
+            "value":result[singleKey]
+        })
+
+
+def scheduler_checkDeviceStatus():
+    """Function to scheduler time to send requests to control
+    the status of the device and its sensors"""
+    while True:
+        try:
+            global timesCheckDeviceStatus, lastTimeCheckDeviceStatus, device_list # importing global variables
+
+            if not isTime(timesCheckDeviceStatus, lastTimeCheckDeviceStatus): # first control if it's time
+                continue
+            
+            # first send request to gather the
+            # average for each telemetry of each device
+            average_list = [] # initialise a variable to gather the averages
+            for singleDevice in device_list:
+                rpc_reply = send_RPC_request(singleDevice, "check-timeseries-average", {}) # get the reply
+                format_device_averages(average_list, rpc_reply, singleDevice) # add the rpc reply to the average list in the proper format
+            
+            # then for each device send the request
+            # to check the status
+            for singleDevice in device_list:
+                send_RPC_request(singleDevice, "check-device-status", {"timeseriesAverage":{average_list}})
+        except Exception as e:
+            print(f"Errore nello scheduler del dispositivo {e}")
+
+"""Define the thread to start"""
+thread_deviceScheduler = threading.Thread(target=scheduler_checkDeviceStatus, daemon=False)
+thread_weightScheduler = threading.Thread(targer=scheduler_checkDeviceStatus, daemon=False)
+
+thread_weightScheduler.start()
+thread_deviceScheduler.start()
+
+thread_weightScheduler.join()
+thread_deviceScheduler.join()
