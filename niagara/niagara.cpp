@@ -20,32 +20,32 @@ void Niagara::display_print(String text) {
 #endif
 
 #if defined(ARDUINO)
-std::optional<SX1262> Niagara::init_radio() {
+SX1262* Niagara::init_radio() {
   // SX1262 has the following connections on this board:
   // NSS pin:   8
   // DIO1 pin:  14
   // NRST pin:  12
   // BUSY pin:  13
-  SX1262 radio = new Module(8, 14, 12, 13);
+  SX1262* radio = new SX1262(new Module(8, 14, 12, 13));
 
   if(Niagara::display_log) display.print("[SX1262] Initializing... ");
-  int state = radio.begin(868.0);
+  int state = radio->begin(868.0);
   if(state != RADIOLIB_ERR_NONE) {
     if(Niagara::display_log) display_printf("\nInitialization Failed!\nError code: %d\n", state);
-    return std::nullopt;
+    return nullptr;
   }
   state = radio.setCRC(2);
   if(state != RADIOLIB_ERR_NONE) {
     if(Niagara::display_log) display_printf("\nCRC Initialization Failed!\nError code: %d\n", state);
-    return std::nullopt;
+    return nullptr;
   }
   if(Niagara::display_log) display.println("OK");
   return radio;
 }
 #else
-std::optional<SX1262> Niagara::init_radio() {
+SX1262* Niagara::init_radio() {
   // now we can create the radio module
-  SX1262 radio = new Module(hal, 21, 16, 18, 20 /*The BUSY pin of the module MUST be specified, otherwise error -2 is thrown*/);
+  SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20 /*The BUSY pin of the module MUST be specified, otherwise error -2 is thrown*/));
   
   if(Niagara::display_log) fprintf(stderr, "[SX1262] Initializing... ");
   /* The module is being initialized with all the default begin() settings
@@ -54,10 +54,10 @@ std::optional<SX1262> Niagara::init_radio() {
    * - The TCXO voltage, which is the crystal which is powering the clock, since this module is not using TCXO, 
    *   not specifying that will cause error -707 to be thrown, so we need to specify its voltage to be 0
    */
-  int state = radio.begin(868.0 /*EU868 frequency*/, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0 /*This is not the default value*/, false);
+  int state = radio->begin(868.0 /*EU868 frequency*/, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0 /*This is not the default value*/, false);
   if(state != RADIOLIB_ERR_NONE) {
     if(Niagara::display_log) fprintf(stderr, "Initialization Failed!\nError code: %d\n", state);
-    return std::nullopt;
+    	return nullptr;
   }
   if(Niagara::display_log) fprintf(stderr, "Initialization successful!\n");
   return radio;
@@ -80,10 +80,9 @@ Niagara::Niagara(bool log) {
   #endif
 
   //Initialize the radio module
-  std::optional<SX1262> radio_return = init_radio();
-  if(!radio_return.has_value()) return;
-  SX1262 return_value = radio_return.value();
-  Niagara::lora = &return_value;
+  SX1262* radio_return = init_radio();
+  if(radio_return == nullptr) return;
+  Niagara::lora = radio_return;
 
   //Initialise the identifier as empty
   Niagara::identifier = "";
@@ -91,6 +90,18 @@ Niagara::Niagara(bool log) {
 
 /* If the boolean for the log variable isn't defined, just set it to true */
 Niagara::Niagara() : Niagara(true) {}
+
+Niagara::~Niagara() {
+  if(Niagara::lora) {
+    delete Niagara::lora;
+    Niagara::lora = nullptr;
+  }
+  
+  if(Niagara::hal) {
+    delete Niagara::hal;
+    Niagara::hal = nullptr;
+  }
+}
 
 bool Niagara::set_identifier(str _identifier) {
   if(!check_identifier(_identifier))
@@ -346,10 +357,7 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
-  printf("Sending data: '%s'\n", (uint8_t*)formattedMessage.c_str());
-//  std::vector<uint8_t> buf(formattedMessage.c_str());
   int status = Niagara::lora->transmit(formattedMessage.c_str());
-  printf("Done send.\n");
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
     return RADIOLIB_ERROR;

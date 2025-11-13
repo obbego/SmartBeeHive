@@ -19,9 +19,6 @@
 
 #include "str.h"
 
-#include <optional>
-#include <vector>
-
 #define BROADCAST "BROAD"
 #define NIAGARA_RETRANSMISSIONS 10
 
@@ -95,6 +92,7 @@ class Niagara {
      */
     Niagara(bool log);
     Niagara();
+    ~Niagara();
 
     #if defined(ARDUINO)
     /*Custom display print methods */
@@ -141,7 +139,7 @@ class Niagara {
     * This method handles all needed initializations to create the
     * object used to manage the radio module.
     */
-    std::optional<SX1262> init_radio();
+    SX1262* init_radio();
 
     /*Used to process messages received using the protocol*/
     bool process_message(str* output, str message);
