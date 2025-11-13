@@ -1,4 +1,4 @@
-from datetime import time, datetime
+from datetime import time, datetime, timedelta
 import threading
 import subprocess
 import json
@@ -32,13 +32,13 @@ device_list = (
 
 # define the hours to do the rpc request
 # change the time if you need it
-times_device-status = sorted({
+timesCheckWeightBeehive = sorted({
     time(1,0)
 })
-times_weight-beehive = sorted({
+timesCheckDeviceStatus = sorted({
     time(2,0)
 })
-last-time_device-status = datetime.now(), last-time_weight-beehive = datetime.now() # create variables to memorize last measure
+lastTimeCheckWeightBeehive = datetime.now(), lastTimeCheckDeviceStatus = datetime.now() # create variables to memorize last measure
 
 
 def send_RPC_request(device, method, params):
@@ -65,9 +65,24 @@ def isTime(time_list, last_time):
     currentTime = datetime.now() # get the current datetime
 
     for singleTime in time_list:
-        # CONDITION TO BE FINISHED
-        if currentTime.time() >= singleTime and datetime.combine(datetime.now().date(), singleTime):
-            pass
+        # control if today the time is passed
+        # or if it's a time not resolved yesterday
+        if (currentTime.time() >= singleTime and datetime.combine(datetime.now().date(), singleTime)>last_time) or (last_time < datetime.combine((datetime.today() - timedelta(days=1)), singleTime)):
+            return True
+        
+    return False
 
-def weightBeehiveScheduler():
-    pass
+def scheduler_checkWeightBeehive():
+    """Function to schedule the time to send
+    RPC requests to check the weight of the beehive"""
+
+    global timesCheckWeightBeehive, lastTimeCheckWeightBeehive, device_list # importing global variables
+
+    if not isTime(timesCheckWeightBeehive, lastTimeCheckWeightBeehive): # first control if it's time
+        return
+    
+    # then send request for each device
+    for singleDevice in device_list:
+        send_RPC_request(singleDevice, "check-weight-beehive", {})
+
+scheduler_checkDeviceStatus()
