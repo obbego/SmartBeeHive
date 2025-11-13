@@ -75,14 +75,67 @@ def isTime(time_list, last_time):
 def scheduler_checkWeightBeehive():
     """Function to schedule the time to send
     RPC requests to check the weight of the beehive"""
+    while True:
+        try:
+            global timesCheckWeightBeehive, lastTimeCheckWeightBeehive, device_list # importing global variables
 
-    global timesCheckWeightBeehive, lastTimeCheckWeightBeehive, device_list # importing global variables
+            if not isTime(timesCheckWeightBeehive, lastTimeCheckWeightBeehive): # first control if it's time
+                continue
+            
+            # then send request for each device
+            for singleDevice in device_list:
+                send_RPC_request(singleDevice, "check-weight-beehive", {})
+        except Exception as e:
+            print(f"Errore nello scheduler del peso {e}")
 
-    if not isTime(timesCheckWeightBeehive, lastTimeCheckWeightBeehive): # first control if it's time
-        return
-    
-    # then send request for each device
-    for singleDevice in device_list:
-        send_RPC_request(singleDevice, "check-weight-beehive", {})
+def format_device_averages(array, result, device):
+    """Function to format the result come from a device to 
+    the appropriate JSON format established
+    for RPC communication"""
 
-scheduler_checkDeviceStatus()
+    # get a dictionnaire format
+    if not isinstance(result, dict):
+        result = json.loads(result)
+
+    # get the keys and create an object for each one
+    for singleKey in result.keys():
+        array.append({
+            "deviceName":device.deviceName,
+            "key":singleKey,
+            "value":result[singleKey]
+        })
+
+
+def scheduler_checkDeviceStatus():
+    """Function to scheduler time to send requests to control
+    the status of the device and its sensors"""
+    while True:
+        try:
+            global timesCheckDeviceStatus, lastTimeCheckDeviceStatus, device_list # importing global variables
+
+            if not isTime(timesCheckDeviceStatus, lastTimeCheckDeviceStatus): # first control if it's time
+                continue
+            
+            # first send request to gather the
+            # average for each telemetry of each device
+            average_list = [] # initialise a variable to gather the averages
+            for singleDevice in device_list:
+                rpc_reply = send_RPC_request(singleDevice, "check-timeseries-average", {}) # get the reply
+                format_device_averages(average_list, rpc_reply, singleDevice) # add the rpc reply to the average list in the proper format
+            
+            # then for each device send the request
+            # to check the status
+            for singleDevice in device_list:
+                send_RPC_request(singleDevice, "check-device-status", {"timeseriesAverage":{average_list}})
+        except Exception as e:
+            print(f"Errore nello scheduler del dispositivo {e}")
+
+"""Define the thread to start"""
+thread_deviceScheduler = threading.Thread(target=scheduler_checkDeviceStatus, daemon=False)
+thread_weightScheduler = threading.Thread(targer=scheduler_checkDeviceStatus, daemon=False)
+
+thread_weightScheduler.start()
+thread_deviceScheduler.start()
+
+thread_weightScheduler.join()
+thread_deviceScheduler.join()
