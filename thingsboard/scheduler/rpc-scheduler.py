@@ -38,7 +38,9 @@ timesCheckWeightBeehive = sorted({
 timesCheckDeviceStatus = sorted({
     time(2,0)
 })
-lastTimeCheckWeightBeehive = datetime.now(), lastTimeCheckDeviceStatus = datetime.now() # create variables to memorize last measure
+# create variables to memorize last measure 
+lastTimeCheckWeightBeehive = datetime.now()
+lastTimeCheckDeviceStatus = datetime.now()
 
 
 def send_RPC_request(device, method, params):
@@ -132,7 +134,7 @@ def scheduler_checkDeviceStatus():
 
 """Define the thread to start"""
 thread_deviceScheduler = threading.Thread(target=scheduler_checkDeviceStatus, daemon=False)
-thread_weightScheduler = threading.Thread(targer=scheduler_checkDeviceStatus, daemon=False)
+thread_weightScheduler = threading.Thread(target=scheduler_checkDeviceStatus, daemon=False)
 
 thread_weightScheduler.start()
 thread_deviceScheduler.start()

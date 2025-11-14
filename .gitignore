@@ -1,1 +1,5 @@
 .vscode/
+
+# exclude data and out files in the scheduler folder
+thingsboard/scheduler/*.json
+thingsboard/scheduler/*.out
