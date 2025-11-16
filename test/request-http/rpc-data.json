@@ -1,5 +1,5 @@
 {
-    "method":"check-telemetry-validity",
+    "method":"post-telemetry-device",
     "params":{
         "content":[
             {
