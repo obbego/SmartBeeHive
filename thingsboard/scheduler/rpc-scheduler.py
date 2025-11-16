@@ -2,6 +2,7 @@ from datetime import time, datetime, timedelta
 import threading
 import subprocess
 import json
+import time as t
 
 class DeviceInfo:
     """Class to gather information about
@@ -23,20 +24,20 @@ class DeviceInfo:
     
 """Define all the constants and the variables 
 to interact with Thingsboard server"""
-THINGSBOARD_HOST_NAME = "localhost" # change this with the real host name
+THINGSBOARD_HOST_NAME = "demo.thingsboard.io" # change this with the real host name
 JSON_FILENAME = "rpc-data.json"
 device_list = (
-    DeviceInfo("device1", "dhfghsgdfhsdg"),
-    DeviceInfo("device2", "dshjskldfksdfksh")
+    DeviceInfo("beehive1", "tevWRCdJC7IYUPl3ha4F"),
+    DeviceInfo("beehive2", "BhP1QobnPngCTa3qjo6Z")
 ) # change the data of the device if you need to execute it
 
 # define the hours to do the rpc request
 # change the time if you need it
 timesCheckWeightBeehive = sorted({
-    time(1,0)
+    time(18,8)
 })
 timesCheckDeviceStatus = sorted({
-    time(2,0)
+    time(18,9)
 })
 # create variables to memorize last measure 
 lastTimeCheckWeightBeehive = datetime.now()
@@ -82,11 +83,14 @@ def scheduler_checkWeightBeehive():
             global timesCheckWeightBeehive, lastTimeCheckWeightBeehive, device_list # importing global variables
 
             if not isTime(timesCheckWeightBeehive, lastTimeCheckWeightBeehive): # first control if it's time
+                t.sleep(1)
                 continue
             
             # then send request for each device
             for singleDevice in device_list:
                 send_RPC_request(singleDevice, "check-weight-beehive", {})
+
+            lastTimeCheckWeightBeehive = datetime.now() # update last time variable
         except Exception as e:
             print(f"Errore nello scheduler del peso {e}")
 
@@ -116,6 +120,7 @@ def scheduler_checkDeviceStatus():
             global timesCheckDeviceStatus, lastTimeCheckDeviceStatus, device_list # importing global variables
 
             if not isTime(timesCheckDeviceStatus, lastTimeCheckDeviceStatus): # first control if it's time
+                t.sleep(1)
                 continue
             
             # first send request to gather the
@@ -129,12 +134,14 @@ def scheduler_checkDeviceStatus():
             # to check the status
             for singleDevice in device_list:
                 send_RPC_request(singleDevice, "check-device-status", {"timeseriesAverage":{average_list}})
+
+            lastTimeCheckDeviceStatus = datetime.now() # update the last time variable
         except Exception as e:
             print(f"Errore nello scheduler del dispositivo {e}")
 
 """Define the thread to start"""
 thread_deviceScheduler = threading.Thread(target=scheduler_checkDeviceStatus, daemon=False)
-thread_weightScheduler = threading.Thread(target=scheduler_checkDeviceStatus, daemon=False)
+thread_weightScheduler = threading.Thread(target=scheduler_checkWeightBeehive, daemon=False)
 
 thread_weightScheduler.start()
 thread_deviceScheduler.start()
