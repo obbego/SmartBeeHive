@@ -9,28 +9,9 @@
     "additionalInfo": null
   },
   "metadata": {
-    "version": 14,
-    "firstNodeIndex": 5,
+    "version": 47,
+    "firstNodeIndex": 4,
     "nodes": [
-      {
-        "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
-        "name": "Save Timeseries",
-        "debugSettings": null,
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 1,
-        "configuration": {
-          "defaultTTL": 0,
-          "useServerTs": false,
-          "processingSettings": {
-            "type": "ON_EVERY_MESSAGE"
-          }
-        },
-        "additionalInfo": {
-          "layoutX": 1321,
-          "layoutY": 150
-        }
-      },
       {
         "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
         "name": "Save Client Attributes",
@@ -243,74 +224,94 @@
         "configurationVersion": 1,
         "configuration": {
           "forwardMsgToDefaultRuleChain": false,
-          "ruleChainId": "e6dbb460-b288-11f0-86b8-4d4474c0a366"
+          "ruleChainId": "10c2dc20-c393-11f0-9dac-f14aa7f7559f"
         },
         "additionalInfo": {
           "description": "node to check if the data is correct",
-          "layoutX": 1012,
-          "layoutY": 151
+          "layoutX": 1005,
+          "layoutY": 146
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
+        "name": "save time series",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "defaultTTL": 0,
+          "useServerTs": false,
+          "processingSettings": {
+            "type": "ON_EVERY_MESSAGE"
+          }
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1249,
+          "layoutY": 145
         }
       }
     ],
     "connections": [
       {
-        "fromIndex": 2,
-        "toIndex": 1,
+        "fromIndex": 1,
+        "toIndex": 0,
         "type": "Post attributes"
       },
       {
-        "fromIndex": 2,
-        "toIndex": 4,
+        "fromIndex": 1,
+        "toIndex": 3,
         "type": "RPC Request to Device"
       },
       {
-        "fromIndex": 2,
-        "toIndex": 7,
+        "fromIndex": 1,
+        "toIndex": 6,
         "type": "Other"
       },
       {
-        "fromIndex": 2,
-        "toIndex": 9,
+        "fromIndex": 1,
+        "toIndex": 8,
         "type": "RPC Request from Device"
       },
       {
-        "fromIndex": 2,
-        "toIndex": 12,
+        "fromIndex": 1,
+        "toIndex": 11,
         "type": "Post telemetry"
       },
       {
-        "fromIndex": 5,
-        "toIndex": 2,
+        "fromIndex": 4,
+        "toIndex": 1,
         "type": "Success"
       },
       {
-        "fromIndex": 5,
-        "toIndex": 6,
+        "fromIndex": 4,
+        "toIndex": 5,
         "type": "Failure"
       },
       {
-        "fromIndex": 9,
-        "toIndex": 3,
+        "fromIndex": 8,
+        "toIndex": 2,
         "type": "Failure"
       },
       {
-        "fromIndex": 9,
-        "toIndex": 8,
+        "fromIndex": 8,
+        "toIndex": 7,
         "type": "check-weight-beehive"
       },
       {
-        "fromIndex": 9,
-        "toIndex": 10,
+        "fromIndex": 8,
+        "toIndex": 9,
         "type": "check-timeseries-average"
       },
       {
-        "fromIndex": 9,
-        "toIndex": 11,
+        "fromIndex": 8,
+        "toIndex": 10,
         "type": "check-device-status"
       },
       {
-        "fromIndex": 12,
-        "toIndex": 0,
+        "fromIndex": 11,
+        "toIndex": 12,
         "type": "output"
       }
     ],

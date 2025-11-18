@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 31,
+    "version": 32,
     "firstNodeIndex": 2,
     "nodes": [
       {
@@ -28,8 +28,8 @@
         },
         "additionalInfo": {
           "description": "reply to RPC command",
-          "layoutX": 2142,
-          "layoutY": 226
+          "layoutX": 2225,
+          "layoutY": 214
         }
       },
       {
@@ -145,8 +145,8 @@
         },
         "additionalInfo": {
           "description": "save average telemetry values as server attributes for the device",
-          "layoutX": 2154,
-          "layoutY": 163
+          "layoutX": 2224,
+          "layoutY": 160
         }
       },
       {
