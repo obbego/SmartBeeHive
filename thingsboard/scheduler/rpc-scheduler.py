@@ -34,10 +34,10 @@ device_list = (
 # define the hours to do the rpc request
 # change the time if you need it
 timesCheckWeightBeehive = sorted({
-    time(18,8)
+    time(12,56)
 })
 timesCheckDeviceStatus = sorted({
-    time(18,9)
+    time(12,57)
 })
 # create variables to memorize last measure 
 lastTimeCheckWeightBeehive = datetime.now()
@@ -53,13 +53,15 @@ def send_RPC_request(device, method, params):
 
     # save the method and the params in the file
     with open(JSON_FILENAME, "w") as file:
-        content = f'{{"method":{method}, "params":{params}}}'
+        content = {"method":method, "params":params}
         json.dump(content, file, indent=4, ensure_ascii=False) # write the converted element into the file
   
     # define the command to send
-    command = ["curl", "-v", "-X", "POST", f"@{JSON_FILENAME}", f"https://{THINGSBOARD_HOST_NAME}/api/v1/{device.accessToken}/rpc", "--header", "Content-Type:application/json"]
+    command = ["curl", "-v", "-X", "POST", "-d", f"@{JSON_FILENAME}", f"https://{THINGSBOARD_HOST_NAME}/api/v1/{device.accessToken}/rpc", "--header", "Content-Type:application/json"]
 
-    return subprocess.run(command, capture_output=True, text=True) # return the result of the rpc request
+    result = subprocess.run(command, capture_output=True, text=True) # return the result of the rpc request
+    print(result)
+    return result
 
 def isTime(time_list, last_time):
     """Function to check if the current time corresponds
@@ -128,12 +130,12 @@ def scheduler_checkDeviceStatus():
             average_list = [] # initialise a variable to gather the averages
             for singleDevice in device_list:
                 rpc_reply = send_RPC_request(singleDevice, "check-timeseries-average", {}) # get the reply
-                format_device_averages(average_list, rpc_reply, singleDevice) # add the rpc reply to the average list in the proper format
+                format_device_averages(average_list, rpc_reply.stdout, singleDevice) # add the rpc reply to the average list in the proper format
             
             # then for each device send the request
             # to check the status
             for singleDevice in device_list:
-                send_RPC_request(singleDevice, "check-device-status", {"timeseriesAverage":{average_list}})
+                send_RPC_request(singleDevice, "check-device-status", {"timeseriesAverage":average_list})
 
             lastTimeCheckDeviceStatus = datetime.now() # update the last time variable
         except Exception as e:
