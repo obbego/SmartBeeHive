@@ -255,3 +255,4 @@ Durante alcune prove nell'utilizzo di una versione demo del server Thingsboard s
 - [Comunicazione con ThingsBoard](https://thingsboard.io/docs/reference/protocols/)
 - [HTTP API](https://thingsboard.io/docs/reference/http-api/)
 - [REST API](https://thingsboard.io/docs/user-guide/telemetry/#data-query-rest-api)
+- [Custom table database](https://thingsboard.io/docs/user-guide/rule-engine-2-0/nodes/action/save-to-custom-table/)
