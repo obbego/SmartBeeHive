@@ -96,6 +96,15 @@ La seguente sezione indica i possibili allarmi che potrebbero essere generati da
 | `HoneyReady` | Warning | Avviso che è possibile raccogliere il miele |
 | `FailedAssetAttributes` | Minor | Recupero degli attributi dell'asset non riuscito. |
 
+### Database
+Il database ThingsBoard dispone anche della possibilità di aggiungere tabelle aggiuntive utilizzando il motore Cassandra. 
+La tabella deve essere già configurata nei file di configurazione del server e vi è un nodo specifico che consente di agire su questa funzionalità. 
+
+Nello specifico la tabella si chiamerà `log-telemetries-action` e conterrà:
+- **PreviousTelemetry** telemetria già inserita, se presente
+- **Timestamp** timestamp della telemetria
+- **CurrentTelemetry** telemetria ripetuta con medesimo timestamp (potrebbe variare) 
+
 
 ## Scheduler
 Dal momento che la versione di ThingsBoard utilizzata non consente di eseguire controlli periodici indipendentemente dai dati inseriti, occorre attivare uno scheduler che invii ad orari prestabiliti richieste RPC per attivare i suddetti controlli.
