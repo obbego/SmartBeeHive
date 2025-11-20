@@ -104,7 +104,9 @@ Nello specifico la tabella si chiamerà `log-telemetries-action` e conterrà:
 - **PreviousTelemetry** telemetria già inserita, se presente
 - **Timestamp** timestamp della telemetria
 - **CurrentTelemetry** telemetria ripetuta con medesimo timestamp (potrebbe variare) 
-
+- **DateTimeAction** data e ora in cui è stato effettuato il controllo
+- **Action** azione effettuata dal controllo (`insert` se il dato è appena stato inserito, `replace` se il nuovo dato rimpiazza quello precedente, `dropped` se il nuovo dato è stato scartato)
+- **DeviceName** nome del device dove l'azione è stata performata 
 
 ## Scheduler
 Dal momento che la versione di ThingsBoard utilizzata non consente di eseguire controlli periodici indipendentemente dai dati inseriti, occorre attivare uno scheduler che invii ad orari prestabiliti richieste RPC per attivare i suddetti controlli.
