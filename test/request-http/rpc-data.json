@@ -1,13 +1,7 @@
 {
-    "method":"post-telemetry-device",
+    "method":"publish",
     "params":{
-        "content":[
-            {
-                "ts":1762271975000,
-                "values":{
-                    "weight":27
-                }
-            }
-        ]
+        "ts":1762271975000,
+        "message":"ciao"
     }
 }

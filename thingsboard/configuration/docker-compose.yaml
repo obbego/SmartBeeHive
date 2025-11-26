@@ -1,0 +1,56 @@
+services:
+  postgres:
+    restart: always
+    image: "postgres:16"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: thingsboard
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=tb-custom
+      - CASSANDRA_AUTHENTICATOR=AllowAllAuthenticator
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+
+  thingsboard-ce:
+    restart: always
+    image: "thingsboard/tb-node:4.2.1"
+    ports:
+      - "8080:8080"
+      - "7070:7070"
+      - "1883:1883"
+      - "8883:8883"
+      - "5683-5688:5683-5688/udp"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    environment:
+      TB_SERVICE_ID: tb-ce-node
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/thingsboard
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      TB_QUEUE_TYPE: in-memory
+      TB_TRANSPORT_TYPE: local
+      CLUSTER_NODE_LOGICAL_ID: tb-ce-node
+    depends_on:
+      - postgres
+      - cassandra
+
+volumes:
+  postgres-data:
+    name: tb-postgres-data
+    driver: local
+  cassandra-data:
+    name: tb-cassandra-data
+    driver: local
