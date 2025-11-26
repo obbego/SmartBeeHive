@@ -138,6 +138,8 @@ oppure è possibile omettere il timestamp e lasciare che il server lo assegni au
 }
 ```
 
+**N.B.** Una volta che viene effattuata una richiesta di POST via HTTP, il messaggio viene processato da Thingsboard, dove il timestamp specificato viene inserito all'interno dei metadata mentre nel corpo del messaggio rimangono solo le chiavi e i valori per la telemetria.
+
 **N.B.** *È possibile inviare i dati in formato JSON con i comandi di POST, ma risulta più comodo utilizzare un file JSON per dati complessi con molte chiavi o oggetti. La soluzione adottata con il file JSON è ottimale per le necessità del progetto.*
 
 #### GET via HTTP
