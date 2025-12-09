@@ -108,6 +108,8 @@ Nello specifico la tabella si chiamerà `log-telemetries-action` e conterrà:
 - **Action** azione effettuata dal controllo (`insert` se il dato è appena stato inserito, `replace` se il nuovo dato rimpiazza quello precedente, `dropped` se il nuovo dato è stato scartato)
 - **DeviceName** nome del device dove l'azione è stata performata 
 
+**N.B.** Tale proposta viene per il momento non attuata in quanto l'utilizzo di un sistema ibrido con Cassandra salverebbe anche le telemetrie all'interno di questa tipologia di database. Per non modificare troppo la configurazione di Thingsboard e in assenza di una documentazione appropriata, si pianifica di trovare una soluzione o scartare la funzionalità di salvataggio, in quanto parte marginale e non necessaria per il funzionamento del sistema.
+
 ## Scheduler
 Dal momento che la versione di ThingsBoard utilizzata non consente di eseguire controlli periodici indipendentemente dai dati inseriti, occorre attivare uno scheduler che invii ad orari prestabiliti richieste RPC per attivare i suddetti controlli.
 
