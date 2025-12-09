@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 59,
+    "version": 60,
     "firstNodeIndex": 0,
     "nodes": [
       {
@@ -207,49 +207,6 @@
         }
       },
       {
-        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
-        "name": "edit_message-for-database",
-        "debugSettings": null,
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 0,
-        "configuration": {
-          "scriptLang": "JS",
-          "jsScript": "/* declare a new object for the message\nwith all data to be saved */\nvar message = {}\n\n/* get the telemetry list and \nthe current index */\nvar currentKey = Object.keys(msg)[0];\nvar currentIndex = metadata.sameTelemetry;\nvar previousTelemetry = null;\nif(currentIndex>=0){\n    var telemetryList = JSON.parse(metadata[currentKey]);\n    previousTelemetry = telemetryList[currentIndex];\n}\n\n/* populate the array with the values */\nmessage.ts = metadata.ts;\nmessage.previousValue = previousTelemetry ? previousTelemetry.value : -999999;\nmessage.currentValue = msg[currentKey];\nmessage.datetime = new Date().toISOString();\nmessage.deviceName = metadata.deviceName;\n\n/* decide the action to do */\nif(metadata.valid && currentIndex>=0)\n    message.action = \"update\";\nelse if(metadata.valid)\n    message.action = \"insert\";\nelse\n    message.action = \"delete\";\n\nreturn {msg: message, metadata: metadata, msgType: msgType};",
-          "tbelScript": "\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};"
-        },
-        "additionalInfo": {
-          "description": "edit the message and transform it with the set of data to be saved into the database in a custom table",
-          "layoutX": 2266,
-          "layoutY": 230
-        }
-      },
-      {
-        "type": "org.thingsboard.rule.engine.action.TbSaveToCustomCassandraTableNode",
-        "name": "save_database-info",
-        "debugSettings": null,
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 1,
-        "configuration": {
-          "tableName": "log-telemetries-action",
-          "fieldsMapping": {
-            "previousValue": "PreviousTelemetry",
-            "ts": "Timestamp",
-            "currentValue": "CurrentTelemetry",
-            "datetime": "DateTimeAction",
-            "action": "Action",
-            "deviceName": "DeviceName"
-          },
-          "defaultTtl": 0
-        },
-        "additionalInfo": {
-          "description": "save the actions done for telemetry in order to replace data",
-          "layoutX": 2543,
-          "layoutY": 228
-        }
-      },
-      {
         "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
         "name": "error_device-timeseries",
         "debugSettings": null,
@@ -312,7 +269,7 @@
       },
       {
         "fromIndex": 0,
-        "toIndex": 11,
+        "toIndex": 9,
         "type": "Failure"
       },
       {
@@ -332,7 +289,7 @@
       },
       {
         "fromIndex": 4,
-        "toIndex": 10,
+        "toIndex": 8,
         "type": "Failure"
       },
       {
@@ -349,21 +306,6 @@
         "fromIndex": 7,
         "toIndex": 1,
         "type": "valid"
-      },
-      {
-        "fromIndex": 7,
-        "toIndex": 8,
-        "type": "dropped"
-      },
-      {
-        "fromIndex": 7,
-        "toIndex": 8,
-        "type": "valid"
-      },
-      {
-        "fromIndex": 8,
-        "toIndex": 9,
-        "type": "Success"
       }
     ],
     "ruleChainConnections": null

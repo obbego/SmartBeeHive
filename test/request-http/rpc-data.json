@@ -1,7 +1,9 @@
 {
     "method":"publish",
     "params":{
-        "ts":1762271975000,
-        "message":"ciao"
+        "timestamp":1762271975000,
+        "action":"deny",
+        "previousTelemetry":75.8,
+        "currentTelemetry":55.2
     }
 }
