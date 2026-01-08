@@ -134,6 +134,26 @@ Alla luce della situazione attuale e dei relativi problemi, ecco i requisiti da 
 3. Configurare la gestione degli account.  
 4. Configurare un’interfaccia grafica di prova per l’output dei risultati.
 
+### Comunicazione
+1. Gestione di più arnie
+2. Supporto di un invio non continuo dei dati
+3. Creazione di allarmi e log per la comunicazione con la parte frontend in modo da riportare possibili errori/bug/informazioni.
+
+## Requisiti e verifica
+Dei requisiti precedentemente elencati, si vogliono sottolineare: 
+
+### Requisiti core
+Nella fase di progetto i requisiti chiave da testare sono:
+1. **RILEVAZIONE SENSORI** Tale requisito sarà definito completato quando sarà possibile ricavare misurazioni dai vari sensori in modo corretto e verosimile al contesto dell'alveare rispettando una certa scansione oraria.
+2. **COMUNICAZIONE LORA** che deve funzionare per tutti i collegamenti. Tale requisito sarà ritenuto soddisfatto se ogni dispositivo utilizzante il LoRa sarà in grado di comunicare almeno i dati di misurazione con gli altri dispositivi del sistema cui è collegato. La dimensione del messaggio trasportabile dovrà essere pari a quella di almeno una misurazione o inferiore se il protocollo è in grado di supportare la frammentazione.
+3. **ACCESSO AL SERVER THINGSBOARD** per il salvataggio di dati e per l'estrapolazione che dovrà essere effettuata dal gruppo che si occupa del lato frontend. Se risulta possibile raccogliere dati distinti per telemetria e dispositivo che li ha generati tale dispositivo può ritenersi soddisfatto. 
+4. **CODICE COMUNICAZIONE ELEMENTI** dove è necessario testare per i dispositivi intermedi almeno la parte di comunicazione e instradamento dei dati, in modo da raggiungere il server per il salvataggio dati.
+ 
+### Requisiti di estensione
+Questi requisiti sono parte integrante per lo sviluppo del progetto, non essenziali alla comunicazione diretta dei dati, ma informazioni relative allo stato della trasmissione, all'interpretazione dei dati e alla notifica di eventuali errori / problematiche. 
+1. **ALLARMI SERVER** per la notifica di eventuali errori, warning nelle misurazioni raccolte e informazioni come il momento della raccolta del miele. Tale requisito verrà testato con l'inserimento di dati verosimili su un dispositivo virtuale per testare a pieno il funzionamento dei controlli e degli allarmi prodotti.
+2. **LOG DISPOSITIVI** compiendo i dispositivi azioni su dati variabili e situazioni dipendenti da fattori esterni, risulta necessario implemenetare per ogni dispositivo intermedio un log per poter salvare con precisione azioni, orari ed esiti per rendere possibile una futura manutenzione.
+
 **N.B.**  
 *Per l’output dei dati si è pensato di utilizzare un’interfaccia grafica dedicata e non quella di default del server ThingsBoard. Tale interfaccia ha lo scopo di essere più accessibile e facilmente collegabile al sito della scuola e ad altri progetti in corso.*
 
