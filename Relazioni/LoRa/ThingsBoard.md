@@ -221,28 +221,6 @@ Ogni richiesta RPC in ThingsBoard è sincrona, quindi il server dovrà inviare u
 
 
 ## Funzionamento per l'alveare
-### Utilizzo del Rule Engine
-Stando alla documentazione precedente è possibile salvare telemetrie per ogni dispositivo utilizzando il sever ThingsBoard.
-Tuttavia, oltre a raccogliere semplicemente i dati, il sistema dell'alveare dovrebbe poter:
-- segnalare lo stato dell'alveare (come quando è ora di raccogliere il miele)
-- segnalare possibili anomalia del sistema di sensori
-- controllare la validità del dato trasmesso
-
-Per questo occorrerà interagire con le Rule Engine e impostare delle Rule chains che possano controllare queste condizioni e segnalarle. 
-
-L'obiettivo è quello di mostrare questi messaggi come allarmi in modo che possano essere letti e mostrati anche nel frontend previsto per il progetto dell'alveare. 
-
-### Asset comune
-Tutti i dispositivi collegati alle arnie dovranno essere raggruppati in un asset comune. 
-Potrebbe essere utile infatti poter confrontare dati tra arnie diverse e notare la presenza di possibili anomalie.
-
-### Rule chains da creare
-Per far sì che il sistema sia completo e possa segnalare informazioni o problemi del sistema occorre che siano implementate le seguenti Rule Chain:
-- **controllo registrazione dato** se il dispositivo indicato non è stato trovato nel server occorre inserire un allarme di errore.
-- **controllo dato** una volta passato il controllo del dispositivo occorre che il dato venga controllato, ossia che la grandezza da misurare sia già stata registrata e che il dato non sia fuori dal range previsto, possibile segnale di un'anomalia dei sensori o di un errore nella trasmissione del dato. In base a quello sarà possibile scegliere se o meno archiviare la telemetria o sostituirla con una già presente. In quel caso è possibile segnalare la cosa con un semplice allarme di rilevanza minore.
-- **controllo dispositivo** deve essere controllato che il dispositivo abbia effettivamente ricevuto misurazioni nell'ultimo intervallo di tempo e che gli ultimi dati raccolti non sforino con la media dei dispositivi vicini. Per questo tipo di dato occorrerebbe inserire un warning. 
-- **controllo alveare** per il controllo dell'alveare è possibile inserire un allarme che indica alcune informazioni relative all'alveare. Ad esempio con un warning si potrebbe indicare il momento in cui raccogliere il miele.
-
 ### Limitazioni nell'utilizzo
 Durante alcune prove nell'utilizzo di una versione demo del server Thingsboard si sono riscontrati i seguenti problemi, equiparabili alla versione gratuita di cui l'alveare è dotato. 
 
