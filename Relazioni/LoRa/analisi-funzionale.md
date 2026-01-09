@@ -1,5 +1,7 @@
 # Analisi funzionale
 ## Schema di comportamento
+![Schema funzionamento](./img/schema-funzionamento.png)
+
 Il sistema per la raccolta dati dell'alveare deve seguire il seguente schema di funzionamento:
 1. **SCHEDA ALVEARE** deve raccogliere le varie misurazioni con una frequenza che rispetta le esigenze di monitoraggio. In seguito attraverso protocollo LoRa dovrà inviare le informazioni al gateway secondo un intervallo predefinito. Tempi di misurazione e di invio potrebbero non coincidere tra loro, così come ogni misurazione potrebbe non necessitare della stessa frequenza.
 2. **GATEWAY** raccoglie i dati e li invia all'antenna di ricezione nell'edificio più vicino con un intervallo definito in base alle esigenze e fattori esterni (tolleranza delle api alle onde).
@@ -57,3 +59,12 @@ Per far sì che il sistema sia completo e possa segnalare informazioni o problem
 ### Scheduler
 Lo scheduler viene realizzato in funzione del server ThingsBoard in modo da inviare richieste RPC periodiche al server per l'esecuzione dei controlli sopra citati. 
 La frequenza dei controlli viene stabilita in fase di progetto (probabilmente 1 volta al giorno).
+
+Anche per lo scheduler risulterebbe opportuno salvare lo stato degli invii in un file di log, in modo da tenerne traccia per futuri controlli e manutenzioni.
+
+## Informazioni aggiuntive
+Per la realizzazione di tale sistema occorre una conoscenza del funzionamento della piattaforma ThingsBoard e la realizzazione di un protocollo per lo scambio di informazioni. 
+
+Durante la fase di ricerca sono state redatte documentazioni riguardo questi due argomenti contenenti le nozioni di base e gli aspetti di interesse per il progetto. 
+
+Per ulteriori approfondimenti visitare quindi [ThingsBoard](./ThingsBoard.md) e [Protocollo Lora](./protocollo-LoRa.md).
