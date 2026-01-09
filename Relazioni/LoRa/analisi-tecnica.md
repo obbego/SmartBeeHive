@@ -141,3 +141,10 @@ Il programma dovrà implementare principalmente le seguenti funzioni:
 Tale scheduler potrebbe essere implementato nel ricevitore dei dati dall'alveare, visto che è predisposto per il collegamento al server ThingsBoard. 
 
 Nel momento stabilito verrà fatta una richiesta RPC per ogni dispositivo, con un leggero ritardo tra una e l'altra. 
+
+### Gestione errori
+Lo scheduler del PC rappresenta un elemento potenzialmente rischioso all'interno del sistema, in quanto non è incluso nativamente in ThingsBoard ma è un'aggiunta esterna e personalizzata. Ne consegue che potrebbero esserci problemi nell'esecuzione delle richieste, e nell'estrapolazione dell'output richiesto. 
+
+Proprio per questo lo scheduler disporrà di un log per la fase di debug inziale e per la durata del suo funzionamento, in modo tale da rilevare le ultime operazioni e i principali errori.
+
+Inoltre **ogni richiesta potrà essere ripetuta al massimo 3 volte**, in modo da scongiurare problemi dovuti ad una possibile congestione della rete o di prima richiesta errata.
