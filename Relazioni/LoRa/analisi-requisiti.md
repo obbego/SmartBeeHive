@@ -12,7 +12,7 @@ Tali dati potranno poi essere utilizzati per determinare quando raccogliere il m
 I dati da rilevare all’interno di ogni arnia sono i seguenti:
 - **TEMPERATURA**
 - **UMIDITÀ**
-- **RUMORE**, per misurare l’attività delle api
+- **RUMORE** (articolato in frequenza di picco e intensità) per misurare l’attività delle api
 - **PESO** peso dell'alveare + api
 
 Tali dati dovranno essere rilevati seguendo una specifica scansione oraria, che potrà essere stabilita in seguito.
@@ -96,7 +96,7 @@ Sono state avanzate alcune possibili soluzioni, tuttora da sviluppare:
 1. **Utilizzo del LoRa**, nonostante i problemi precedentemente elencati. L’idea è quella di costruire un protocollo semplificato al di sopra, in modo da garantire una comunicazione senza collisioni.  
 2. **Ripetizione nell’invio dei dati** – Poiché il numero di interazioni tra i dispositivi è basso, una soluzione potrebbe essere la loro memorizzazione. In questo modo i dati verranno raccolti e trasmessi solo nei momenti consentiti. Ogni dato potrà inoltre essere inviato più volte per ridurre eventuali errori.  
 3. **Sviluppo della scatola dei sensori**, che verrà posizionata all’esterno dell’arnia. Questa soluzione garantisce un buon grado di protezione e riduce al minimo l’interferenza con le api.  
-4. **Scheda dedicata al rilevamento del rumore** ***(PROPOSTA DA VERIFICARE)*** – Questa scheda si attiverà solo al superamento di una soglia di segnale. Da quel momento effettuerà il campionamento del segnale per rilevare rumore e frequenza, consentendo al resto del sistema di operare indipendentemente. Al termine, i dati verranno comunicati alla scheda principale.  
+4. **Scheda dedicata al rilevamento del rumore** ***(PROPOSTA DA VERIFICARE)*** – Questa scheda si attiverà solo al superamento di una soglia di segnale. Da quel momento effettuerà il campionamento del segnale per rilevare intensità e frequenza di picco, consentendo al resto del sistema di operare indipendentemente. Al termine, i dati verranno comunicati alla scheda principale.  
 5. **Utilizzo di una fotoresistenza** per determinare il momento in cui effettuare la misurazione. Occorre tuttavia prestare attenzione a possibili variazioni momentanee di luce (illuminazione artificiale, ombre, ecc.).
 
 ## Requisiti attuali

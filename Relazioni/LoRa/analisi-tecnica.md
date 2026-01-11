@@ -20,7 +20,8 @@ Ogni dispositivo dovrà avere i seguenti attributi impostati come `SHARED`:
 - *temperature* in °C
 - *weight* in kg
 - *humidity* in %
-- *noise* in Hz
+- *noise-frequency* in Hz
+- *noise-intensity* in dB
 
 **N.B.** Ogni dispositivo avrà un ID e un token di accesso, che dovranno essere copiati e utilizzati dai dispositivi che si occuperanno di inviare le telemetrie, estrapolarle o mandare richieste RPC. 
 
@@ -85,13 +86,15 @@ La seguente sezione indica i possibili allarmi che potrebbero essere generati da
 | `DeviceDifferentTemperature` | Major | Il dispositivo ha una temperatura media molto diversa rispetto a quella degli altri dispositivi. |
 | `DeviceDifferentHumidity` | Major | Il dispositivo ha un'umidità media molto diversa rispetto a quella degli altri dispositivi. |
 | `DeviceDifferentWeight` | Major | Il dispositivo ha un peso medio molto diverso rispetto a quella degli altri dispositivi. |
-| `DeviceDifferentNoise` | Major | Il dispositivo ha un rumore medio molto diverso rispetto a quella degli altri dispositivi. |
+| `DeviceDifferentNoiseIntensity` | Major | Il dispositivo ha un'intesità di rumore media molto diversa rispetto a quella degli altri dispositivi. |
+| `DeviceDifferentNoiseFrequency` | Major | Il dispositivo ha una frequenza di rumore media molto diversa rispetto a quella degli altri dispositivi. |
 | `ChangeOriginatorToAsset` | Minor | Il cambio di originatore del messaggio da dispositivo ad asset non è riuscito. |
 | `ErrorDeviceTimeseries` | Minor | L'arricchimento del messaggio con le telemetrie del dispositivo non è riuscito.|
 | `DeviceOldTemperature` | Major | L'ultima temperatura registrata supera un certo intervallo di tempo. |
 | `DeviceOldHumidity` | Major | L'ultima umidità registrata supera un certo intervallo di tempo. |
 | `DeviceOldWeight` | Major | L'ultimo peso registrato supera un certo intervallo di tempo. |
-| `DeviceOldNoise` | Major | L'ultimo rumore registrato supera un certo intervallo di tempo. |
+| `DeviceOldNoiseFrequency` | Major | L'ultima frequenza di rumore registrata supera un certo intervallo di tempo. |
+| `DeviceOldNoiseIntensity` | Major | L'ultima intensità di rumore registrata supera un certo intervallo di tempo. |
 | `ErrorTimeseriesWeightDevice` | Minor | L'arricchimento con le telemetrie di peso del dispositivo non è riuscito. |
 | `HoneyReady` | Warning | Avviso che è possibile raccogliere il miele |
 | `FailedAssetAttributes` | Minor | Recupero degli attributi dell'asset non riuscito. |
