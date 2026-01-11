@@ -2,7 +2,12 @@
 Di seguito viene riportata l'analisi tecnica suddivisa per i vari componenti facenti parte del sistema dell'alveare. 
 
 ## Sistema sensoristico
+Per la misura dei parametri all'interno dell'alveare si fa uso di un sistema sensoristico formato da:
+- **Celle di carico**, in grado di misurare il peso dell'alveare per monitorare la quantita' di miele prodotto all'interno delle arnie. Per la misura del peso, vengono poste quattro di queste agli angoli dell'arnia, connesse ad una scheda per l'interfacciamento con il microcontrollore.
+- **DHT22**, un sensore di umidita' e temperatura, specializzato per la sopportazione dei parametri atmosferici che si possono trovare all'esterno dell'arnia come pioggia o alte o basse temperature. Questo sensore viene posto all'esterno dell'arnia per la cattura delle condizioni esterne.
+- **KY-037**, un sensore microfonico per la misura dell'attivita' alveare all'interno dell'arnia. Dal microcontrollore all'utilizzo di questo sensore vengono prodotti due parametri, ovvero l'intensita' e la frequenza di picco del rumore prodotto all'interno dell'alveare, che ne permettono di misurare l'attivita'.
 
+Nel sistema si trova inoltre un microcontrollore con lo scopo di misurare questi parametri. Questo e' basato su *ESP32* con supporto per *LoRa* tramite chip *SX1262*.
 
 ## Gateway arnie
 
