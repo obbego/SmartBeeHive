@@ -3,17 +3,21 @@ Di seguito viene riportata l'analisi tecnica suddivisa per i vari componenti fac
 
 ## Sistema sensoristico
 Per la misura dei parametri all'interno dell'alveare si fa uso di un sistema sensoristico formato da:
-- **Celle di carico**, in grado di misurare il peso dell'alveare per monitorare la quantita' di miele prodotto all'interno delle arnie. Per la misura del peso, vengono poste quattro di queste agli angoli dell'arnia, connesse ad una scheda per l'interfacciamento con il microcontrollore.
-- **DHT22**, un sensore di umidita' e temperatura, specializzato per la sopportazione dei parametri atmosferici che si possono trovare all'esterno dell'arnia come pioggia o alte o basse temperature. Questo sensore viene posto all'esterno dell'arnia per la cattura delle condizioni esterne.
-- **KY-037**, un sensore microfonico per la misura dell'attivita' alveare all'interno dell'arnia. Dal microcontrollore all'utilizzo di questo sensore vengono prodotti due parametri, ovvero l'intensita' e la frequenza di picco del rumore prodotto all'interno dell'alveare, che ne permettono di misurare l'attivita'.
+- **Celle di carico**, in grado di misurare il peso dell'alveare per monitorare la quantità di miele prodotto all'interno delle arnie. Per la misura del peso vengono poste quattro di queste agli angoli dell'arnia, connesse a una scheda per l'interfacciamento con il microcontrollore.
+- **DHT22**, un sensore di umidità e temperatura, specializzato per la sopportazione dei parametri atmosferici che si possono trovare all'esterno dell'arnia, come pioggia o alte o basse temperature. Questo sensore viene posto all'esterno dell'arnia per la cattura delle condizioni esterne.
+- **KY-037**, un sensore microfonico per la misura dell'attività dell'alveare all'interno dell'arnia. Dal microcontrollore, all'utilizzo di questo sensore, vengono prodotti due parametri, ovvero l'intensità e la frequenza di picco del rumore prodotto all'interno dell'alveare, che ne permettono la misura dell'attività.
 
-Nel sistema si trova inoltre un microcontrollore con lo scopo di misurare questi parametri. Questo e' basato su *ESP32* con supporto per *LoRa* tramite chip *SX1262*.
+Nel sistema si trova inoltre un microcontrollore con lo scopo di misurare questi parametri. Questo è basato su *ESP32* con supporto per *LoRa* tramite chip *SX1262*.
 
 ## Gateway arnie
-
+Il gateway è l'elemento che si occupa della ricezione delle informazioni dalle arnie stesse, per permettere un invio di queste verso il ricevitore tramite il protocollo *Niagara*, che successivamente si occuperà dell'invio a ThingsBoard per l'aggiunta delle misure al database.  
+Il gateway ha lo scopo di attendere una richiesta dal ricevitore delle misurazioni, in quanto quest'ultimo, essendo connesso a Internet, è al corrente della data e dell'ora e ha l'obiettivo di richiedere tre misure giornaliere alle arnie.  
+Il sistema sensoristico può effettuare più misure di quelle che vengono richieste dal ricevitore, effettuando solamente l'invio di questi dati sulla rete *LoRa* su richiesta da parte di quest'ultimo. Ciò avviene quando si deve fornire una lettura media delle misure attraverso l'intervallo delle otto ore fra una misura e l'altra, anziché una lettura istantanea.
 
 ## Ricevitore misurazioni
-
+La ricezione delle misurazioni viene effettuata attraverso un software in esecuzione su un *Raspberry Pi* che implementa il protocollo *Niagara* per la comunicazione con le arnie.  
+Sarà proprio il ricevitore delle misurazioni che si occuperà del timing, ovvero del conteggio del tempo trascorso fra una misura e l'altra, per permettere di inviare una richiesta al gateway a certi intervalli di tempo.  
+Successivamente, alla ricezione delle misurazioni da parte delle arnie, viene stabilita una connessione HTTP con il server ThingsBoard per l'invio di questi dati e il salvataggio nel database.
 
 ## Server ThingsBoard
 Le parti da configurare del server ThingsBoard saranno quelle indicate di seguito.
