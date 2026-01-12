@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 32,
+    "version": 33,
     "firstNodeIndex": 2,
     "nodes": [
       {
@@ -44,7 +44,8 @@
             "temperature",
             "humidity",
             "weight",
-            "noise"
+            "noise_frequency",
+            "noise_intensity"
           ],
           "aggregation": "NONE",
           "fetchMode": "ALL",
@@ -276,7 +277,7 @@
       },
       {
         "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
-        "name": "alarm_old-noise",
+        "name": "alarm_old-noise-frequency",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -291,7 +292,7 @@
           "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
           "useMessageAlarmData": false,
           "overwriteAlarmDetails": false,
-          "alarmType": "DeviceOldNoise",
+          "alarmType": "DeviceOldNoiseFrequency",
           "severity": "MAJOR",
           "propagate": false,
           "relationTypes": [],
@@ -303,6 +304,37 @@
           "description": "indicate alarm that has an old latest telemetry about noise",
           "layoutX": 1506,
           "layoutY": 427
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_old-noise-intensity",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceOldNoiseIntensity",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "indicate alarm that has an old latest telemetry about noise",
+          "layoutX": 1512,
+          "layoutY": 490
         }
       }
     ],
@@ -355,7 +387,12 @@
       {
         "fromIndex": 7,
         "toIndex": 3,
-        "type": "error_noise"
+        "type": "error_noise_frequency"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 3,
+        "type": "error_noise_intensity"
       },
       {
         "fromIndex": 7,
@@ -390,7 +427,12 @@
       {
         "fromIndex": 7,
         "toIndex": 11,
-        "type": "error_noise"
+        "type": "error_noise_frequency"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 12,
+        "type": "error_noise_intensity"
       }
     ],
     "ruleChainConnections": null

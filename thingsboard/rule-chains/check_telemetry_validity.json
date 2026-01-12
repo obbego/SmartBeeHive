@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 60,
+    "version": 61,
     "firstNodeIndex": 0,
     "nodes": [
       {
@@ -45,7 +45,8 @@
             "general_weight": "general_weight",
             "general_temperature": "general_temperature",
             "general_humidity": "general_humidity",
-            "general_noise": "general_noise"
+            "general_noise_intensity": "general_noise_intensity",
+            "general_noise_frequency": "general_noise_frequency"
           }
         },
         "additionalInfo": {
@@ -83,7 +84,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "var message = []; // create a new message to incorporate\n/* define constants of threshold to verify if a data is correct */\nconst MINTEMPERATURETHRESHOLD = -20; // °C\nconst MAXTEMPERATURETHRESHOLD = 70;\nconst MINWEIGHTTHRESHOLD = 0; // kg\nconst MAXWEIGHTTHRESHOLD = 30;\nconst MINHUMIDITYTHRESHOLD = 0; // %\nconst MAXHUMIDITYTHRESHOLD = 100;\nconst MINNOISETHRESHOLD = 0; // Hz\nconst MAXNOISETHRESHOLD = 500;\n\n/* for each message check\nif it's over the threshold so as to eliminate it */\nvar check; // create a boolean variable\nfor(const singleMeasure of msg){\n    check = true;\n\n    if(\"temperature\" in singleMeasure && (singleMeasure.temperature<MINTEMPERATURETHRESHOLD || singleMeasure.temperature>MAXTEMPERATURETHRESHOLD))\n        check = false;\n    else if(\"humidity\" in singleMeasure && (singleMeasure.humidity<MINHUMIDITYTHRESHOLD || singleMeasure.humidity>MAXHUMIDITYTHRESHOLD))\n        check = false;\n    else if(\"weight\" in singleMeasure && (singleMeasure.weight<MINWEIGHTTHRESHOLD || singleMeasure.weight>MAXWEIGHTTHRESHOLD))\n        check = false;\n    else if(\"noise\" in singleMeasure && (singleMeasure.noise<MINNOISETHRESHOLD || singleMeasure.noise>MAXNOISETHRESHOLD))\n        check = false;\n        \n    if(check)\n        message.push(singleMeasure);\n}\n\nreturn {msg: message, metadata: metadata, msgType: msgType};",
+          "jsScript": "var message = []; // create a new message to incorporate\n/* define constants of threshold to verify if a data is correct */\nconst MINTEMPERATURETHRESHOLD = -20; // °C\nconst MAXTEMPERATURETHRESHOLD = 70;\nconst MINWEIGHTTHRESHOLD = 0; // kg\nconst MAXWEIGHTTHRESHOLD = 30;\nconst MINHUMIDITYTHRESHOLD = 0; // %\nconst MAXHUMIDITYTHRESHOLD = 100;\nconst MINNOISEFREQUENCYTHRESHOLD = 0; // Hz\nconst MAXNOISEFREQUENCYTHRESHOLD = 500;\nconst MINNOISEINTENSITYTHRESHOLD = 0; // dB \nconst MAXNOISEINTENSITYTHRESHOLD = 120;\n\n/* for each message check\nif it's over the threshold so as to eliminate it */\nvar check; // create a boolean variable\nfor(const singleMeasure of msg){\n    check = true;\n\n    if(\"temperature\" in singleMeasure && (singleMeasure.temperature<MINTEMPERATURETHRESHOLD || singleMeasure.temperature>MAXTEMPERATURETHRESHOLD))\n        check = false;\n    else if(\"humidity\" in singleMeasure && (singleMeasure.humidity<MINHUMIDITYTHRESHOLD || singleMeasure.humidity>MAXHUMIDITYTHRESHOLD))\n        check = false;\n    else if(\"weight\" in singleMeasure && (singleMeasure.weight<MINWEIGHTTHRESHOLD || singleMeasure.weight>MAXWEIGHTTHRESHOLD))\n        check = false;\n    else if(\"noise_frequency\" in singleMeasure && (singleMeasure.noise_frequency<MINNOISEFREQUENCYTHRESHOLD || singleMeasure.noise_frequency>MAXNOISEFREQUENCYTHRESHOLD))\n        check = false;\n    else if(\"noise_frequency\" in singleMeasure && (singleMeasure.noise_intensity<MINNOISEINTENSITYTHRESHOLD || singleMeasure.noise_intensity>MAXNOISEINTENSITYTHRESHOLD))\n        check = false;\n        \n    if(check)\n        message.push(singleMeasure);\n}\n\nreturn {msg: message, metadata: metadata, msgType: msgType};",
           "tbelScript": "\nreturn {msg: msg, metadata: metadata, msgType: msgType};"
         },
         "additionalInfo": {
@@ -125,8 +126,9 @@
           "latestTsKeyNames": [
             "weight",
             "temperature",
-            "noise",
-            "humidity"
+            "humidity",
+            "noise_frequency",
+            "noise_intensity"
           ],
           "aggregation": "NONE",
           "fetchMode": "ALL",
