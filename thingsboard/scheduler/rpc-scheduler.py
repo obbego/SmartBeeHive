@@ -34,10 +34,10 @@ device_list = (
 # define the hours to do the rpc request
 # change the time if you need it
 timesCheckWeightBeehive = sorted({
-    time(12,56)
+    time(12,43)
 })
 timesCheckDeviceStatus = sorted({
-    time(12,57)
+    time(12,44)
 })
 # create variables to memorize last measure 
 lastTimeCheckWeightBeehive = datetime.now()

@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 31,
+    "version": 34,
     "firstNodeIndex": 2,
     "nodes": [
       {
@@ -28,8 +28,8 @@
         },
         "additionalInfo": {
           "description": "reply to RPC command",
-          "layoutX": 2142,
-          "layoutY": 226
+          "layoutX": 2225,
+          "layoutY": 214
         }
       },
       {
@@ -44,7 +44,8 @@
             "temperature",
             "humidity",
             "weight",
-            "noise"
+            "noise_frequency",
+            "noise_intensity"
           ],
           "aggregation": "NONE",
           "fetchMode": "ALL",
@@ -145,8 +146,8 @@
         },
         "additionalInfo": {
           "description": "save average telemetry values as server attributes for the device",
-          "layoutX": 2154,
-          "layoutY": 163
+          "layoutX": 2224,
+          "layoutY": 160
         }
       },
       {
@@ -176,7 +177,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "var errorList = []; // create the list for errors\nconst TIMETHRESHOLD = 24; // it maximum hours of difference from the last telemetry of that measure type \n\n/**\n * Function to establish if the last time of that\n * specific measure was taken before the threshold\n * @param timestamp timestamp of the measure\n * @return TRUE if the difference of time is lower than the threshold, FALSE otherwise\n */\nfunction isLastTelemetryRecent(timestamp){\n    return (Date.now() - timestamp) / 1000 / 60 / 60 < TIMETHRESHOLD;\n}\n\n/* get the keys and\ninitialise the variables */\nvar measures = Object.keys(msg);\nvar telemetryList;\n\n/* check for each telemetry the\nlast save of a value */\nfor(const singleMeasure of measures){\n    telemetryList = JSON.parse(msg[singleMeasure]); // get the list of telemetry\n    /* check the difference in hours. \n    If the distance exceeds the threshold add an error */\n    if(!isLastTelemetryRecent(telemetryList[telemetryList.length-1].ts))\n        errorList.push(\"error_\"+singleMeasure);\n}\n\n/* if the list has no error found, \npopulate the array with a single value */\nif(errorList.length === 0)\n    errorList.push(\"values_ok\");\n\nreturn errorList;",
+          "jsScript": "var errorList = []; // create the list for errors\nconst TIMETHRESHOLD = 24; // it maximum hours of difference from the last telemetry of that measure type \n\n/**\n * Function to establish if the last time of that\n * specific measure was taken before the threshold\n * @param timestamp timestamp of the measure\n * @return TRUE if the difference of time is lower than the threshold, FALSE otherwise\n */\nfunction isLastTelemetryRecent(timestamp){\n    return (Date.now() - timestamp) / 1000 / 60 / 60 < TIMETHRESHOLD;\n}\n\n/* get the keys and\ninitialise the variables */\nvar measures = Object.keys(msg);\nvar telemetryList;\n\n/* add condition where measure types are not found */\nif(!(\"temperature\" in msg))\n    errorList.push(\"error_temperature\");\nif(!(\"humidity\" in msg))\n    errorList.push(\"error_humidity\");\nif(!(\"weight\" in msg))\n    errorList.push(\"error_weight\");\nif(!(\"noise_frequency\" in msg))\n    errorList.push(\"error_noise_frequency\");\nif(!(\"noise_intensity\" in msg))\n    errorList.push(\"error_noise_intensity\");\n\n/* check for each telemetry the\nlast save of a value */\nfor(const singleMeasure of measures){\n    telemetryList = JSON.parse(msg[singleMeasure]); // get the list of telemetry\n    /* check the difference in hours. \n    If the distance exceeds the threshold add an error */\n    if(!isLastTelemetryRecent(telemetryList[telemetryList.length-1].ts))\n        errorList.push(\"error_\"+singleMeasure);\n}\n\n/* if the list has no error found, \npopulate the array with a single value */\nif(errorList.length === 0)\n    errorList.push(\"values_ok\");\n\nreturn errorList;",
           "tbelScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType == 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);"
         },
         "additionalInfo": {
@@ -276,7 +277,7 @@
       },
       {
         "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
-        "name": "alarm_old-noise",
+        "name": "alarm_old-noise-frequency",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -291,7 +292,7 @@
           "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
           "useMessageAlarmData": false,
           "overwriteAlarmDetails": false,
-          "alarmType": "DeviceOldNoise",
+          "alarmType": "DeviceOldNoiseFrequency",
           "severity": "MAJOR",
           "propagate": false,
           "relationTypes": [],
@@ -303,6 +304,37 @@
           "description": "indicate alarm that has an old latest telemetry about noise",
           "layoutX": 1506,
           "layoutY": 427
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_old-noise-intensity",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceOldNoiseIntensity",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "indicate alarm that has an old latest telemetry about noise",
+          "layoutX": 1512,
+          "layoutY": 490
         }
       }
     ],
@@ -355,7 +387,12 @@
       {
         "fromIndex": 7,
         "toIndex": 3,
-        "type": "error_noise"
+        "type": "error_noise_frequency"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 3,
+        "type": "error_noise_intensity"
       },
       {
         "fromIndex": 7,
@@ -390,7 +427,12 @@
       {
         "fromIndex": 7,
         "toIndex": 11,
-        "type": "error_noise"
+        "type": "error_noise_frequency"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 12,
+        "type": "error_noise_intensity"
       }
     ],
     "ruleChainConnections": null
