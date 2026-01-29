@@ -3,3 +3,5 @@
 # exclude data and out files in the scheduler folder
 thingsboard/scheduler/*.json
 thingsboard/scheduler/*.out
+!thingsboard/scheduler/device-register.json
+!thingsboard/scheduler/timing-scheduler.json

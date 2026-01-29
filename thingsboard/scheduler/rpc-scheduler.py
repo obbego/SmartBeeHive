@@ -23,14 +23,86 @@ class DeviceInfo:
 
         return self.deviceName == other.deviceName
     
+    @staticmethod
+    def from_json(object:dict):
+        """Static method to convert a JSON object 
+        into an instance"""
+
+        return DeviceInfo(object['deviceName'], object['accessToken'])
+    
 """Define all the constants and the variables 
 to interact with Thingsboard server"""
 THINGSBOARD_HOST_NAME = "demo.thingsboard.io" # change this with the real host name
 JSON_FILENAME = "rpc-data.json"
-device_list = (
-    DeviceInfo("beehive1", "tevWRCdJC7IYUPl3ha4F"),
-    DeviceInfo("beehive2", "BhP1QobnPngCTa3qjo6Z")
-) # change the data of the device if you need to execute it
+DEVICE_FILENAME = "device-register.json"
+TIMING_FILENAME = "timing-scheduler.json"
+
+def recover_devices():
+    """Function to recover the device list to use
+    to send RPC requests"""
+
+    global DEVICE_FILENAME 
+
+    # try to open the file
+    try:
+        with open(DEVICE_FILENAME, "r") as file:
+            file_content = json.load(file)
+    except Exception as e:
+        raise Exception(e)
+
+    # control if the element is a list
+    if not isinstance(file_content, list):
+        raise TypeError("file_content of device-register must be a list")
+    
+    # return the list
+    device_list = []
+    try:
+        for singleDevice in device_list:
+            device_list.append(DeviceInfo.from_json(singleDevice))
+    except Exception:
+        raise Exception("Format of the device cannot be converted")
+    
+    return device_list
+
+def recover_timings():
+    """Function to recover timings to send
+    the RPC requests to the ThingsBoard server. 
+    The timing is expressed with a list of hour and minutes per day"""
+
+    global TIMING_FILENAME
+
+    # try to open the file
+    try:
+        with open(TIMING_FILENAME, "r") as file:
+            file_content = json.load(file)
+    except Exception as e:
+        raise Exception(e)
+
+    # control if the element is a list
+    if not isinstance(file_content, dict):
+        raise TypeError("file_content of the timings must be a dict")
+
+    # declare timing list
+    timesCheckDeviceStatus = []
+    timesCheckWeightBeehive = []
+
+    # try to read the timings from the file
+    try:
+        for singleTime in file_content['check-device-status']:
+            timesCheckDeviceStatus.append(time(singleTime['hour'], singleTime['minute']))
+    except Exception as e:
+        raise Exception(e)
+    
+    try:
+        for singleTime in file_content['check-weight-beehive']:
+            timesCheckWeightBeehive.append(time(singleTime['hour'], singleTime['minute']))
+    except Exception as e:
+        raise Exception(e)
+    
+    return timesCheckWeightBeehive, timesCheckDeviceStatus
+    
+
+device_list = recover_devices() # change the data of the device if you need to execute it
 
 # define the hours to do the rpc request
 # change the time if you need it
