@@ -5,6 +5,25 @@ import json
 import time as t
 import fcntl
 
+# logging setup
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
+logger = logging.getLogger(__name__) # create logger
+logger.setLevel(logging.DEBUG) # set level of the logger
+if not logger.handlers():
+    logger_handler = TimedRotatingFileHandler(
+        filename='scheduler.log',
+        when='D',
+        interval=28,
+        backupCount=12,
+        encoding='utf-8'
+    ) # define rotating handler
+    logger_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s") # formatter for the handler
+    logger_handler.setFormatter(logger_formatter)
+    logger.addHandler(logger_handler)
+
+
 class DeviceInfo:
     """Class to gather information about
     the device to be connected with in thingsboard"""
@@ -99,19 +118,15 @@ def recover_timings():
     except Exception as e:
         raise Exception(e)
     
-    return timesCheckWeightBeehive, timesCheckDeviceStatus
+    return sorted(timesCheckWeightBeehive), sorted(timesCheckDeviceStatus)
     
 
 device_list = recover_devices() # change the data of the device if you need to execute it
 
 # define the hours to do the rpc request
 # change the time if you need it
-timesCheckWeightBeehive = sorted({
-    time(12,43)
-})
-timesCheckDeviceStatus = sorted({
-    time(12,44)
-})
+timesCheckWeightBeehive, timesCheckDeviceStatus = recover_timings()
+
 # create variables to memorize last measure 
 lastTimeCheckWeightBeehive = datetime.now()
 lastTimeCheckDeviceStatus = datetime.now()
@@ -164,13 +179,15 @@ def scheduler_checkWeightBeehive():
                 t.sleep(1)
                 continue
             
+            logger.info("Start of the RPC request to check the weight of every beehive registered") # add logging info
             # then send request for each device
             for singleDevice in device_list:
                 send_RPC_request(singleDevice, "check-weight-beehive", {})
 
             lastTimeCheckWeightBeehive = datetime.now() # update last time variable
         except Exception as e:
-            print(f"Errore nello scheduler del peso {e}")
+            print(f"Error on weight scheduler {e}")
+            logger.error(f"Error on the check-weight-beehive scheduler: {e}")
 
 def format_device_averages(array, result, device):
     """Function to format the result come from a device to 
@@ -200,7 +217,8 @@ def scheduler_checkDeviceStatus():
             if not isTime(timesCheckDeviceStatus, lastTimeCheckDeviceStatus): # first control if it's time
                 t.sleep(1)
                 continue
-            
+
+            logger.info("Start RPC request to check the status of every device registered") # add logging info
             # first send request to gather the
             # average for each telemetry of each device
             average_list = [] # initialise a variable to gather the averages
@@ -215,14 +233,18 @@ def scheduler_checkDeviceStatus():
 
             lastTimeCheckDeviceStatus = datetime.now() # update the last time variable
         except Exception as e:
-            print(f"Errore nello scheduler del dispositivo {e}")
+            print(f"Error on the device scheduler {e}")
+            logger.error(f"Error on the device scheduler: {e}")
 
-"""Define the thread to start"""
-thread_deviceScheduler = threading.Thread(target=scheduler_checkDeviceStatus, daemon=False)
-thread_weightScheduler = threading.Thread(target=scheduler_checkWeightBeehive, daemon=False)
+if __name__ == "__main__":
+    print("Start of RPC scheduler...")
 
-thread_weightScheduler.start()
-thread_deviceScheduler.start()
+    # define thread to start
+    thread_deviceScheduler = threading.Thread(target=scheduler_checkDeviceStatus, daemon=False)
+    thread_weightScheduler = threading.Thread(target=scheduler_checkWeightBeehive, daemon=False)
 
-thread_weightScheduler.join()
-thread_deviceScheduler.join()
+    thread_weightScheduler.start()
+    thread_deviceScheduler.start()
+
+    thread_weightScheduler.join()
+    thread_deviceScheduler.join()
