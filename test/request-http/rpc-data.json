@@ -1,13 +1,9 @@
 {
-    "method":"post-telemetry-device",
+    "method":"publish",
     "params":{
-        "content":[
-            {
-                "ts":1762271975000,
-                "values":{
-                    "weight":68.5
-                }
-            }
-        ]
+        "timestamp":1762271975000,
+        "action":"deny",
+        "previousTelemetry":75.8,
+        "currentTelemetry":55.2
     }
 }

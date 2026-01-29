@@ -2,13 +2,22 @@
 Di seguito viene riportata l'analisi tecnica suddivisa per i vari componenti facenti parte del sistema dell'alveare. 
 
 ## Sistema sensoristico
+Per la misura dei parametri all'interno dell'alveare si fa uso di un sistema sensoristico formato da:
+- **Celle di carico**, in grado di misurare il peso dell'alveare per monitorare la quantità di miele prodotto all'interno delle arnie. Per la misura del peso vengono poste quattro di queste agli angoli dell'arnia, connesse a una scheda per l'interfacciamento con il microcontrollore.
+- **DHT22**, un sensore di umidità e temperatura, specializzato per la sopportazione dei parametri atmosferici che si possono trovare all'esterno dell'arnia, come pioggia o alte o basse temperature. Questo sensore viene posto all'esterno dell'arnia per la cattura delle condizioni esterne.
+- **KY-037**, un sensore microfonico per la misura dell'attività dell'alveare all'interno dell'arnia. Dal microcontrollore, all'utilizzo di questo sensore, vengono prodotti due parametri, ovvero l'intensità e la frequenza di picco del rumore prodotto all'interno dell'alveare, che ne permettono la misura dell'attività.
 
+Nel sistema si trova inoltre un microcontrollore con lo scopo di misurare questi parametri. Questo è basato su *ESP32* con supporto per *LoRa* tramite chip *SX1262*.
 
 ## Gateway arnie
-
+Il gateway è l'elemento che si occupa della ricezione delle informazioni dalle arnie stesse, per permettere un invio di queste verso il ricevitore tramite il protocollo *Niagara*, che successivamente si occuperà dell'invio a ThingsBoard per l'aggiunta delle misure al database.  
+Il gateway ha lo scopo di attendere una richiesta dal ricevitore delle misurazioni, in quanto quest'ultimo, essendo connesso a Internet, è al corrente della data e dell'ora e ha l'obiettivo di richiedere tre misure giornaliere alle arnie.  
+Il sistema sensoristico può effettuare più misure di quelle che vengono richieste dal ricevitore, effettuando solamente l'invio di questi dati sulla rete *LoRa* su richiesta da parte di quest'ultimo. Ciò avviene quando si deve fornire una lettura media delle misure attraverso l'intervallo delle otto ore fra una misura e l'altra, anziché una lettura istantanea.
 
 ## Ricevitore misurazioni
-
+La ricezione delle misurazioni viene effettuata attraverso un software in esecuzione su un *Raspberry Pi* che implementa il protocollo *Niagara* per la comunicazione con le arnie.  
+Sarà proprio il ricevitore delle misurazioni che si occuperà del timing, ovvero del conteggio del tempo trascorso fra una misura e l'altra, per permettere di inviare una richiesta al gateway a certi intervalli di tempo.  
+Successivamente, alla ricezione delle misurazioni da parte delle arnie, viene stabilita una connessione HTTP con il server ThingsBoard per l'invio di questi dati e il salvataggio nel database.
 
 ## Server ThingsBoard
 Le parti da configurare del server ThingsBoard saranno quelle indicate di seguito.
@@ -20,7 +29,8 @@ Ogni dispositivo dovrà avere i seguenti attributi impostati come `SHARED`:
 - *temperature* in °C
 - *weight* in kg
 - *humidity* in %
-- *noise* in Hz
+- *noise-frequency* in Hz
+- *noise-intensity* in dB
 
 **N.B.** Ogni dispositivo avrà un ID e un token di accesso, che dovranno essere copiati e utilizzati dai dispositivi che si occuperanno di inviare le telemetrie, estrapolarle o mandare richieste RPC. 
 
@@ -85,17 +95,32 @@ La seguente sezione indica i possibili allarmi che potrebbero essere generati da
 | `DeviceDifferentTemperature` | Major | Il dispositivo ha una temperatura media molto diversa rispetto a quella degli altri dispositivi. |
 | `DeviceDifferentHumidity` | Major | Il dispositivo ha un'umidità media molto diversa rispetto a quella degli altri dispositivi. |
 | `DeviceDifferentWeight` | Major | Il dispositivo ha un peso medio molto diverso rispetto a quella degli altri dispositivi. |
-| `DeviceDifferentNoise` | Major | Il dispositivo ha un rumore medio molto diverso rispetto a quella degli altri dispositivi. |
+| `DeviceDifferentNoiseIntensity` | Major | Il dispositivo ha un'intesità di rumore media molto diversa rispetto a quella degli altri dispositivi. |
+| `DeviceDifferentNoiseFrequency` | Major | Il dispositivo ha una frequenza di rumore media molto diversa rispetto a quella degli altri dispositivi. |
 | `ChangeOriginatorToAsset` | Minor | Il cambio di originatore del messaggio da dispositivo ad asset non è riuscito. |
 | `ErrorDeviceTimeseries` | Minor | L'arricchimento del messaggio con le telemetrie del dispositivo non è riuscito.|
 | `DeviceOldTemperature` | Major | L'ultima temperatura registrata supera un certo intervallo di tempo. |
 | `DeviceOldHumidity` | Major | L'ultima umidità registrata supera un certo intervallo di tempo. |
 | `DeviceOldWeight` | Major | L'ultimo peso registrato supera un certo intervallo di tempo. |
-| `DeviceOldNoise` | Major | L'ultimo rumore registrato supera un certo intervallo di tempo. |
+| `DeviceOldNoiseFrequency` | Major | L'ultima frequenza di rumore registrata supera un certo intervallo di tempo. |
+| `DeviceOldNoiseIntensity` | Major | L'ultima intensità di rumore registrata supera un certo intervallo di tempo. |
 | `ErrorTimeseriesWeightDevice` | Minor | L'arricchimento con le telemetrie di peso del dispositivo non è riuscito. |
 | `HoneyReady` | Warning | Avviso che è possibile raccogliere il miele |
 | `FailedAssetAttributes` | Minor | Recupero degli attributi dell'asset non riuscito. |
 
+### Database
+Il database ThingsBoard dispone anche della possibilità di aggiungere tabelle aggiuntive utilizzando il motore Cassandra. 
+La tabella deve essere già configurata nei file di configurazione del server e vi è un nodo specifico che consente di agire su questa funzionalità. 
+
+Nello specifico la tabella si chiamerà `log-telemetries-action` e conterrà:
+- **PreviousTelemetry** telemetria già inserita, se presente
+- **Timestamp** timestamp della telemetria
+- **CurrentTelemetry** telemetria ripetuta con medesimo timestamp (potrebbe variare) 
+- **DateTimeAction** data e ora in cui è stato effettuato il controllo
+- **Action** azione effettuata dal controllo (`insert` se il dato è appena stato inserito, `replace` se il nuovo dato rimpiazza quello precedente, `dropped` se il nuovo dato è stato scartato)
+- **DeviceName** nome del device dove l'azione è stata performata 
+
+**N.B.** Tale proposta viene per il momento non attuata in quanto l'utilizzo di un sistema ibrido con Cassandra salverebbe anche le telemetrie all'interno di questa tipologia di database. Per non modificare troppo la configurazione di Thingsboard e in assenza di una documentazione appropriata, si pianifica di trovare una soluzione o scartare la funzionalità di salvataggio, in quanto parte marginale e non necessaria per il funzionamento del sistema.
 
 ## Scheduler
 Dal momento che la versione di ThingsBoard utilizzata non consente di eseguire controlli periodici indipendentemente dai dati inseriti, occorre attivare uno scheduler che invii ad orari prestabiliti richieste RPC per attivare i suddetti controlli.
@@ -128,3 +153,10 @@ Il programma dovrà implementare principalmente le seguenti funzioni:
 Tale scheduler potrebbe essere implementato nel ricevitore dei dati dall'alveare, visto che è predisposto per il collegamento al server ThingsBoard. 
 
 Nel momento stabilito verrà fatta una richiesta RPC per ogni dispositivo, con un leggero ritardo tra una e l'altra. 
+
+### Gestione errori
+Lo scheduler del PC rappresenta un elemento potenzialmente rischioso all'interno del sistema, in quanto non è incluso nativamente in ThingsBoard ma è un'aggiunta esterna e personalizzata. Ne consegue che potrebbero esserci problemi nell'esecuzione delle richieste, e nell'estrapolazione dell'output richiesto. 
+
+Proprio per questo lo scheduler disporrà di un log per la fase di debug inziale e per la durata del suo funzionamento, in modo tale da rilevare le ultime operazioni e i principali errori.
+
+Inoltre **ogni richiesta potrà essere ripetuta al massimo 3 volte**, in modo da scongiurare problemi dovuti ad una possibile congestione della rete o di prima richiesta errata.

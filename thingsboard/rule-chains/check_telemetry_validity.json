@@ -11,48 +11,69 @@
     }
   },
   "metadata": {
-    "version": 27,
+    "version": 61,
     "firstNodeIndex": 0,
     "nodes": [
       {
-        "type": "org.thingsboard.rule.engine.metadata.TbGetDeviceAttrNode",
-        "name": "get_asset-attributes",
-        "debugSettings": null,
+        "type": "org.thingsboard.rule.engine.metadata.TbGetRelatedAttributeNode",
+        "name": "get_device-attributes-asset",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
         "singletonMode": false,
         "queueName": null,
         "configurationVersion": 1,
         "configuration": {
-          "deviceRelationsQuery": {
+          "relationsQuery": {
             "fetchLastLevelOnly": false,
             "direction": "TO",
             "maxLevel": 1,
-            "relationType": "Contains",
-            "deviceTypes": [
-              "default"
+            "filters": [
+              {
+                "relationType": "Contains",
+                "entityTypes": [
+                  "ASSET"
+                ]
+              }
             ]
           },
-          "tellFailureIfAbsent": true,
+          "dataToFetch": "ATTRIBUTES",
           "fetchTo": "METADATA",
-          "clientAttributeNames": [],
-          "latestTsKeyNames": [],
-          "serverAttributeNames": [
-            "general_temperature",
-            "general_weight",
-            "general_humidity",
-            "general_noise"
-          ],
-          "sharedAttributeNames": [],
-          "getLatestValueWithTs": false
+          "dataMapping": {
+            "general_weight": "general_weight",
+            "general_temperature": "general_temperature",
+            "general_humidity": "general_humidity",
+            "general_noise_intensity": "general_noise_intensity",
+            "general_noise_frequency": "general_noise_frequency"
+          }
         },
         "additionalInfo": {
-          "description": "get the attributes of the asset to get the general average",
-          "layoutX": 395,
+          "description": "get the server attributes from the related asset",
+          "layoutX": 293,
           "layoutY": 151
         }
       },
       {
+        "type": "org.thingsboard.rule.engine.flow.TbRuleChainOutputNode",
+        "name": "output",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "version": 0
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 2262,
+          "layoutY": 156
+        }
+      },
+      {
         "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
-        "name": "get_max-min-timestamp",
+        "name": "check_data-threshold",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -63,19 +84,41 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "var timestamps = msg.map(singleMeasure => singleMeasure.ts); // get the timestamps\n\n/* calculate maximum and minimum and save\nit into metadata */\nmetadata.maxTimestamp = Math.max(...timestamps);\nmetadata.minTimestamp = Math.min(...timestamps);\n\n/* use this script to remove also the \nprefix \"ss_\" to the server attributes \ngot by the asset */\nfor(const metadataKey of metadata){\n    if(metadataKey.startsWith(\"ss_\")){\n        var newKey = metadataKey.replace(\"ss_\", \"\"); // create a new key removing the prefix\n        metadata[newKey] = metadata[metadataKey]; // move the content to the new key\n        delete metadata[metadataKey]; // delete the previous key\n    }\n}\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "jsScript": "var message = []; // create a new message to incorporate\n/* define constants of threshold to verify if a data is correct */\nconst MINTEMPERATURETHRESHOLD = -20; // °C\nconst MAXTEMPERATURETHRESHOLD = 70;\nconst MINWEIGHTTHRESHOLD = 0; // kg\nconst MAXWEIGHTTHRESHOLD = 30;\nconst MINHUMIDITYTHRESHOLD = 0; // %\nconst MAXHUMIDITYTHRESHOLD = 100;\nconst MINNOISEFREQUENCYTHRESHOLD = 0; // Hz\nconst MAXNOISEFREQUENCYTHRESHOLD = 500;\nconst MINNOISEINTENSITYTHRESHOLD = 0; // dB \nconst MAXNOISEINTENSITYTHRESHOLD = 120;\n\n/* for each message check\nif it's over the threshold so as to eliminate it */\nvar check; // create a boolean variable\nfor(const singleMeasure of msg){\n    check = true;\n\n    if(\"temperature\" in singleMeasure && (singleMeasure.temperature<MINTEMPERATURETHRESHOLD || singleMeasure.temperature>MAXTEMPERATURETHRESHOLD))\n        check = false;\n    else if(\"humidity\" in singleMeasure && (singleMeasure.humidity<MINHUMIDITYTHRESHOLD || singleMeasure.humidity>MAXHUMIDITYTHRESHOLD))\n        check = false;\n    else if(\"weight\" in singleMeasure && (singleMeasure.weight<MINWEIGHTTHRESHOLD || singleMeasure.weight>MAXWEIGHTTHRESHOLD))\n        check = false;\n    else if(\"noise_frequency\" in singleMeasure && (singleMeasure.noise_frequency<MINNOISEFREQUENCYTHRESHOLD || singleMeasure.noise_frequency>MAXNOISEFREQUENCYTHRESHOLD))\n        check = false;\n    else if(\"noise_frequency\" in singleMeasure && (singleMeasure.noise_intensity<MINNOISEINTENSITYTHRESHOLD || singleMeasure.noise_intensity>MAXNOISEINTENSITYTHRESHOLD))\n        check = false;\n        \n    if(check)\n        message.push(singleMeasure);\n}\n\nreturn {msg: message, metadata: metadata, msgType: msgType};",
+          "tbelScript": "\nreturn {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "check if the data given in the telemetry are out of the threshold given, so as to discard them immediately and report only changings.",
+          "layoutX": 832,
+          "layoutY": 152
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "format_message",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* tolerate if the data is a single object and \ntransform it into an array */\nvar dataArray = Array.isArray(msg) ? msg : [msg];\n\nreturn {msg: dataArray, metadata: metadata, msgType: msgType};",
           "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
         },
         "additionalInfo": {
-          "description": "Function to get the maximum and minimum timestamp to understand the search of the timeseries",
-          "layoutX": 747,
-          "layoutY": 159
+          "description": "format message and transform it into an array if it's not. It will become useful in the next steps. ",
+          "layoutX": 553,
+          "layoutY": 149
         }
       },
       {
         "type": "org.thingsboard.rule.engine.metadata.TbGetTelemetryNode",
         "name": "get_latest-telemetries",
-        "debugSettings": null,
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
         "singletonMode": false,
         "queueName": null,
         "configurationVersion": 2,
@@ -83,30 +126,118 @@
           "latestTsKeyNames": [
             "weight",
             "temperature",
-            "noise",
-            "humidity"
+            "humidity",
+            "noise_frequency",
+            "noise_intensity"
           ],
           "aggregation": "NONE",
           "fetchMode": "ALL",
           "orderBy": "ASC",
           "limit": 1000,
-          "useMetadataIntervalPatterns": true,
+          "useMetadataIntervalPatterns": false,
           "startIntervalPattern": "${minTimestamp}",
-          "endIntervalPattern": "${maxTimestamp)",
+          "endIntervalPattern": "${maxTimestamp}",
           "startInterval": 2,
-          "startIntervalTimeUnit": "MINUTES",
+          "startIntervalTimeUnit": "DAYS",
           "endInterval": 1,
           "endIntervalTimeUnit": "MINUTES"
         },
         "additionalInfo": {
           "description": "get the latest telemetries with dynamic minimum and maximum timestamp",
-          "layoutX": 1055,
-          "layoutY": 160
+          "layoutX": 1086,
+          "layoutY": 153
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbSplitArrayMsgNode",
+        "name": "split_array-telemetries",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "version": 0
+        },
+        "additionalInfo": {
+          "description": "split the array of telemetries into single messages to process",
+          "layoutX": 1359,
+          "layoutY": 145
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "check_telemetry-value",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "/* variable definition */\nvar currentIndex = -1, currentKey, telemetryList, check = true, result = true;\n\ncurrentKey = Object.keys(msg)[0]; // get the first and only key\n\n/* get the list of telemetries\nand find the telemetry that match the timestamp */\nif(!(currentKey in metadata))\n    check = false;\nelse{\n    telemetryList = JSON.parse(metadata[currentKey]);\n    currentIndex = telemetryList.findIndex(singleTelemetry => Number(singleTelemetry.ts) === Number(metadata.ts));   \n}\n\n/* control if a telemetry has been found,\notherwise it's not possible to compare it with other telemetries */\nif(currentIndex<0)\n    check=false;\n\n/* control if the general average \nhas been found in the common asset */\nif(!(\"general_\"+currentKey in metadata))\n    check=false;\n    \n/* control if the message is closer to the average, otherwise\nit's not possible to replace the telemetry */\nif(Math.abs(msg[currentKey] - Number(metadata[\"general_\"+currentKey]))>=Math.abs(Number(telemetryList[currentIndex].value) - Number(metadata[\"general_\"+currentKey])))\n    result = false;\n    \n/* copy the result to metadata and\nreturn the message */\nmetadata.valid = result;\nmetadata.sameTelemetry = currentIndex;\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "tbelScript": "/* variable definition */\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "node to check the value of the telemetry in order to establish if it can replace o be saved to the database",
+          "layoutX": 1630,
+          "layoutY": 143
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsSwitchNode",
+        "name": "switch_message-validity",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "var result = JSON.parse(metadata.valid); // add this to get the boolean\n\nif(result)\n    return ['valid'];\n\nreturn ['dropped'];",
+          "tbelScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType == 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);"
+        },
+        "additionalInfo": {
+          "description": "switch that process the validity of the message ",
+          "layoutX": 1932,
+          "layoutY": 148
         }
       },
       {
         "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
-        "name": "alarm_failed-asset-attrinutes",
+        "name": "error_device-timeseries",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "ErrorDeviceTimeseries",
+          "severity": "MINOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "generate an error when it's not possible to get the timeseries of the device",
+          "layoutX": 1370,
+          "layoutY": 230
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "error_asset-attributes",
         "debugSettings": null,
         "singletonMode": false,
         "queueName": null,
@@ -126,107 +257,57 @@
           "dynamicSeverity": false
         },
         "additionalInfo": {
-          "description": "alarm to signal if there was an error on getting the attributes from the asset that contains the devices",
-          "layoutX": 743,
-          "layoutY": 238
-        }
-      },
-      {
-        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
-        "name": "alarm_error-device-timeseries",
-        "debugSettings": {
-          "failuresEnabled": false,
-          "allEnabled": false,
-          "allEnabledUntil": 0
-        },
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 0,
-        "configuration": {
-          "scriptLang": "JS",
-          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = \"Error in getting timeseries from device \"+metadata.deviceName;\n}\n\n\nreturn details;",
-          "alarmDetailsBuildTbel": "",
-          "useMessageAlarmData": false,
-          "overwriteAlarmDetails": false,
-          "alarmType": "ErrorDeviceTimeseries",
-          "severity": "MINOR",
-          "propagate": false,
-          "relationTypes": [],
-          "propagateToOwner": false,
-          "propagateToTenant": false,
-          "dynamicSeverity": false
-        },
-        "additionalInfo": {
-          "description": "alarm to inform that has been an error in getting the timeseries from the device",
-          "layoutX": 1383,
-          "layoutY": 223
-        }
-      },
-      {
-        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
-        "name": "delete_dropped-telemetries",
-        "debugSettings": null,
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 0,
-        "configuration": {
-          "scriptLang": "JS",
-          "jsScript": "var currentIndex, currentKey,\n    telemetryList; // variable declaration\nvar removeIndexes = []; // list of index to be removed\n/* check for each telemetry if it's closer \nto the average */\nfor (var i = 0; i < msg.length; i++) {\n    const singleMessage = msg[i];\n    /* initialising the variables at the beginning\n    of each cycle */\n    currentIndex = -1;\n    currentKey = Object.keys(singleMessage.values)[0];\n    /* find if there's the telemetry inside the list \n    if there's a list of telemetries */\n    if (currentKey in metadata) {\n        telemetryList = JSON.parse(metadata[currentKey]);\n        currentIndex = telemetryList.findIndex(\n            singleTelemetry => singleTelemetry.ts ===\n            singleMessage.ts);\n    }\n\n    /* if there is no telemetry with that timestamp\n    just continue */\n    if (currentIndex < 0)\n        continue;\n\n    /* otherwise control if you have the average\n    and see if the new value is closer to average, \n    otherwise remove it */\n    if ('general_' + currentKey in metadata && Math.abs(\n            metadata['general_' + currentKey] -\n            singleMessage.values[currentKey]) >= Math.abs(\n            metadata['general_' + currentKey] - telemetryList[currentIndex].value))\n        removeIndexes.push(i);\n}\n\n/* pass the message and remove \nall the telemetries that are in the index */\nvar message = msg.filter((singleMeasure, index) => !\n    removeIndexes.includes(index));\n\nreturn {\n    msg: message,\n    metadata: metadata,\n    msgType: msgType\n};",
-          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
-        },
-        "additionalInfo": {
-          "description": "drop the telemetries which are considered farther from the average",
-          "layoutX": 1385,
-          "layoutY": 164
-        }
-      },
-      {
-        "type": "org.thingsboard.rule.engine.flow.TbRuleChainOutputNode",
-        "name": "output",
-        "debugSettings": null,
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 0,
-        "configuration": {
-          "version": 0
-        },
-        "additionalInfo": {
-          "description": "rule chain output with the remaining telemetries to be saved",
-          "layoutX": 1706,
-          "layoutY": 166
+          "description": "error when it's not possible to get the attributes from the common asset",
+          "layoutX": 562,
+          "layoutY": 218
         }
       }
     ],
     "connections": [
       {
         "fromIndex": 0,
-        "toIndex": 1,
+        "toIndex": 3,
         "type": "Success"
       },
       {
         "fromIndex": 0,
-        "toIndex": 3,
+        "toIndex": 9,
         "type": "Failure"
-      },
-      {
-        "fromIndex": 1,
-        "toIndex": 2,
-        "type": "Success"
       },
       {
         "fromIndex": 2,
         "toIndex": 4,
-        "type": "Failure"
+        "type": "Success"
       },
       {
-        "fromIndex": 2,
+        "fromIndex": 3,
+        "toIndex": 2,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 4,
         "toIndex": 5,
         "type": "Success"
+      },
+      {
+        "fromIndex": 4,
+        "toIndex": 8,
+        "type": "Failure"
       },
       {
         "fromIndex": 5,
         "toIndex": 6,
         "type": "Success"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 7,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 1,
+        "type": "valid"
       }
     ],
     "ruleChainConnections": null

@@ -1,3 +1,4 @@
+#!/bin/bash
 SCRIPT_PATH="rpc-scheduler.py"
 
 # check if the python has been installed

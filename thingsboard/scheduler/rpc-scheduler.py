@@ -3,6 +3,7 @@ import threading
 import subprocess
 import json
 import time as t
+import fcntl
 
 class DeviceInfo:
     """Class to gather information about
@@ -53,14 +54,17 @@ def send_RPC_request(device, method, params):
 
     # save the method and the params in the file
     with open(JSON_FILENAME, "w") as file:
+        fcntl.flock(file, fcntl.LOCK_EX) # lock file
+
         content = {"method":method, "params":params}
         json.dump(content, file, indent=4, ensure_ascii=False) # write the converted element into the file
+
+        fcntl.flock(file, fcntl.LOCK_UN) # unlock file
   
     # define the command to send
     command = ["curl", "-v", "-X", "POST", "-d", f"@{JSON_FILENAME}", f"https://{THINGSBOARD_HOST_NAME}/api/v1/{device.accessToken}/rpc", "--header", "Content-Type:application/json"]
 
     result = subprocess.run(command, capture_output=True, text=True) # return the result of the rpc request
-    print(result)
     return result
 
 def isTime(time_list, last_time):

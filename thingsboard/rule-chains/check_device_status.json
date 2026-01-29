@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 34,
+    "version": 37,
     "firstNodeIndex": 1,
     "nodes": [
       {
@@ -41,7 +41,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "/* get the deviceList and \nthe attributes of the message */\nvar averageList = msg.params.timeseriesAverage;\ndelete msg.method;\ndelete msg.params;\n\n/* variable declaration for \nthe counting of the average */\nvar sumTemperature = 0, sumWeight = 0, sumHumidity = 0, sumNoise = 0;\nvar temperatureCounter = 0, weightCounter = 0, humidityCounter = 0, noiseCounter = 0;\n\nfor(const singleAverage of averageList){\n    /* if it's the measure of another device add it to \n    the sum so as to do the average later */\n    if(singleAverage.key === \"average_temperature\" && singleAverage.deviceName!=metadata.deviceName){\n        sumTemperature += singleAverage.value;\n        temperatureCounter++;\n    }\n    /* if it's the value of the device \n    add it to the message directly */\n    else if(singleAverage.key === \"average_temperature\")\n        msg.device_temperature = singleAverage.value;\n    /* do the rest for the other averages types */\n    else if(singleAverage.key === \"average_humidity\" && singleAverage.deviceName!=metadata.deviceName){\n        sumHumidity += singleAverage.value;\n        humidityCounter++;\n    }\n    else if(singleAverage.key === \"average_humidity\")\n        msg.device_humidity = singleAverage.value;\n    else if(singleAverage.key === \"average_weight\" && singleAverage.deviceName!=metadata.deviceName){\n        sumWeight += singleAverage.value;\n        weightCounter++;\n    }\n    else if(singleAverage.key === \"average_weight\")\n        msg.device_weight = singleAverage.value;\n    else if(singleAverage.key === \"average_noise\" && singleAverage.deviceName!=metadata.deviceName){\n        sumNoise += singleAverage.value;\n        noiseCounter++;\n    }\n    else if(singleAverage.key === \"average_noise\")\n        msg.device_noise = singleAverage.value;\n}\n\n/* finally calculate the averages of the\nmeasures checking if it has some values to gather */\nif(temperatureCounter != 0)\n    msg.other_temperature = sumTemperature / temperatureCounter;\n    \nif(humidityCounter != 0)\n    msg.other_humidity = sumHumidity / humidityCounter;\n    \nif(weightCounter != 0)\n    msg.other_weight = sumWeight / weightCounter;\n    \nif(noiseCounter != 0)\n    msg.other_noise = sumNoise / noiseCounter;\n    \n/* then check if there is both \naverage of the single measure and average of other devices \nin order to make a general_average */\nif('device_temperature' in msg && 'other_temperature' in msg)\n    msg.general_temperature = (sumTemperature + msg.device_temperature) / (temperatureCounter+1);\nif('device_humidity' in msg && 'other_humidity' in msg)\n    msg.general_humidity = (sumHumidity + msg.device_humidity) / (humidityCounter+1);\nif('device_weight' in msg && 'other_weight' in msg)\n    msg.general_weight = (sumWeight + msg.device_weight) / (weightCounter+1);\nif('device_noise' in msg && 'other_noise' in msg)\n    msg.general_noise = (sumNoise + msg.device_noise) / (noiseCounter+1);\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "jsScript": "/* get the deviceList and \nthe attributes of the message */\nvar averageList = msg.params.timeseriesAverage;\ndelete msg.method;\ndelete msg.params;\n\n/* variable declaration for \nthe counting of the average */\nvar sumTemperature = 0, sumWeight = 0, sumHumidity = 0, sumNoiseIntensity = 0, sumNoiseFrequency = 0;\nvar temperatureCounter = 0, weightCounter = 0, humidityCounter = 0, noiseIntensityCounter = 0, noiseFrequencyCounter = 0;\n\nfor(const singleAverage of averageList){\n    /* if it's the measure of another device add it to \n    the sum so as to do the average later */\n    if(singleAverage.key === \"average_temperature\" && singleAverage.deviceName!=metadata.deviceName){\n        sumTemperature += singleAverage.value;\n        temperatureCounter++;\n    }\n    /* if it's the value of the device \n    add it to the message directly */\n    else if(singleAverage.key === \"average_temperature\")\n        msg.device_temperature = singleAverage.value;\n    /* do the rest for the other averages types */\n    else if(singleAverage.key === \"average_humidity\" && singleAverage.deviceName!=metadata.deviceName){\n        sumHumidity += singleAverage.value;\n        humidityCounter++;\n    }\n    else if(singleAverage.key === \"average_humidity\")\n        msg.device_humidity = singleAverage.value;\n    else if(singleAverage.key === \"average_weight\" && singleAverage.deviceName!=metadata.deviceName){\n        sumWeight += singleAverage.value;\n        weightCounter++;\n    }\n    else if(singleAverage.key === \"average_weight\")\n        msg.device_weight = singleAverage.value;\n    else if(singleAverage.key === \"average_noise_intensity\" && singleAverage.deviceName!=metadata.deviceName){\n        sumNoiseIntensity += singleAverage.value;\n        noiseIntensityCounter++;\n    }\n    else if(singleAverage.key === \"average_noise_intensity\")\n        msg.device_noise = singleAverage.value;\n    else if(singleAverage.key === \"average_noise_frequency\" && singleAverage.deviceName!=metadata.deviceName){\n        sumNoiseFrequency += singleAverage.value;\n        noiseFrequencyCounter++;\n    }\n    else if(singleAverage.key === \"average_noise_frequency\")\n        msg.device_noise = singleAverage.value;\n}\n\n/* finally calculate the averages of the\nmeasures checking if it has some values to gather */\nif(temperatureCounter != 0)\n    msg.other_temperature = sumTemperature / temperatureCounter;\n    \nif(humidityCounter != 0)\n    msg.other_humidity = sumHumidity / humidityCounter;\n    \nif(weightCounter != 0)\n    msg.other_weight = sumWeight / weightCounter;\n    \nif(noiseIntensityCounter != 0)\n    msg.other_noise_intensity = sumNoiseIntensity / noiseIntensityCounter;\n    \nif(noiseFrequencyCounter != 0)\n    msg.other_noise_frequency = sumNoiseFrequency / noiseFrequencyCounter;\n    \n/* then check if there is both \naverage of the single measure and average of other devices \nin order to make a general_average */\nif('device_temperature' in msg && 'other_temperature' in msg)\n    msg.general_temperature = (sumTemperature + msg.device_temperature) / (temperatureCounter+1);\nif('device_humidity' in msg && 'other_humidity' in msg)\n    msg.general_humidity = (sumHumidity + msg.device_humidity) / (humidityCounter+1);\nif('device_weight' in msg && 'other_weight' in msg)\n    msg.general_weight = (sumWeight + msg.device_weight) / (weightCounter+1);\nif('device_noise_intensity' in msg && 'other_noise_intensity' in msg)\n    msg.general_noise_intensity = (sumNoiseIntensity + msg.device_noise_intensity) / (noiseIntensityCounter+1);\nif('device_noise_frequency' in msg && 'other_noise_frequency' in msg)\n    msg.general_noise_intensity = (sumNoiseIntensity + msg.device_noise_intensity) / (noiseIntensityCounter+1);\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
           "tbelScript": ""
         },
         "additionalInfo": {
@@ -59,7 +59,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "/* define constants as thresholds\nfor measures tolerance */\nconst DIFFERENCETEMPERATURE_THRESHOLD =\n    5; // difference of temperature in °C\nconst DIFFERENCEWEIGHT_THRESHOLD =\n    3; // difference of weight in kg \nconst DIFFERENCEHUMIDITY_THRESHOLD =\n    20; // difference of humidity in %\nconst DIFFERENCENOISE_THRESHOLD =\n    0.20; // relative difference of noise between the measures\n\n/* define variables and lists for the execution\nof the script */\nvar errors = [];\n\n/* do the controls and check if the averages\nare too different between them. \nIn that case add an error */\nif ('device_temperature' in msg && 'other_temperature' in\n    msg && Math.abs(msg.device_temperature - msg\n        .other_temperature) >=\n    DIFFERENCETEMPERATURE_THRESHOLD)\n    errors.push(\"different_temperature\");\nif ('device_humidity' in msg && 'other_humidity' in msg &&\n    Math.abs(msg.device_humidity - msg.other_humidity) >=\n    DIFFERENCEHUMIDITY_THRESHOLD)\n    errors.push(\"different_humidity\");\nif ('device_weight' in msg && 'other_weight' in\n    msg && Math.abs(msg.device_weight - msg\n        .other_weight) >= DIFFERENCEWEIGHT_THRESHOLD)\n    errors.push(\"different_weight\");\nif ('device_noise' in msg && 'other_noise' in\n    msg && Math.abs(1 - msg.device_noise / msg\n        .other_noise) >= DIFFERENCENOISE_THRESHOLD)\n    errors.push(\"different_noise\");\n    \n/* if no error has been added,\nreturn an ok condition */\nif(errors.length === 0)\n    errors.push(\"ok\");\n    \nreturn errors;",
+          "jsScript": "/* define constants as thresholds\nfor measures tolerance */\nconst DIFFERENCETEMPERATURE_THRESHOLD =\n    5; // difference of temperature in °C\nconst DIFFERENCEWEIGHT_THRESHOLD =\n    3; // difference of weight in kg \nconst DIFFERENCEHUMIDITY_THRESHOLD =\n    20; // difference of humidity in %\nconst DIFFERENCENOISEFREQUENCY_THRESHOLD =\n    0.20; // relative difference of noise frequency between the measures\nconst DIFFERENCENOISEINTENSITY_THRESHOLD = 0.40; // relative difference of noise frequency between the measures\n\n/* define variables and lists for the execution\nof the script */\nvar errors = [];\n\n/* do the controls and check if the averages\nare too different between them. \nIn that case add an error */\nif ('device_temperature' in msg && 'other_temperature' in\n    msg && Math.abs(msg.device_temperature - msg\n        .other_temperature) >=\n    DIFFERENCETEMPERATURE_THRESHOLD)\n    errors.push(\"different_temperature\");\nif ('device_humidity' in msg && 'other_humidity' in msg &&\n    Math.abs(msg.device_humidity - msg.other_humidity) >=\n    DIFFERENCEHUMIDITY_THRESHOLD)\n    errors.push(\"different_humidity\");\nif ('device_weight' in msg && 'other_weight' in\n    msg && Math.abs(msg.device_weight - msg\n        .other_weight) >= DIFFERENCEWEIGHT_THRESHOLD)\n    errors.push(\"different_weight\");\nif ('device_noise_frequency' in msg && 'other_noise_frequency' in\n    msg && Math.abs(1 - msg.device_noise_frequency / msg\n        .other_noise_frequency) >= DIFFERENCENOISEFREQUENCY_THRESHOLD)\n    errors.push(\"different_noise_frequency\");\nif ('device_noise_intensity' in msg && 'other_noise_intensity' in\n    msg && Math.abs(1 - msg.device_noise_intensity / msg\n        .other_noise_intensity) >= DIFFERENCENOISEINTENSITY_THRESHOLD)\n    errors.push(\"different_noise_intensity\");\n    \n/* if no error has been added,\nreturn an ok condition */\nif(errors.length === 0)\n    errors.push(\"ok\");\n    \nreturn errors;",
           "tbelScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType == 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);"
         },
         "additionalInfo": {
@@ -159,7 +159,7 @@
       },
       {
         "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
-        "name": "alarm_device-different-noise",
+        "name": "alarm_device-different-noise-frequency",
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
@@ -174,7 +174,7 @@
           "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
           "useMessageAlarmData": false,
           "overwriteAlarmDetails": false,
-          "alarmType": "DeviceDifferentNoise",
+          "alarmType": "DeviceDifferentNoiseFrequency",
           "severity": "MAJOR",
           "propagate": false,
           "relationTypes": [],
@@ -285,6 +285,37 @@
           "layoutX": 2017,
           "layoutY": 153
         }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "alarm_device-different-noise-intensity",
+        "debugSettings": {
+          "failuresEnabled": false,
+          "allEnabled": false,
+          "allEnabledUntil": 0
+        },
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "DeviceDifferentNoiseIntensity",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "send alarm if the device has different noise from the rest of the devices",
+          "layoutX": 929,
+          "layoutY": 592
+        }
       }
     ],
     "connections": [
@@ -341,7 +372,7 @@
       {
         "fromIndex": 2,
         "toIndex": 6,
-        "type": "different_noise"
+        "type": "different_noise_frequency"
       },
       {
         "fromIndex": 2,
@@ -351,7 +382,12 @@
       {
         "fromIndex": 2,
         "toIndex": 7,
-        "type": "different_noise"
+        "type": "different_noise_frequency"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 7,
+        "type": "different_noise_intensity"
       },
       {
         "fromIndex": 2,
@@ -367,6 +403,11 @@
         "fromIndex": 2,
         "toIndex": 7,
         "type": "ok"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 11,
+        "type": "different_noise_intensity"
       },
       {
         "fromIndex": 7,

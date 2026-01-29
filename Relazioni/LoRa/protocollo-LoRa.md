@@ -109,14 +109,24 @@ Nell’header, in seguito alla sezione contenente sorgente e destinazione del pa
 
   Nel caso ci sia stato un errore durante la ricezione dei dati, viene ritornato un valore diverso da `NIAGARA_OK` contenuto nell'enumeratore `Niagara_Ret`.
 
-## Miglioramenti futuri
+## Implementazioni effettuate
+Il protocollo integra:
+- **Handshake fra dispositivi per l'invio di pacchetti e relativi messaggi di controllo**: ogni volta che viene inviato un pacchetto attraverso `send` o `receive`, in background viene effettuato un handshake a tre vie fra il dispositivo e la destinazione tramite funzioni di livello più basso, implementate privatamente all'interno della libreria, che possono essere denominate `send_raw` e `receive_raw`. Queste funzioni "raw" sono al momento quelle non funzionanti e necessitano di correzione per consentire l'esecuzione del software. Esse si occupano esclusivamente di incapsulare tre informazioni — ID del dispositivo e della destinazione, messaggio di controllo e corpo effettivo del pacchetto — all'interno di un vettore di dati grezzo, che può essere inviato al layer 1 verso l'esterno tramite segnali radio LoRa in broadcast.
+- **Formato per le stringhe di indirizzamento**: è stato implementato un identificatore di broadcast `BROAD`, definito anche come costante all'interno della libreria con il nome `BROADCAST`. Inoltre, l'identificatore specificato è ora vincolato dai seguenti criteri:
+    - La sua lunghezza deve essere compresa fra 4 e 12 caratteri
+    - Non deve essere uguale all'identificatore di broadcast
+    - Deve contenere esclusivamente caratteri alfanumerici, senza caratteri speciali
+- **Classe per la conversione in JSON dei dati**: è stata implementata una classe per gestire la conversione in JSON dei dati inviati verso il lato ricevente, al fine di semplificarne l'invio a ThingsBoard, sebbene tale funzionalità non sia ancora stata effettivamente implementata dal punto di vista pratico.
 
+## Criteri minimi di validazione
+Nella prima iterazione del protocollo, il minimo indispensabile per consentire la comunicazione è rappresentato dalle funzioni di basso livello, quali `receive_raw` e `send_raw`, che vengono utilizzate dalle funzioni pubbliche di livello più alto `receive` e `send` all'interno della libreria durante l'handshake.
+
+Queste funzioni si occupano esclusivamente dell'incapsulamento dei parametri di invio in una singola sequenza di dati destinata all'invio in broadcast radio. In fase di ricezione, si occupano invece del deincapsulamento dei dati e del controllo della stringa di destinazione, al fine di verificare che il dispositivo di destinazione corrisponda a quello corrente. Quest'ultima operazione, data la sua complessità, è quella che al momento causa problemi, rendendo impossibile il test completo del protocollo.
+
+## Miglioramenti futuri
 Si prevede di integrare il protocollo con le seguenti funzionalità:
 
-- Handshake tra i dispositivi e gestione (benché minima) delle sessioni a layer 4, con aggiunta di ritrasmissione dei pacchetti  
-- Messaggi di controllo utilizzati effettivamente per questo handshake  
-- Specificare un formato per le stringhe di indirizzamento  
-- Fare in modo che la funzione di invio dati costruisca direttamente il JSON da inviare nel corpo del messaggio destinato al gateway, in modo da passare direttamente le letture dei sensori e lasciare che essa si occupi della loro formattazione  
+- Fare in modo che la funzione di invio dati costruisca direttamente il JSON da inviare nel corpo del messaggio destinato al gateway, in modo da passare direttamente le letture dei sensori e lasciare che essa si occupi della loro formattazione, funzione che al momento esiste nel codice, ma non e' stata ancora implementata.
 
 # Specifiche protocollo
 ## Sistema di comunicazione
@@ -144,4 +154,5 @@ Questi valori appartengono ad un enumeatore della libreria `niagara.h` e sono:
 - `HANDSHAKE_ACK` valore che indica la conferma del dispositivo ricevente all'interno del processo di handshake
 - `HANSHAKE ERROR` invio errore se il pacchetto non è stato ricevuto perchè gli hash dei pacchetti non combaciano
 - `TIME_SYNC` invio del tempo (millisecondi o data) da parte di uno dei dispositivi per potersi sincronizzare. 
+
 - `END` fine della connessione tra i due dispositivi

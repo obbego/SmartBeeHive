@@ -12,7 +12,7 @@ Tali dati potranno poi essere utilizzati per determinare quando raccogliere il m
 I dati da rilevare all’interno di ogni arnia sono i seguenti:
 - **TEMPERATURA**
 - **UMIDITÀ**
-- **RUMORE**, per misurare l’attività delle api
+- **RUMORE** (articolato in frequenza di picco e intensità) per misurare l’attività delle api
 - **PESO** peso dell'alveare + api
 
 Tali dati dovranno essere rilevati seguendo una specifica scansione oraria, che potrà essere stabilita in seguito.
@@ -96,7 +96,7 @@ Sono state avanzate alcune possibili soluzioni, tuttora da sviluppare:
 1. **Utilizzo del LoRa**, nonostante i problemi precedentemente elencati. L’idea è quella di costruire un protocollo semplificato al di sopra, in modo da garantire una comunicazione senza collisioni.  
 2. **Ripetizione nell’invio dei dati** – Poiché il numero di interazioni tra i dispositivi è basso, una soluzione potrebbe essere la loro memorizzazione. In questo modo i dati verranno raccolti e trasmessi solo nei momenti consentiti. Ogni dato potrà inoltre essere inviato più volte per ridurre eventuali errori.  
 3. **Sviluppo della scatola dei sensori**, che verrà posizionata all’esterno dell’arnia. Questa soluzione garantisce un buon grado di protezione e riduce al minimo l’interferenza con le api.  
-4. **Scheda dedicata al rilevamento del rumore** ***(PROPOSTA DA VERIFICARE)*** – Questa scheda si attiverà solo al superamento di una soglia di segnale. Da quel momento effettuerà il campionamento del segnale per rilevare rumore e frequenza, consentendo al resto del sistema di operare indipendentemente. Al termine, i dati verranno comunicati alla scheda principale.  
+4. **Scheda dedicata al rilevamento del rumore** ***(PROPOSTA DA VERIFICARE)*** – Questa scheda si attiverà solo al superamento di una soglia di segnale. Da quel momento effettuerà il campionamento del segnale per rilevare intensità e frequenza di picco, consentendo al resto del sistema di operare indipendentemente. Al termine, i dati verranno comunicati alla scheda principale.  
 5. **Utilizzo di una fotoresistenza** per determinare il momento in cui effettuare la misurazione. Occorre tuttavia prestare attenzione a possibili variazioni momentanee di luce (illuminazione artificiale, ombre, ecc.).
 
 ## Requisiti attuali
@@ -133,6 +133,26 @@ Alla luce della situazione attuale e dei relativi problemi, ecco i requisiti da 
 2. Configurare il database.  
 3. Configurare la gestione degli account.  
 4. Configurare un’interfaccia grafica di prova per l’output dei risultati.
+
+### Comunicazione
+1. Gestione di più arnie
+2. Supporto di un invio non continuo dei dati
+3. Creazione di allarmi e log per la comunicazione con la parte frontend in modo da riportare possibili errori/bug/informazioni.
+
+## Requisiti e verifica
+Dei requisiti precedentemente elencati, si vogliono sottolineare: 
+
+### Requisiti core
+Nella fase di progetto i requisiti chiave da testare sono:
+1. **RILEVAZIONE SENSORI** Tale requisito sarà definito completato quando sarà possibile ricavare misurazioni dai vari sensori in modo corretto e verosimile al contesto dell'alveare rispettando una certa scansione oraria.
+2. **COMUNICAZIONE LORA** che deve funzionare per tutti i collegamenti. Tale requisito sarà ritenuto soddisfatto se ogni dispositivo utilizzante il LoRa sarà in grado di comunicare almeno i dati di misurazione con gli altri dispositivi del sistema cui è collegato. La dimensione del messaggio trasportabile dovrà essere pari a quella di almeno una misurazione o inferiore se il protocollo è in grado di supportare la frammentazione.
+3. **ACCESSO AL SERVER THINGSBOARD** per il salvataggio di dati e per l'estrapolazione che dovrà essere effettuata dal gruppo che si occupa del lato frontend. Se risulta possibile raccogliere dati distinti per telemetria e dispositivo che li ha generati tale dispositivo può ritenersi soddisfatto. 
+4. **CODICE COMUNICAZIONE ELEMENTI** dove è necessario testare per i dispositivi intermedi almeno la parte di comunicazione e instradamento dei dati, in modo da raggiungere il server per il salvataggio dati.
+ 
+### Requisiti di estensione
+Questi requisiti sono parte integrante per lo sviluppo del progetto, non essenziali alla comunicazione diretta dei dati, ma informazioni relative allo stato della trasmissione, all'interpretazione dei dati e alla notifica di eventuali errori / problematiche. 
+1. **ALLARMI SERVER** per la notifica di eventuali errori, warning nelle misurazioni raccolte e informazioni come il momento della raccolta del miele. Tale requisito verrà testato con l'inserimento di dati verosimili su un dispositivo virtuale per testare a pieno il funzionamento dei controlli e degli allarmi prodotti.
+2. **LOG DISPOSITIVI** compiendo i dispositivi azioni su dati variabili e situazioni dipendenti da fattori esterni, risulta necessario implemenetare per ogni dispositivo intermedio un log per poter salvare con precisione azioni, orari ed esiti per rendere possibile una futura manutenzione.
 
 **N.B.**  
 *Per l’output dei dati si è pensato di utilizzare un’interfaccia grafica dedicata e non quella di default del server ThingsBoard. Tale interfaccia ha lo scopo di essere più accessibile e facilmente collegabile al sito della scuola e ad altri progetti in corso.*
