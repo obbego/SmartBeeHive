@@ -2,6 +2,7 @@
 #define HASH_H
 
 #include <stdint.h>
+#include <stdio.h>
 #include "str.h"
 
 // Define the CRC32 polynomial used for the hash calculation
@@ -27,6 +28,13 @@ static uint32_t crc32(const str data, unsigned int length = 32) {
     crc = ~crc; // Final inversion of CRC (as per CRC32 standard)
     //Convert the crc 32bit value into a char array
     return crc;
+}
+
+// Function to serialize a crc32 integer to a string of characters to send or receive through radio or compare multiple crc values
+static str crc32_to_str(uint32_t crc) {
+    char buf[11]; // max 10 cifre + '\0'
+    snprintf(buf, sizeof(buf), "%u", crc);
+    return str(buf);
 }
 
 #endif // CRC32_H

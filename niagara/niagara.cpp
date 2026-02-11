@@ -114,188 +114,203 @@ bool Niagara::set_identifier(str _identifier) {
 }
 
 Niagara_Ret Niagara::receive(str* output, str* source) {
-  //If the identifier is empty and not yet initialized then return an error
-  if(Niagara::identifier.length() == 0)
-    return NIAGARA_NO_IDENTIFIER;
+  //Check if the identifier hasn't yet been initialised
+  if(identifier.length() == 0)
+      return NIAGARA_NO_IDENTIFIER;
 
-  //Contains the ID of the first device whose first SYN was received
-  str device;
-  //Saves the received control signals
+  //Saves the current receive state of the handshake  
+  enum class RxState {
+    WAIT_SYN,
+    WAIT_FINAL_ACK
+  };
+
+  //Variable which keeps track of the handshake's state
+  RxState state = RxState::WAIT_SYN;
+  //Timer used to keep track of timeouts
+  Timer session_timer;
+
+  //The remote device's identifier to communicate with
+  str device = "";
+  //Buffer for the payload
+  str payload;
+  //Buffer for the control message
   Niagara_Control control;
-  //Saves the output of the receivings
-  str output_internal;
-  //Contains the status of the operations
+  //Return status of send and receive methods
   Niagara_Ret status;
-  //Amount of retransmissions done during the handshake
-  int retransmission_counter = 0;
-  //Flag to receive the message a second time since the hash didn't match
-  bool reperform_receive;
 
-  //Timer to check for retransmissions
-  Timer retransmission_timer;
+  //Start the timer to count for timeouts
+  session_timer.start();
 
-  //Wait until a receive has completed
-  do {
-    //Reset the flag to reperform the receive
-    reperform_receive = false;
-
-    /* If the receiving is being reperformed then don't handle
-     * it again, work on the output of the last receive call.
-    */
-    if(!reperform_receive) {
-      //Try to receive data
-      status = Niagara::receive_raw(source, &control, &output_internal);
-      //In case an error occurred then return an error
-      if(status != NIAGARA_OK)
-        return NIAGARA_RECEIVE_ERROR;
-      
-      //If not a syn req, skip
-      if(control != SYN)
-        continue;
-    }
-
-    //Compute hashed data for error check
-    uint32_t hashed_data_int = crc32(output_internal);
-    str hashed_data = (char*)&hashed_data_int;
-    
-    //While cycle for retransmissions
-    retransmission_timer.start();
-    //Set to false when a retransmission is not necessary
-    bool retransmit = true;
-    while(retransmission_counter < NIAGARA_RETRANSMISSIONS) {
-      if(retransmit) {
-        retransmit = true;
-        //Send the first acknowledgement
-        if(Niagara::send_raw(device, ACK, hashed_data) != NIAGARA_OK)
-          return NIAGARA_SEND_ERROR;
-      }
-        
-      //Try to receive new data, check the source
-      str source;
-      status = Niagara::receive_raw(&source, &control, &output_internal);
-      if(status == NIAGARA_TIMEOUT) {
-        retransmission_counter++;
-        continue;
-      }
-      if(status != NIAGARA_OK ) {
-        if(retransmission_timer.elapsed() > NIAGARA_TIMEOUT) {
-          retransmission_timer.start();
-          retransmission_counter++;
-          continue;
-        }
-
-        retransmit = false;
-        continue;
-      }
-      if(control == RETRANSMISSION_TIMEOUT)
-        return NIAGARA_RECEIVE_ERROR;
-      
-      //If the source isn't the device which is handshaking or the control message isn't a ping then ignore
-      if(source != device)
-        continue;
-
-      /* If another syn request was sent, then
-       * reperform the receiving to handle the message that
-       * has been resent.
-       */
-      if(control == SYN) {
-        //Perform the receive again
-        reperform_receive = true;
-        break;
-      }
-
-      //If the control message is different then ignore the message
-      if(control != ACK)
-        continue;
-    }
-
-    //If the max retransmission amount was reached then ignore
-    if(retransmission_counter == NIAGARA_RETRANSMISSIONS)
+  //Keep reiterating until the amount of retransmissions reaches the maximum amount of retransmissions
+  while(true) {
+    //Check if the session time has exceeded the timeout in which case stop the communication
+    if(session_timer.elapsed() > MAX_RECV_WAIT)
       return NIAGARA_TIMEOUT;
-    else if(!reperform_receive) break; //If everything went well, then restart the cycle
-  } while(reperform_receive);
-  
-  //Save the internal output in the actual output
-  *output = output_internal;
 
-  
-  return NIAGARA_OK;
-}
+    //Receive raw data from the radio module and process it at the lower layer
+    status = Niagara::receive_raw(source, &control, &payload);
 
-Niagara_Ret Niagara::send(str destination, str message) {
-  //If the identifier is empty and not yet initialized then return an error
-  if(Niagara::identifier.length() == 0)
-    return NIAGARA_NO_IDENTIFIER;
-
-  //Source of the receivings
-  str source;
-  //Received control message
-  Niagara_Control control_msg;
-  //Buffer to save the payload
-  str crc_buffer;
-  //Timer to keep track of retransmissions
-  Timer retransmission_timer;
-  //Retransmission counter
-  int retransmission_counter = 0;
-  //Status code returned by methods
-  Niagara_Ret status;
-
-  //Set to false when a retransmission is not necessary
-  bool retransmit = true;
-  //Start retransmission timer
-  retransmission_timer.start();
-  while(retransmission_counter < NIAGARA_RETRANSMISSIONS) {
-    if(retransmit) {
-      retransmit = true;
-      //Send SYN to establish connection
-      if(Niagara::send_raw(destination, SYN, message) != NIAGARA_OK)
-        return NIAGARA_SEND_ERROR;
-    }
-
-    //Wait for acknowledgement
-    status = Niagara::receive_raw(&source, &control_msg, &crc_buffer);
-    if(status == NIAGARA_TIMEOUT) {
-      retransmission_counter++;
+    //If the receive went into timeout state then try receiving the data again
+    if(status == NIAGARA_TIMEOUT)
       continue;
-    }
+
+    //If the receive returned an error then propagate it to the whole method
     if(status != NIAGARA_OK)
       return NIAGARA_RECEIVE_ERROR;
 
-    //Check that source and received parameters match with an acknowledgement
-    if(source != destination || control_msg != ACK) {
-      if(retransmission_timer.elapsed() > NIAGARA_TIMEOUT)
-      {
-        retransmission_timer.start();
-        retransmission_counter++;
-        continue;
+    /*
+     * Check if the remote device has been set and it's the source of this message,
+     * in which case, if the control message is a SYNCHRONIZE request, reset the handshake
+     * status to restart. This situation might happen when the CRC32 check failed on the other
+     * side and the other side sent the message again with the control message set as a SYN.
+    */
+    if(device == *source && control == SYN)
+      state = RxState::WAIT_SYN;
+
+    //Check based on the current handshake's state
+    switch(state) {
+      //If the handshake is waiting for a SYN message and it got received
+      case RxState::WAIT_SYN:
+        //If the maximum retransmission amount was reached on the remote side then close
+        if(control == RETRANSMISSION_TIMEOUT)
+          return NIAGARA_RETRANSMISSION_ERROR;
+        //Check if the control message is SYN, otherwise ignore this message
+        if(control != SYN)
+          break;
+
+        //The remote device we're communicating with is the source of this message
+        device = *source;
+
+        //Reply with the acknowledgement 
+        {
+          //Compute the CRC to send back to the remote device
+          str crc = crc32_to_str(crc32(payload));
+          //Send the crc back as the payload of the acknowledgement
+          if(Niagara::send_raw(device, ACK, crc) != NIAGARA_OK)
+            return NIAGARA_SEND_ERROR; //In case of any send error then propagate it to the whole method
+        }
+
+        //Set the state to wait for the final acknowledgement
+        state = RxState::WAIT_FINAL_ACK;
+        //Reset the session timer
+        session_timer.start();
+        //Go back and wait for data to receive
+        break;
+
+      //If the handshake was pending for final acknowledgement
+      case RxState::WAIT_FINAL_ACK:
+        //Check if the source is the remote device we're communicating with
+        if(*source != device)
+          break;
+
+        //If the control message matches with the requested acknowledgement
+        if(control == ACK) {
+          //Return the output and return the OK status
+          *output = payload;
+          return NIAGARA_OK;
+        }
+
+        //If the maximum retransmission amount was reached on the remote side then close
+        if(control == RETRANSMISSION_TIMEOUT)
+          return NIAGARA_RETRANSMISSION_ERROR;
+
+        break;
       }
+  }
+}
 
-      retransmit = false;
-      continue;
+Niagara_Ret Niagara::send(str destination, str message) {
+  //Check if the identifier hasn't yet been initialised
+  if(identifier.length() == 0)
+    return NIAGARA_NO_IDENTIFIER;
+
+  //Saves the current send state of the handshake  
+  enum class TxState {
+    SEND_SYN,
+    WAIT_ACK
+  };
+
+  //Variable to keep track of the current handshake's state
+  TxState state = TxState::SEND_SYN;
+  //Timer to check for timeouts
+  Timer timer;
+  //Counter for the amount of retransmissions
+  int retransmissions = 0;
+
+  //Remote device's callsign
+  str remote;
+  //Buffer for the received crc
+  str received_crc;
+  //Buffer for the control message received
+  Niagara_Control control;
+  //Buffer for the status of send and receive functions
+  Niagara_Ret status;
+
+  //Compute the crc of the message being sent so it can be checked
+  str expected_crc = crc32_to_str(crc32(message));
+
+  //Start the timer counting for retransmissions
+  timer.start();
+  //Loop until the maximum amount of retransmissions is reached
+  while(retransmissions < NIAGARA_RETRANSMISSIONS) {
+    switch(state) { //Check the current state of the handshake
+      case TxState::SEND_SYN: //If the SYN request should be sent:
+        //Send the SYN request with the message as payload
+        if(Niagara::send_raw(destination, SYN, message) != NIAGARA_OK)
+          return NIAGARA_SEND_ERROR; //In case of any error propagate it to the whole method
+
+        //Start the timer counting for retransmission timeouts
+        timer.start();
+        //Wait for the acknowledgement
+        state = TxState::WAIT_ACK;
+        break;
+
+      //If the ACK should be received
+      case TxState::WAIT_ACK:
+        //Wait for it to be actually received
+        status = Niagara::receive_raw(&remote, &control, &received_crc);
+
+        //In case the acknowledgement timed out then try to retransmit the message
+        if(status == NIAGARA_TIMEOUT && timer.elapsed() > MAX_RECV_WAIT) {
+          //Increment the retransmission counter
+          retransmissions++;
+          //Go back to the SYN
+          state = TxState::SEND_SYN;
+          //Exit from the switch condition
+          break;
+        }
+
+        //If the receive method returned an error then propagate it to the whole method
+        if(status != NIAGARA_OK)
+          return NIAGARA_RECEIVE_ERROR;
+
+        //If the remote device isn't correct or the control message isn't an acknowledgement then ignore this message
+        if(remote != destination || control != ACK)
+          break;
+
+        //If the CRC check doesn't work correctly then go back to the SYN and retransmit
+        if(received_crc != expected_crc) {
+          //Increase the retransmission counter
+          retransmissions++;
+          //Go back to sending the SYN request
+          state = TxState::SEND_SYN;
+          //Exit from the switch condition
+          break;
+        }
+
+        //Send the final acknowledgement with no payload and exit
+        status = Niagara::send_raw(destination, ACK, "");
+        //If there has been a problem sending the message then propagate that problem back to the whole method
+        if(status != NIAGARA_OK)
+          return NIAGARA_SEND_ERROR;
+        //If the final acknowledgement had no internal error then the message got sent correctly
+        return NIAGARA_OK;
     }
-
-    //Compare the crc with the one received from the receiving device
-    uint32_t computed_crc_num = crc32(message);
-    str computed_crc = (char*)&computed_crc_num;
-    if(computed_crc != crc_buffer) {
-      //Retransmit the message
-      retransmission_timer.start();
-      retransmission_counter++;
-      continue;
-    } 
   }
 
-  //Check if the amount of retransmissions got exceeded
-  if(retransmission_counter == NIAGARA_RETRANSMISSIONS) {
-    Niagara::send_raw(destination, RETRANSMISSION_TIMEOUT, ""); //Send a message indicating maximum amount of retransmissions reached
-    return NIAGARA_TIMEOUT;
-  }
-
-  //Send the last acknowledgement to finalize the handshake
-  if(Niagara::send_raw(destination, ACK, "") != NIAGARA_OK)
-    return NIAGARA_SEND_ERROR;
-
-  return NIAGARA_OK;
+  //In case of no retransmissions left then send a retransmission timeout message and exit
+  Niagara::send_raw(destination, RETRANSMISSION_TIMEOUT, "");
+  return NIAGARA_TIMEOUT;
 }
 
 Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, str* message_output) {
@@ -303,14 +318,16 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
 
-  char receive_output[512];
-  int status = Niagara::lora->receive((uint8_t*)receive_output, 512);
+  char receive_output[LORA_BUFFER_MTU];
+  int status = Niagara::lora->receive((uint8_t*)receive_output, LORA_BUFFER_MTU);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
   str receive_output_str(receive_output);
   str processed_output[3];
-  Niagara::process_message(processed_output, receive_output_str);
-  if(processed_output == nullptr) return NIAGARA_NOT_DESTINATION;
+  //Check for errors on the process message method
+  status = Niagara::process_message(processed_output, receive_output_str) != 0
+  if(status == 6) return NIAGARA_NOT_DESTINATION;
+  else if(status != 0) return NIAGARA_INVALID_DATA;
 
   int control_value = processed_output[1].toInt();
 
@@ -321,35 +338,37 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
   return NIAGARA_OK;
 }
 
-bool Niagara::process_message(str* output, str message) {
+int Niagara::process_message(str* output, str message) {
   //If the identifier is empty and not yet initialized then return an error
-  if(Niagara::identifier.length() == 0)
-    return false;
+  if(identifier.length() == 0)
+    return 1;
+  if(message.length() == 0)
+    return 2;
 
   //In case the message destination isn't this board then exit
   int separatorIndex = message.indexOf('|');
-  if(separatorIndex <= 0) return false;
-  str callsign = message.substring(0, separatorIndex - 1);
+  if(separatorIndex <= 0) return 3;
+  str callsign = message.substring(0, separatorIndex);
   //Separate the destination id in source and destination id
   str sourceID, destinationID;
   int identifierSeparator = callsign.indexOf('.');
-  if(identifierSeparator <= 0) return false;
-  if(callsign.length() <= identifierSeparator) return false;
-  sourceID = callsign.substring(0, identifierSeparator - 1);
+  if(identifierSeparator <= 0 || identifierSeparator >= callsign.length() - 1) return 4;
+  if(callsign.length() <= identifierSeparator) return 5;
+  sourceID = callsign.substring(0, identifierSeparator);
   destinationID = callsign.substring(identifierSeparator + 1);
-  if(!valid_destination(destinationID)) return false;
-  if(message.length() <= separatorIndex + 1) return false; 
-  int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|');
-  if(secondSeparatorIndex <= 0) return false;
-
+  if(!valid_destination(destinationID)) return 6;
+  if(message.length() <= separatorIndex + 1) return 7; 
+  int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|') + separatorIndex + 1;
+  if(secondSeparatorIndex <= 0) return 8;
+  
   //Separate the str into the control sequence and the message itself
   output[0] = sourceID;
-  output[1] = message.substring(separatorIndex + 1, secondSeparatorIndex - 1);
+  output[1] = message.substring(separatorIndex + 1, secondSeparatorIndex);
   if(message.length() > secondSeparatorIndex + 1)
     output[2] = message.substring(secondSeparatorIndex + 1);
   else output[2] = "";
 
-  return true;
+  return 0;
 }
 
 Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str message) {
@@ -359,6 +378,8 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
+  //Check if the formatted message to send is bigger than the maximum transmission unit to send over the radio
+  if(formattedMessage.length() >= LORA_BUFFER_MTU) return NIAGARA_TOO_LARGE;
   int status = Niagara::lora->transmit(formattedMessage.c_str());
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
@@ -367,8 +388,24 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 }
 
 str Niagara::format_message(str destination, Niagara_Control control, str message) {
-  if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0) return "";
-  return (Niagara::identifier + "." + destination + "|" + str(static_cast<int>(control)) + "|" + message);
+    if(identifier.length() == 0)
+        return "";
+
+    if(destination.length() == 0)
+        return "";
+
+    if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0)
+        return "";
+
+    if(message.indexOf('|') >= 0)
+        return "";
+
+    if(control < 0 || control >= END)
+        return "";
+
+    return identifier + "." + destination + "|" +
+           str(static_cast<int>(control)) + "|" +
+           message;
 }
 
 bool Niagara::valid_destination(str destination) {

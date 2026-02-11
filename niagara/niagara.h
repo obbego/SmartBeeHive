@@ -19,8 +19,14 @@
 
 #include "str.h"
 
+// To be set in the destination for broadcast communication
 #define BROADCAST "BROAD"
+// Maximum amount of retransmissions to be sent before the send method throws an error
 #define NIAGARA_RETRANSMISSIONS 10
+// Amount of time that the handshake waits for the other device to reply before trying a retransmission
+#define MAX_RECV_WAIT 30000
+// Maximum amount of bytes which can be sent at a time on the radio device
+#define LORA_BUFFER_MTU 512
 
 /**
  * This enumerator is returned by any method of the
@@ -44,6 +50,12 @@ enum Niagara_Ret {
      * received isn't.
     */
     NIAGARA_INVALID_DATA,    
+    /*
+     * Returned by the underlaying send method when the binary data
+     * which is to be sent over the radio exceedes the maximum size
+     * which can be sent at a time.
+    */
+    NIAGARA_TOO_LARGE,  
     /*Returned by the receive method when the
      * message received's destination isn't this device
     */
