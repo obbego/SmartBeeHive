@@ -25,8 +25,6 @@
 #define NIAGARA_RETRANSMISSIONS 10
 // Amount of time that the handshake waits for the other device to reply before trying a retransmission
 #define MAX_RECV_WAIT 30000
-// Maximum amount of bytes which can be sent at a time on the radio device
-#define LORA_BUFFER_MTU 512
 
 /**
  * This enumerator is returned by any method of the
@@ -141,6 +139,8 @@ class Niagara {
     str identifier;
     /* Whether to log radio initialization or not */
     bool display_log;
+    /* Chip's hardware MTU */
+    uint16_t chip_mtu;
     
     #ifndef ARDUINO
     // instance of the HAL class

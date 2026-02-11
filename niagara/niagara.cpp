@@ -83,6 +83,7 @@ Niagara::Niagara(bool log) {
   SX1262* radio_return = init_radio();
   if(radio_return == nullptr) return;
   Niagara::lora = radio_return;
+  Niagara::chip_mtu = lora->maxPacketLength();
 
   //Initialise the identifier as empty
   Niagara::identifier = "";
@@ -318,8 +319,8 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
 
-  char receive_output[LORA_BUFFER_MTU];
-  int status = Niagara::lora->receive((uint8_t*)receive_output, LORA_BUFFER_MTU);
+  char receive_output[Niagara::chip_mtu];
+  int status = Niagara::lora->receive((uint8_t*)receive_output, Niagara::chip_mtu);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE) return RADIOLIB_ERROR;
   str receive_output_str(receive_output);
@@ -379,7 +380,7 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) return NIAGARA_INVALID_DATA;
   //Check if the formatted message to send is bigger than the maximum transmission unit to send over the radio
-  if(formattedMessage.length() >= LORA_BUFFER_MTU) return NIAGARA_TOO_LARGE;
+  if(formattedMessage.length() >= Niagara::chip_mtu) return NIAGARA_TOO_LARGE;
   int status = Niagara::lora->transmit(formattedMessage.c_str());
   if(status == RADIOLIB_ERR_TX_TIMEOUT) return NIAGARA_TIMEOUT;
   if(status != RADIOLIB_ERR_NONE)
