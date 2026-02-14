@@ -4,7 +4,7 @@
 
 #include <curl/curl.h>     // library to handle HTTP requests
 #include <spdlog/spdlog.h> // library to handle logging
-#include <Niagara.h>       // library to handle LoRa communication
+#include "niagara.h"      // library to handle LoRa communication
 
 using namespace std;
 
