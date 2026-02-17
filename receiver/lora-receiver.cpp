@@ -70,7 +70,7 @@ std::shared_ptr<spdlog::logger> logger;
 
 void initLogger() {
     try {
-        logger = spdlog::daily_logger_mt("daily_logger", "logs/lora_receiver.log");
+        logger = spdlog::daily_logger_mt("daily_logger", "logs/lora_receiver.log", 0, 0, true, 7);
         logger->set_level(spdlog::level::debug);
     } catch (const spdlog::spdlog_ex &ex) {
         std::cerr << "Log initialization failed: " << ex.what() << std::endl;
