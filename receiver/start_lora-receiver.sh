@@ -19,8 +19,71 @@ if ! dpkg -s libspdlog-dev >/dev/null 2>&1; then
     sudo apt install -y libspdlog-dev
 fi
 
+# install cmake and make if not found
+if ! command -v cmake &> /dev/null; then
+    sudo apt install -y cmake
+fi
+
+if ! command -v make &> /dev/null; then
+    sudo apt install -y make
+fi
+
+# install lgpio if not found
+if [ ! -f "/usr/local/lib/liblgpio.so" ]; then
+    echo "lgpio non trovata, procedo con l'installazione..."
+    
+    # Save current directory
+    CURRENT_DIR=$(pwd)
+    
+    # Clone lg2 repository
+    TMP_DIR=$(mktemp -d)
+    cd "$TMP_DIR"
+    git clone https://github.com/joan2937/lg.git
+    cd lg
+    
+    # Compile and install
+    make
+    sudo make install
+    
+    # Cleanup and return to original directory
+    cd "$CURRENT_DIR"
+    rm -rf "$TMP_DIR"
+    echo "lgpio installata con successo"
+else
+    echo "lgpio trovata nel sistema"
+fi
+
+
+# install RadioLib if not found
+if [ ! -d "/usr/local/include/RadioLib" ]; then
+    echo "RadioLib non trovata, procedo con l'installazione..."
+    
+    # Save current directory
+    CURRENT_DIR=$(pwd)
+    
+    # Clone RadioLib repository
+    TMP_DIR=$(mktemp -d)
+    cd "$TMP_DIR"
+    git clone https://github.com/jgromes/RadioLib.git
+    cd RadioLib
+    
+    # Create build directory and compile
+    mkdir build
+    cd build
+    cmake ..
+    make
+    sudo make install
+    
+    # Cleanup and return to original directory
+    cd "$CURRENT_DIR"
+    rm -rf "$TMP_DIR"
+    echo "RadioLib installata con successo"
+else
+    echo "RadioLib trovata nel sistema"
+fi
+
 # compile custom libraries useful for the main script
-g++ $NIAGARA_SOURCE -o $NIAGARA_BUILD -llgpio -lRadioLib
+g++ $NIAGARA_SOURCE -o $NIAGARA_BUILD
 
 # compile the main script including the
 # libraries used 
@@ -28,7 +91,8 @@ mkdir -p $OUTPUT_DIR
 g++ "$SOURCE_FILE" -std=c++17 \
     -I/usr/include/spdlog \
     -I"$NIAGARA_INCLUDE" \
-    -L"$NIAGARA_BUILD" -lniagara \
+    -I../niagara \
+    $NIAGARA_SOURCE \
     -lcurl \
     -o "$OUTPUT_DIR/$OUTPUT_FILE"
 

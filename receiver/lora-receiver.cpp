@@ -4,6 +4,9 @@
 
 #include <curl/curl.h>     // library to handle HTTP requests
 #include <spdlog/spdlog.h> // library to handle logging
+#include <spdlog/sinks/daily_file_sink.h> // daily logger sink
+#include <spdlog/pattern_formatter.h> // pattern formatter
+#include <memory> // for shared_ptr
 #include "niagara.h"      // library to handle LoRa communication
 
 using namespace std;
@@ -43,19 +46,36 @@ public:
     {
         return this->identifier == other.identifier;
     }
+
+    /**
+     * Getter for access token
+     * @return the access token of the device
+     */
+    string getAccessToken() const
+    {
+        return this->accessToken;
+    }
 };
 
 /* define constants for
 the execution of the program */
-#define DEVICES_FILE "devices.txt"
-#define POST_FILE "post_data.json"
-#define THINGSBOARD_HOST "http://localhost:8080"
+const string DEVICES_FILE = "devices.txt";
+const string POST_FILE = "post_data.json";
+const string THINGSBOARD_HOST = "http://localhost:8080";
 /* define global variables in order to be used all over the program */
 vector<DeviceInfo> devices;
 /* define logger to register device operation. 
 Keep track of the last seven days of actions which will be stored. */
-auto logger = spdlog::daily_logger_mt("daily_logger", "logs/lora_receiver.log", 0, 0, true, 7); 
-spdlog::set_level(spdlog::level::debug);
+std::shared_ptr<spdlog::logger> logger;
+
+void initLogger() {
+    try {
+        logger = spdlog::daily_logger_mt("daily_logger", "logs/lora_receiver.log");
+        logger->set_level(spdlog::level::debug);
+    } catch (const spdlog::spdlog_ex &ex) {
+        std::cerr << "Log initialization failed: " << ex.what() << std::endl;
+    }
+}
 
 /**
  * Function to recover the devices information from a specified
@@ -68,7 +88,7 @@ bool recoverDevices()
     /* open the file */
     ifstream file(DEVICES_FILE);
     if (!file){
-        logger->error("Error in opening file "+DEVICE_FILE+". Please check if the file exists and has the right path and permissions");
+        logger->error("Error in opening file "+DEVICES_FILE+". Please check if the file exists and has the right path and permissions");
         return false;
     }
 
@@ -122,8 +142,8 @@ bool sendDataToThingsBoard(string payload, string source)
 
         /* configuration of all the parts of
         the request */
-        curl_easy_setopt(curl, CURLOPT_URL, THINGSBOARD_HOST + "/api/v1/" + it->accessToken + "telemetry");
-        curl_easy_setopt(curl, CURLOPT_HEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_URL, THINGSBOARD_HOST + "/api/v1/" + it->getAccessToken() + "telemetry");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 
         /* get the result of the request about the connection
@@ -140,7 +160,7 @@ bool sendDataToThingsBoard(string payload, string source)
             long httpCode = 0;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
             if (httpCode == 200){
-                logger->success("Successfully sent data to ThingsBoard from device "+source);
+                logger->info("Successfully sent data to ThingsBoard from device "+source);
                 check = true;
             }
             else {
@@ -164,6 +184,9 @@ bool sendDataToThingsBoard(string payload, string source)
 
 int main(int argc, char *argv[])
 {
+    /* initialize logger */
+    initLogger();
+    
     /* start of the program */
     cout << "Starting of the LoRA receiver..." << endl;
     logger->info("Starting of the LoRA receiver...");
@@ -193,7 +216,7 @@ int main(int argc, char *argv[])
             logger->error("Error in receiving data from "+source+" with error code: "+to_string(niagara_status));
             continue;
         }
-        logger->success("Data received from "+source);
+        logger->info("Data received from "+source);
 
         /* send the data to ThingsBoard server.
         Try two times to send the message if there are some problems */
