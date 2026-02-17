@@ -106,6 +106,7 @@ bool recoverDevices()
         else
             devices.push_back(DeviceInfo(firstAttribute, token));
     }
+    file.close(); // close file
 
     if (counter == 0){
         logger->error("No devices registered. Please add some to continue.");
