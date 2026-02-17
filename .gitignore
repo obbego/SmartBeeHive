@@ -6,6 +6,10 @@ thingsboard/scheduler/*.out
 !thingsboard/scheduler/device-register.json
 !thingsboard/scheduler/timing-scheduler.json
 
-# exclude loggin file in device scripts
+# exclude logging file in device scripts
 thingsboard/scheduler/**/*.log
 thingsboard/scheduler/**/*.log.*
+
+# exclude files of the receiver
+receiver/devices.txt
+receiver/out/*
