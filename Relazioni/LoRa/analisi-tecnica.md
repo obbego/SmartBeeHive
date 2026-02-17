@@ -19,6 +19,42 @@ La ricezione delle misurazioni viene effettuata attraverso un software in esecuz
 Sarà proprio il ricevitore delle misurazioni che si occuperà del timing, ovvero del conteggio del tempo trascorso fra una misura e l'altra, per permettere di inviare una richiesta al gateway a certi intervalli di tempo.  
 Successivamente, alla ricezione delle misurazioni da parte delle arnie, viene stabilita una connessione HTTP con il server ThingsBoard per l'invio di questi dati e il salvataggio nel database.
 
+### Dati necessari
+Il ricevitore dovrà contenere al suo interno, per ogni arnia, il corrispondente token di accesso al server ThingsBoard. 
+
+Infatti, per motivi riguardanti la MTU size del protocollo LoRa, l'identificativo che il ricevitore otterrà dalla comunicazione con le arnie sarà una stringa di caratteri di dimensione ridotta, che permette una comunicazione più agevole a differenza del token. 
+
+Il file si troverà dentro alla cartella con il codice del ricevitore `devices.txt` dove all'interno saranno presenti i dati che rispetteranno la seguente formattazione:
+```
+DEVICE_1 TOKEN_1
+DEVICE_2 TOKEN_2
+...
+```
+Rispettare tale formattazione risulta fondamentale per il setup iniziale del ricevitore. 
+
+Per archiviare i dati relativi ai dispositivi verrà utilizzata in ausilio la classe **DeviceInfo**, utilizzata anche nello scheduler e contenente, come attributi, l'identificativo e il corrispondente token di accesso per le richieste POST su ThingsBoard.
+
+### Librerie richieste
+Il ricevitore risulta di fatto il collegamento tra il sistema di comunicazione LoRa e l'archiviazione mediante ThingsBoard. Essendo inoltre realizzato in linguaggio C++, necessita l'installazione di librerie apposite che in altri linguaggi (come Python) potrebbero essere già disponibili. 
+
+Di seguito vengono quindi riportate le librerie richieste con relativa funzione e motivo della scelta:
+- ***Niagara*** libreria realizzata all'interno del progetto. Al suo interno contiene anche altri moduli da installare, come **lgpio** e **Radiolib**.
+- ***curllib*** libreria utilizzata per fare richieste HTTP/HTTPS da codice mediante curl. Installazione semplice, ampiamemnte impiegata e base per molte altre librerie per la comunicazione HTTP/HTTPS. Dovendo eseguire il codice su un dispositivo Raspberry, conviene scegliere un package affidabile che risulti il più leggero possibile. 
+- ***spdlog*** package per la gestione dei log. Dal momento che il codice rimarrà in esecuzione all'infinito, risulta fondamentale registarne le azioni in modo tale da essere consultate in caso di manutenzione/debug. **spdlog** è un package molto leggero (a differenza di altri) che supporta anche la "time rotation" per registrare solo l'ultimo periodo.
+
+**N.B.** *Le indicazioni fornite riguardo l'adattabilità e agli aspetti delle librerie si riferiscono all'esercizio del codice all'interno di un Raspberry Pi con sistema operativo basato su kernel Linux. Non è garantito che tali considerazioni possano valere in ambienti diversi da quelli menzionati.*
+
+### Funzioni codice
+Il codice del ricevitore dovrà contenere le seguenti misurazioni:
+- ***void initLogger()*** funzione per inizializzare il logger per registrare gli eventi.
+- ***bool recoverDevices()*** funzione che recupera i dati relativi alle arnie per il salvataggio su ThingsBoard. Ritorna TRUE nel caso in cui l'operazione sia riuscita con successo.
+- ***bool sendDataToThingsBoard()*** funzione che riceve i dati ed invia una richiesta POST al server ThingsBoard per il salvataggio delle telemetrie relative a quel dispositivo. La funzione ritorna TRUE se l'invio è riuscito è il server conferma la ricevuta delle telemetrie.
+
+La ricezione via LoRa verrà effettuata all'interno della funzione **main** invocando le funzioni definite nella libreria di progetto **Niagara**. 
+Il programma è monothread e monoprocesso, in quanto il protocollo LoRa e relativa libreria non prevede la ricezione simultanea dei messaggi. 
+Ciò quindi costituisce una sorta di "imbuto", che però è da considerarsi accettabile visto la frequenza di invio delle telemetrie (3 volte al giorno). 
+
+
 ## Server ThingsBoard
 Le parti da configurare del server ThingsBoard saranno quelle indicate di seguito.
 Per ulteriori informazioni sul funzionamento e sull'analisi del server ThingsBoard visitare [questa pagina](./ThingsBoard.md).
