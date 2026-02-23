@@ -19,8 +19,8 @@ using namespace std;
 class DeviceInfo
 {
 private:
-    string identifier;
-    string accessToken;
+    str identifier;
+    str accessToken;
 
 public:
     /**
@@ -30,7 +30,7 @@ public:
      * @param deviceName the identifier use in LoRa communication
      * @param token access token used in ThingsBoard communication
      */
-    DeviceInfo(string deviceName, string token)
+    DeviceInfo(str deviceName, str token)
     {
         this->identifier = deviceName;
         this->accessToken = token;
@@ -51,7 +51,7 @@ public:
      * Getter for access token
      * @return the access token of the device
      */
-    string getAccessToken() const
+    str getAccessToken() const
     {
         return this->accessToken;
     }
@@ -123,7 +123,7 @@ bool recoverDevices()
  * @param source identifier for the source device
  * @return true if the data has been sent correctly, false otherwise
  */
-bool sendDataToThingsBoard(string payload, string source)
+bool sendDataToThingsBoard(str payload, str source)
 {
     /* define boolean variable */
     bool check;
@@ -143,7 +143,7 @@ bool sendDataToThingsBoard(string payload, string source)
 
         /* configuration of all the parts of
         the request */
-        curl_easy_setopt(curl, CURLOPT_URL, THINGSBOARD_HOST + "/api/v1/" + it->getAccessToken() + "telemetry");
+        curl_easy_setopt(curl, CURLOPT_URL, THINGSBOARD_HOST + "/api/v1/" + string(it->getAccessToken().c_str()) + "telemetry");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 
@@ -152,7 +152,7 @@ bool sendDataToThingsBoard(string payload, string source)
         CURLcode res = curl_easy_perform(curl);
         if (res != CURLE_OK)
         {
-            logger->error("Error "+ string(curl_easy_strerror(res)) + " in curl sending data to ThingsBoard using device "+source);
+            logger->error("Error "+ string(curl_easy_strerror(res)) + " in curl sending data to ThingsBoard using device "+string(source.c_str()));
             check = false;
         }
         else
@@ -161,11 +161,11 @@ bool sendDataToThingsBoard(string payload, string source)
             long httpCode = 0;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
             if (httpCode == 200){
-                logger->info("Successfully sent data to ThingsBoard from device "+source);
+                logger->info("Successfully sent data to ThingsBoard from device "+string(source.c_str()));
                 check = true;
             }
             else {
-                logger->error("Return code error "+to_string(httpCode)+" while sending data to ThingsBoard using device " + source);
+                logger->error("Return code error "+to_string(httpCode)+" while sending data to ThingsBoard using device " + string(source.c_str()));
                 check = false;
             }
         }
@@ -207,17 +207,17 @@ int main(int argc, char *argv[])
     send them to ThingsBoard server */
     while (true)
     {
-        string payload, source;
+        str payload, source;
 
         /* receive data from LoRa receiver and control
         the return code */
         Niagara_Ret niagara_status = niagara->receive(&payload, &source);
         if (niagara_status != NIAGARA_OK)
         {
-            logger->error("Error in receiving data from "+source+" with error code: "+to_string(niagara_status));
+            logger->error("Error in receiving data from "+string(source.c_str())+" with error code: "+to_string(niagara_status));
             continue;
         }
-        logger->info("Data received from "+source);
+        logger->info("Data received from "+string(source.c_str()));
 
         /* send the data to ThingsBoard server.
         Try two times to send the message if there are some problems */
