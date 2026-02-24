@@ -154,7 +154,7 @@ class Niagara {
     SX1262* init_radio();
 
     /*Used to process messages received using the protocol*/
-    bool process_message(str* output, str message);
+    int process_message(str* output, str message);
 
     /*Used to format messages according to the protocol
      * A blank str is returned in case invalid parameters are passed in destination message

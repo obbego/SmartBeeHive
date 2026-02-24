@@ -83,7 +83,7 @@ Niagara::Niagara(bool log) {
   SX1262* radio_return = init_radio();
   if(radio_return == nullptr) return;
   Niagara::lora = radio_return;
-  Niagara::chip_mtu = lora->maxPacketLength();
+  Niagara::chip_mtu = radio_return->maxPacketLength;
 
   //Initialise the identifier as empty
   Niagara::identifier = "";
@@ -326,7 +326,7 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
   str receive_output_str(receive_output);
   str processed_output[3];
   //Check for errors on the process message method
-  status = Niagara::process_message(processed_output, receive_output_str) != 0
+  status = Niagara::process_message(processed_output, receive_output_str) != 0;
   if(status == 6) return NIAGARA_NOT_DESTINATION;
   else if(status != 0) return NIAGARA_INVALID_DATA;
 
