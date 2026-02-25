@@ -82,17 +82,17 @@ else
     echo "RadioLib trovata nel sistema"
 fi
 
-# compile custom libraries useful for the main script
-g++ $NIAGARA_SOURCE -o $NIAGARA_BUILD
 
 # compile the main script including the
 # libraries used 
 mkdir -p $OUTPUT_DIR
-g++ "$SOURCE_FILE" -std=c++17 \
-    -I/usr/include/spdlog \
-    -I"$NIAGARA_INCLUDE" \
+g++ "$SOURCE_FILE" $NIAGARA_SOURCE -std=c++17 \
     -I../niagara \
-    $NIAGARA_SOURCE \
+    -I/usr/local/include \
+    -L/usr/local/lib \
+    -lRadioLib \
+    -lgpio -lrt -lpthread \
+    -lspdlog \
     -lcurl \
     -o "$OUTPUT_DIR/$OUTPUT_FILE"
 

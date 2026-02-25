@@ -194,8 +194,8 @@ int main(int argc, char *argv[])
 
     /* initialize variables and objects for the
     execution of the program */
-    Niagara nigara = Niagara();
-    niagara->set_identifier("LoRa_rec"); // set identifier
+    Niagara niagara;
+    niagara.set_identifier("LoRa_rec"); // set identifier
 
     /* setup the environment */
     if (!recoverDevices()){
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 
         /* receive data from LoRa receiver and control
         the return code */
-        Niagara_Ret niagara_status = niagara->receive(&payload, &source);
+        Niagara_Ret niagara_status = niagara.receive(&payload, &source);
         if (niagara_status != NIAGARA_OK)
         {
             logger->error("Error in receiving data from "+string(source.c_str())+" with error code: "+to_string(niagara_status));
