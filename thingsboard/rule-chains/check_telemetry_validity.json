@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 61,
+    "version": 62,
     "firstNodeIndex": 0,
     "nodes": [
       {
@@ -177,7 +177,7 @@
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "/* variable definition */\nvar currentIndex = -1, currentKey, telemetryList, check = true, result = true;\n\ncurrentKey = Object.keys(msg)[0]; // get the first and only key\n\n/* get the list of telemetries\nand find the telemetry that match the timestamp */\nif(!(currentKey in metadata))\n    check = false;\nelse{\n    telemetryList = JSON.parse(metadata[currentKey]);\n    currentIndex = telemetryList.findIndex(singleTelemetry => Number(singleTelemetry.ts) === Number(metadata.ts));   \n}\n\n/* control if a telemetry has been found,\notherwise it's not possible to compare it with other telemetries */\nif(currentIndex<0)\n    check=false;\n\n/* control if the general average \nhas been found in the common asset */\nif(!(\"general_\"+currentKey in metadata))\n    check=false;\n    \n/* control if the message is closer to the average, otherwise\nit's not possible to replace the telemetry */\nif(Math.abs(msg[currentKey] - Number(metadata[\"general_\"+currentKey]))>=Math.abs(Number(telemetryList[currentIndex].value) - Number(metadata[\"general_\"+currentKey])))\n    result = false;\n    \n/* copy the result to metadata and\nreturn the message */\nmetadata.valid = result;\nmetadata.sameTelemetry = currentIndex;\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
+          "jsScript": "/* variable definition */\nvar currentIndex = -1, currentKey, telemetryList, check = true, result = true;\n\ncurrentKey = Object.keys(msg)[0]; // get the first and only key\n\n/* get the list of telemetries\nand find the telemetry that match the timestamp */\nif(!(currentKey in metadata))\n    check = false;\nelse{\n    telemetryList = JSON.parse(metadata[currentKey]);\n    currentIndex = telemetryList.findIndex(singleTelemetry => Number(singleTelemetry.ts) === Number(metadata.ts));   \n}\n\n/* control if a telemetry has been found,\notherwise it's not possible to compare it with other telemetries */\nif(currentIndex<0)\n    check=false;\n\n/* control if the general average \nhas been found in the common asset */\nif(!(\"general_\"+currentKey in metadata))\n    check=false;\n    \n/* control if the message is closer to the average, otherwise\nit's not possible to replace the telemetry */\nif(check && Math.abs(msg[currentKey] - Number(metadata[\"general_\"+currentKey]))>=Math.abs(Number(telemetryList[currentIndex].value) - Number(metadata[\"general_\"+currentKey])))\n    result = false;\n    \n/* copy the result to metadata and\nreturn the message */\nmetadata.valid = result;\nmetadata.sameTelemetry = currentIndex;\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};",
           "tbelScript": "/* variable definition */\n\nreturn {msg: msg, metadata: metadata, msgType: msgType};"
         },
         "additionalInfo": {
