@@ -1,15 +1,1 @@
-.vscode/
-
-# exclude data and out files in the scheduler folder
-thingsboard/scheduler/*.json
-thingsboard/scheduler/*.out
-!thingsboard/scheduler/device-register.json
-!thingsboard/scheduler/timing-scheduler.json
-
-# exclude logging file in device scripts
-thingsboard/scheduler/**/*.log
-thingsboard/scheduler/**/*.log.*
-
-# exclude files of the receiver
-receiver/devices.txt
-receiver/out/*
+**/.DS_Store
