@@ -1,9 +1,14 @@
 #include "niagara.h"
 #include "Timer.h"
 
+// Define the callback function for logging
+void logger(const char* message) {
+	printf(message);
+}
+
 int main(void) {
 	//Initialise the device
-	Niagara device;
+	Niagara device(logger);
 	if(!device.set_identifier("RASPI")) {
 		fprintf(stderr, "Error while setting identifier.\n");
 		return 1;
@@ -28,7 +33,6 @@ int main(void) {
 				fprintf(stderr, "Error while sending data: %d\n", static_cast<int>(error));
 				continue;
 			}
-			fprintf(stdout, "Successful send.\n");
 		}
 
 		//Try to receive
@@ -40,6 +44,6 @@ int main(void) {
 			continue;
 		}
 
-		printf("Received: %s\n", receive);
+		printf("Received: %s\n", receive.c_str());
 	}
 }

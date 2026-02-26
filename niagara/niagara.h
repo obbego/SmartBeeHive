@@ -4,8 +4,6 @@
 #if defined(ARDUINO)
 // include the library
 #include <RadioLib.h>
-//Used for display.println
-#include <heltec_unofficial.h>
 //Used for printf
 #include <stdarg.h>
 #else
@@ -25,6 +23,9 @@
 #define NIAGARA_RETRANSMISSIONS 10
 // Amount of time that the handshake waits for the other device to reply before trying a retransmission
 #define MAX_RECV_WAIT 30000
+
+//Define the type for the callback method of the log handler
+typedef void (*NiagaraLogHandler)(const char*);
 
 /**
  * This enumerator is returned by any method of the
@@ -97,18 +98,13 @@ enum Niagara_Control {
 class Niagara {
   public:    
     /**
-     * Initialises this device with the passed identifier,
-     * which must be an alphanumeric string with 6-12 characters.
+     * Initialises this device with the log handler, which
+     * is a callback function which contains the method used
+     * to print the protocol's logs.
      */
-    Niagara(bool log);
+    Niagara(NiagaraLogHandler _log_handler);
     Niagara();
     ~Niagara();
-
-    #if defined(ARDUINO)
-    /*Custom display print methods */
-    void display_printf(const char* format, ...);
-    void display_print(String text);
-    #endif
     
     /**
      * Waits for an incoming connection from a device and
@@ -133,12 +129,17 @@ class Niagara {
     /*Sends a raw message to a specific destination */
     Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
 
+    /*Log print methods which use the handler if available. */
+    void log_printf(const char* format, ...);
+    void log_print(String text);
+
     /* RadioLib pointer to the LoRa chip */
     SX1262* lora;
     /* Niagara identifier for this device */
     str identifier;
-    /* Whether to log radio initialization or not */
-    bool display_log;
+    /* If this value is set to something other than nullptr,
+    then the log is enabled. */
+    NiagaraLogHandler log_handler = nullptr;
     /* Chip's hardware MTU */
     uint16_t chip_mtu;
     
@@ -174,6 +175,12 @@ class Niagara {
      * given to the constructor
      */
     bool check_identifier(str identifier);
+
+    /**
+     * Function which cleans the received crc and checks
+     * if it's equal to the expected one, returning true if so.
+     */
+    bool check_crc(str received_crc, str expected_crc);
 };
 
 #endif
