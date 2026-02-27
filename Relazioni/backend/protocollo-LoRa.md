@@ -70,53 +70,88 @@ Date le problematiche citate in questo documento, è sembrata plausibile la crea
 
 Segue una descrizione delle caratteristiche del protocollo.
 
-# Descrizione protocollo
+# Descrizione implementazioni protocollo
 
-Il protocollo introduce le seguenti funzionalità alla comunicazione corrente:
+Il protocollo introduce le seguenti funzionalità alla comunicazione permessa dalla libreria `RadioLib`:
 
 - Indirizzamento  
 - Messaggi di controllo  
-- Abilitazione del CRC sul protocollo LoRa sottostante  
+- Handshake fra mittente e destinatario con supporto per ritrasmissioni (implementando un limite sul massimo delle ritrasmissioni consentite)
+- Invio e verifica della CRC32 durante la handshake per il controllo errori
+- Frammentazione a layer superiore nel caso il pacchetto superi la MTU del chip utilizzato
+- Logging robusto con due livelli differenti
 
-Un pacchetto inviato dal protocollo contiene la sorgente e la destinazione del messaggio. Il dispositivo ricevente viene identificato con una stringa di testo che deve combaciare con quella contenuta nella destinazione del pacchetto ricevuto, altrimenti il pacchetto viene ignorato. La stringa di testo non ha un limite di lunghezza al momento.  
+Un pacchetto inviato dal protocollo contiene la sorgente e la destinazione del messaggio. Il dispositivo ricevente viene identificato con una stringa di testo che deve combaciare con quella contenuta nella destinazione del pacchetto ricevuto, altrimenti il pacchetto viene ignorato. Seguono le specifiche per la costruzione dell'identificatore:
+# Identificatore
+Secondo le specifiche del protocollo, l'identificatore deve avere sottostare alle seguenti caratteristiche:
+  - Deve avere una lunghezza compresa fra 4 e 12 caratteri
+  - Deve essere alfanumerico, nessun carattere speciale consentito in quanto potrebbe andare ad interferire con i separatori che vengono aggiungi a layer 2
+  - Non deve essere l'identificatore di broadcast, definito all'interno della libreria come la stringa `BROAD`. Questo identificatore non può essere impostato come identificatore di alcun nodo, ma può solamente essere una destinazione
 
-Nell’header, in seguito alla sezione contenente sorgente e destinazione del pacchetto, segue un valore numerico contenente il messaggio di controllo, che può essere una `REQUEST`, una `REPLY` o un `PING`. Al momento il protocollo non ha comportamenti differenti in base al messaggio di controllo inviato; esso può essere direttamente specificato e letto dall’utente. Il protocollo inoltre si occupa di abilitare la codifica CRC nel LoRa sottostante per garantire una maggiore accuratezza nel trasferimento delle informazioni.
+Nell’header, in seguito alla sezione contenente sorgente e destinazione del pacchetto, segue un valore numerico contenente il messaggio di controllo, che può essere un `SYN`, un `ACK`, oppure un `RETRANSMISSION_TIMEOUT`. Questi messaggi di controllo vengono utilizzati per identificare la funzione dei pacchetti durante la handshake.
+# Handshake a 3 vie e ritrasmissioni
+Il protocollo implementa una handshake a 3 vie. Questa viene utilizzata ad ogni invio di ogni pacchetto. Se un pacchetto viene frammentato, ogni frammento verrà inviato utilizzando questa handshake, si illustrano le fasi di questa:
+- Il mittente invia un `SYN` al destinatario, contenente come payload la stringa da recepire
+- Il destinatario, alla ricevuta del `SYN`, calcola il CRC32 del suo payload e risponde con un `ACK`, il cui payload sarà a sua volta riempito con il risultato di questo calcolo
+- Il mittente procede a verificare la CRC32 ricevuta dal destinatario comparandola con quella da lui calcolata sul messaggio originale. Se le due combaciano, allora procede a rispondere con un `ACK` finale di conferma con payload vuoto, altrimenti viene inviato un nuovo `SYN`. All'invio del nuovo `SYN` viene effettuata una ritrasmissione che causa la ripetizione della handshake.
+- Se vengono effettuate piú di `MAX_RETRANSMISSIONS` ritrasmissioni, allora il mittente invia un pacchetto di tipo `RETRANSMISSION_TIMEOUT` indicando che é stato raggiunto il numero massimo di queste. Se questo pacchetto viene recepito correttamente al destinatario, allora questo interromperà la ricezione restituendo un codice di errore. Altrimenti sarà necessario attendere un timeout.
+
+# Funzionalità di basso livello
+Ogni volta che viene inviato un pacchetto attraverso `send` o `receive`, in background viene effettuato un handshake a tre vie fra il dispositivo e la destinazione tramite funzioni di livello più basso, implementate privatamente all'interno della libreria, che possono essere denominate `send_raw` e `receive_raw`. Queste funzioni "raw" si occupano esclusivamente di incapsulare tre informazioni, all'interno di un vettore di dati grezzo, che può essere inviato al layer 1 verso l'esterno tramite segnali radio LoRa in broadcast
+Queste informazioni sono le seguenti: 
+    - ID del dispositivo e della destinazione
+    - Messaggio di controllo 
+    - Corpo effettivo del pacchetto
+
+# Classe per la conversione in JSON dei dati
+È stata implementata una classe per gestire la conversione in JSON dei dati inviati verso il lato ricevente, al fine di semplificarne l'invio a ThingsBoard, sebbene tale funzionalità non sia ancora stata effettivamente implementata dal punto di vista pratico.
+
+# Frammentazione
+Il protocollo implementa un fragmenter che gestisce la frammentazione (`FragmentConstructor`) e la deframmentazione (`FragmentDestructor`) dei pacchetti. Segue una descrizione della gestione della frammentazione:
+- **Invio**:
+    - Alla chiamata della funzione `send(str, str)`, viene utilizzato il `FragmentConstructor` per separare il messaggio in segmenti, ognuno con header che separa:
+        - Fragment Index, indice del frammento
+        - Total Fragments, ammontare totale di frammenti
+        - Payload, messaggio frammentato
+    - Ogni frammento viene individualmente inviato via radio effettuando la handshake con le dovute ritrasmissioni. In caso di errore irreversibile nell'invio o nella costruzione di un frammento, l'invio viene interrotto e l'errore viene propagato alla funzione `send(str, str)`
+- **Ricezione**
+    - Alla chiamata della funzione `receive(str*, str*)`, viene utilizzato il `FragmentDestructor` per ricostruire i frammenti ricevuti, il quale può produrre alcuni errori, quali:
+        - Ricezione di frammenti con indici non sequenziali o ordinati
+        - Frammenti con header invalidi
+        - Frammenti con valori incongruenti fra loro
+        - Header malformati che causano errori di parsing
+    - Uno qualsiasi di questi errori causa il ritorno del valore `NIAGARA_INVALID_FRAGMENT` dalla funzione.
+    - La libreria gestisce anche il contesto dell'invio dei pacchetti frammentati. Viene salvata la sorgente del primo pacchetto frammentato ricevuto dalla funzione `receive(str*, str*)`. Questa sorgente viene verificata ad ogni ricezione di pacchetti frammentati successivi. Qualora avvenga che pacchetti frammentati vengano inviati al destinatario di un altro flusso di pacchetti frammentati non terminato, i primi verranno ignorati fino a quando il destinatario non ha cessato la ricezione e ricostruzione del messaggio originale.
+
 
 ## Utilizzo della libreria
 
 - **Costruttore**  
+  Il costruttore della libreria permette la creazione e gestione del logger
+  `Niagara(log_handler, Niagara_LogLevel::TERMINAL);`
+  - Il primo parametro è il puntatore ad una funzione di firma:
+    `void funzione(const char*)`
+    Questa funzione gestisce i messaggi di log prodotti dalla libreria. Astrae l'output del log dalla libreria stessa, permettendo la definizione di un output qualunque, che esso sia un file, un display o una seriale di uscita. Ció è indipendente dalla piattaforma.
+  - Il secondo parametro definisce il livello di log. Qualora la funzione handler del logger stampi in output su un display di un microcontrollore a dimensioni ridotte, il logger può essere impostato con livello `Niagara_LogLevel::DISPLAY` per produrre log output piú concisi, altrimenti si può utilizzare `Niagara_LogLevel::TERMINAL` per un log completo.
 
-  Il costruttore della libreria permette la creazione dell’identificatore del dispositivo:  
-  `NiagaraPi("RASPI", true);`  
-
-  Il secondo parametro è opzionale e determina se mostrare i messaggi di log nel terminale durante l’inizializzazione del modulo radio.
+- **Impostazione Identificatore**
+  Dopo aver chiamato il costruttore, è necessario impostare l'identificatore del dispositivo prima di poter chiamare i metodi di invio e ricezione:
+  `bool set_identifier(str identifier);`
+  La chiamata di questo identificatore provoca un controllo di verifica dei requisiti sull'identificatore passato. Se questo controllo va a buon fine, la funzione restituisce `true` e imposta l'identificatore nel dispositivo corrente.
+  La mancata chiamata di questo metodo prima di effettuare chiamate a funzioni di invio o ricezione provoca il ritorno di `NIAGARA_NO_IDENTIFIER` da queste.
 
 - **Invio dati**  
-
   L’invio dei dati avviene attraverso l’utilizzo del seguente metodo:  
-  `Niagara_Ret NiagaraPi::send(std::string destination, Niagara_Control control, std::string message);`
-
-  Si specifica come prima stringa la destinazione del pacchetto, ovvero l’identificativo che il dispositivo ricevente ha inserito nel costruttore della libreria. Successivamente si specifica il messaggio di controllo, contenuto nell’enumeratore `Niagara_Control`, e infine viene specificata una stringa con il messaggio vero e proprio.
-
+  `Niagara_Ret Niagara::send(str destination, str message);`
+  Si specifica come prima stringa la destinazione del pacchetto, ovvero l’identificativo o il *callsign* che il dispositivo ricevente ha inserito nel costruttore della libreria. Successivamente viene specificato il messaggio da recapitare.
   Nel caso ci sia stato un errore durante l’invio dei dati, viene ritornato un valore diverso da `NIAGARA_OK` contenuto nell'enumeratore `Niagara_Ret`.
+  La classe `str` definita in `str.h`, implementa un oggetto stringa compatibile minimalmente sia con `std::string` che con `String` di Arduino. Altri tipi di stringhe devono essere convertiti in questa classe prima di poterli passare al protocollo Niagara.
 
 - **Ricezione dati**  
-
   La ricezione dei dati avviene attraverso il metodo bloccante seguente:  
-  `Niagara_Ret NiagaraPi::receive(std::string* source, Niagara_Control* control_output, std::string* message_output);`
-
-  Richiede un puntatore a una stringa che verrà riempita con l’identificatore della sorgente che ha inviato il messaggio. Inoltre, un altro puntatore a un tipo `Niagara_Control` che riempirà il valore di controllo contenuto nel messaggio ricevuto e infine un’ultima stringa che viene popolata con il messaggio ricevuto effettivo.
-
+  `Niagara_Ret Niagara::receive(str* source, str* output);`
+  Richiede un puntatore a una stringa che verrà riempita con l’identificatore della sorgente che ha inviato il messaggio. Mentre un'altra stringa viene popolata con il messaggio ricevuto effettivo.
   Nel caso ci sia stato un errore durante la ricezione dei dati, viene ritornato un valore diverso da `NIAGARA_OK` contenuto nell'enumeratore `Niagara_Ret`.
-
-## Implementazioni effettuate
-Il protocollo integra:
-- **Handshake fra dispositivi per l'invio di pacchetti e relativi messaggi di controllo**: ogni volta che viene inviato un pacchetto attraverso `send` o `receive`, in background viene effettuato un handshake a tre vie fra il dispositivo e la destinazione tramite funzioni di livello più basso, implementate privatamente all'interno della libreria, che possono essere denominate `send_raw` e `receive_raw`. Queste funzioni "raw" sono al momento quelle non funzionanti e necessitano di correzione per consentire l'esecuzione del software. Esse si occupano esclusivamente di incapsulare tre informazioni — ID del dispositivo e della destinazione, messaggio di controllo e corpo effettivo del pacchetto — all'interno di un vettore di dati grezzo, che può essere inviato al layer 1 verso l'esterno tramite segnali radio LoRa in broadcast.
-- **Formato per le stringhe di indirizzamento**: è stato implementato un identificatore di broadcast `BROAD`, definito anche come costante all'interno della libreria con il nome `BROADCAST`. Inoltre, l'identificatore specificato è ora vincolato dai seguenti criteri:
-    - La sua lunghezza deve essere compresa fra 4 e 12 caratteri
-    - Non deve essere uguale all'identificatore di broadcast
-    - Deve contenere esclusivamente caratteri alfanumerici, senza caratteri speciali
-- **Classe per la conversione in JSON dei dati**: è stata implementata una classe per gestire la conversione in JSON dei dati inviati verso il lato ricevente, al fine di semplificarne l'invio a ThingsBoard, sebbene tale funzionalità non sia ancora stata effettivamente implementata dal punto di vista pratico.
 
 ## Criteri minimi di validazione
 Nella prima iterazione del protocollo, il minimo indispensabile per consentire la comunicazione è rappresentato dalle funzioni di basso livello, quali `receive_raw` e `send_raw`, che vengono utilizzate dalle funzioni pubbliche di livello più alto `receive` e `send` all'interno della libreria durante l'handshake.
@@ -127,32 +162,3 @@ Queste funzioni si occupano esclusivamente dell'incapsulamento dei parametri di 
 Si prevede di integrare il protocollo con le seguenti funzionalità:
 
 - Fare in modo che la funzione di invio dati costruisca direttamente il JSON da inviare nel corpo del messaggio destinato al gateway, in modo da passare direttamente le letture dei sensori e lasciare che essa si occupi della loro formattazione, funzione che al momento esiste nel codice, ma non e' stata ancora implementata.
-
-# Specifiche protocollo
-## Sistema di comunicazione
-Ogni pacchetto ha al suo interno i seguenti dati:
-- **identificativo mittente**
-- **identificativo destinatario**
-- **messaggio di controllo** valore che indica il tipo di pacchetto che viene inviato (sincronizzazione, ricezione, errore ecc.)
-- **payload** contenuto del pacchetto con dati da trasmettere
-
-Per la comunicazione di ogni informazione verrà effettuata l'operazione di sincronizzazione, acknowledgenment e conferma dell'acknowledgement. Nella fase di sincronizzazione viene inviato anche il payload, mentre nell'acknowledgement l'hash del messaggio precedente. Se ciò non combacia viene mandato un messaggio di errore e viene effettuata la ritrasmissione del pacchetto. 
-
-**N.B.** Ogni pacchetto con lora ha una dimensione massima di 255 byte, quindi potranno essere inviati poche telemetrie alla volta, oppure gestire la frammentazione di pacchetti. 
-
-## Funzioni per la comunicazione
-Le funzioni che la libreria dovrebbe prevedere sono:
-
-- `connect()` per il dispositivo che instaura una connessione ed eseguire l'handshake a tre vie 
-- `listen()` che blocca il dispositivo finché non riceve una richiesta di sincronizzazione e poi continua con l'handshake a tre vie
-- `end()` utilizzato per terminare la connessione
-
-## Tipologie di comunicazione
-Ogni messaggio inviato viene associato un messaggio di controllo che indica il tipo di informazione che il dispositivo vuole trasmettere. 
-Questi valori appartengono ad un enumeatore della libreria `niagara.h` e sono:
-- `HANSHAKE_SYN` valore di controllo inviato all'inizio dell'handshake in fase di connessione
-- `HANDSHAKE_ACK` valore che indica la conferma del dispositivo ricevente all'interno del processo di handshake
-- `HANSHAKE ERROR` invio errore se il pacchetto non è stato ricevuto perchè gli hash dei pacchetti non combaciano
-- `TIME_SYNC` invio del tempo (millisecondi o data) da parte di uno dei dispositivi per potersi sincronizzare. 
-
-- `END` fine della connessione tra i due dispositivi
