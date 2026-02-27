@@ -95,6 +95,12 @@ enum Niagara_Control {
     END //This must be the last element
 };
 
+enum Niagara_LogLevel {
+    DISPLAY, //Used when the log should be concise because it's being output to a display
+    TERMINAL, //Used when the log can be extended because it's being output to a terminal
+    NONE //Used when no log should be used.
+};
+
 class Niagara {
   public:    
     /**
@@ -102,7 +108,7 @@ class Niagara {
      * is a callback function which contains the method used
      * to print the protocol's logs.
      */
-    Niagara(NiagaraLogHandler _log_handler);
+    Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level);
     Niagara();
     ~Niagara();
     
@@ -131,15 +137,24 @@ class Niagara {
 
     /*Log print methods which use the handler if available. */
     void log_printf(const char* format, ...);
-    void log_print(String text);
+    void log_printf(Niagara_LogLevel level, const char* format, ...);
+    void log_print(str text);
+    void log_print(str extendedText, str conciseText);
+    void log_print(Niagara_LogLevel level, str text);
+
+    // Helper function which doesn't uses ellipsis for variadicity
+    void vlog_printf(const char* format, va_list args);
 
     /* RadioLib pointer to the LoRa chip */
-    SX1262* lora;
+    SX1262* lora = nullptr;
     /* Niagara identifier for this device */
     str identifier;
     /* If this value is set to something other than nullptr,
     then the log is enabled. */
     NiagaraLogHandler log_handler = nullptr;
+    /* This value determines how much the log should be concise.
+    */
+    Niagara_LogLevel log_level = NONE;
     /* Chip's hardware MTU */
     uint16_t chip_mtu;
     

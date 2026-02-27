@@ -2,12 +2,9 @@
 #include "Timer.h"
 #include "Hash.h"
 
-void Niagara::log_printf(const char* format, ...) {
+void Niagara::vlog_printf(const char* format, va_list args) {
   // Ignore logging if log handler isn't set
-  if(Niagara::log_handler == nullptr) return;
-
-  va_list args;
-  va_start(args, format);
+  if(Niagara::log_handler == nullptr || Niagara::log_level == NONE) return;
 
   // Copy arguments because they're consumed by first vsnprintf call
   va_list args_copy;
@@ -18,17 +15,13 @@ void Niagara::log_printf(const char* format, ...) {
   va_end(args_copy);
 
   // If the formatting is invalid, the return value is negative
-  if (len < 0) {
-      va_end(args);
-      return; 
-  }
+  if (len < 0) return;
 
   // Allocate needed memory
   char* buffer = new char[len + 1];
 
   // Write the text in the newly allocated buffer
   vsnprintf(buffer, len + 1, format, args);
-  va_end(args);
 
   // Send the retrieved text to the log handler
   Niagara::log_handler(buffer);
@@ -37,12 +30,60 @@ void Niagara::log_printf(const char* format, ...) {
   delete[] buffer;
 }
 
-void Niagara::log_print(String text) {
+void Niagara::log_printf(const char* format, ...) {
+  // Ignore logging if log handler isn't set
+  if(Niagara::log_handler == nullptr || Niagara::log_level == NONE) return;
+
+  //Call the internal variadic printf method
+  va_list args;
+  va_start(args, format);
+  vlog_printf(format, args);
+  va_end(args);
+}
+
+void Niagara::log_printf(Niagara_LogLevel level, const char* format, ...) {
+  // Ignore logging if log handler isn't set
+  if(Niagara::log_handler == nullptr || Niagara::log_level == NONE) return;
+  //Check if the current log level is the same as the one specified
+  if(Niagara::log_level != level) return;
+
+  //Call the printf method
+  va_list args;
+  va_start(args, format);
+  vlog_printf(format, args);
+  va_end(args);
+}
+
+void Niagara::log_print(str text) {
   //Ignore logging if log handler isn't set
-  if(Niagara::log_handler == nullptr) return;
+  if(Niagara::log_handler == nullptr || Niagara::log_level == NONE) return;
 
   //Send the string to the handler
   Niagara::log_handler(text.c_str());
+}
+
+/*
+ * This is a convenience method which bundles the check
+ * for the log level, deciding whether to use the concise
+ * or the extended string based on the set log level.
+ * If the log level is set to NONE then the log handler isn't called.
+ */
+void Niagara::log_print(str extended, str concise) {
+  //Ignore logging if log handler isn't set
+  if(Niagara::log_handler == nullptr) return;
+
+  //Send the string to the handler based on the log level
+  switch(log_level) {
+    case TERMINAL:
+      Niagara::log_handler(extended.c_str());
+    case DISPLAY:
+      Niagara::log_handler(concise.c_str());
+  }
+}
+
+void Niagara::log_print(Niagara_LogLevel level, str text) {
+  if(Niagara::log_level != level) return;
+  log_print(str);
 }
 
 #if defined(ARDUINO)
@@ -54,18 +95,20 @@ SX1262* Niagara::init_radio() {
   // BUSY pin:  13
   SX1262* radio = new SX1262(new Module(8, 14, 12, 13));
 
-  if(Niagara::display_log) log_print("[SX1262] Initializing... ");
+  log_print("[SX1262] Initializing...", "Init Radio...");
   int state = radio->begin(868.0);
   if(state != RADIOLIB_ERR_NONE) {
-    if(Niagara::display_log) log_printf("\nInitialization Failed!\nError code: %d\n", state);
+    if(log_level == TERMINAL) log_printf(" Initialization Failed!\nError code: %d\n", state);
+    else log_printf("!\nError code: %d\n", state);
     return nullptr;
   }
   state = radio->setCRC(2);
   if(state != RADIOLIB_ERR_NONE) {
-    if(Niagara::display_log) log_printf("\nCRC Initialization Failed!\nError code: %d\n", state);
+    if(log_level == TERMINAL) log_printf(" CRC Initialization Failed!\nError code: %d\n", state);
+    else log_printf("!\nCRC Error: %d\n", state);
     return nullptr;
   }
-  if(Niagara::display_log) log_print("OK\n");
+  log_print(" Initialization successful!\n", "OK.\n");
   return radio;
 }
 #else
@@ -73,7 +116,7 @@ SX1262* Niagara::init_radio() {
   // now we can create the radio module
   SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20 /*The BUSY pin of the module MUST be specified, otherwise error -2 is thrown*/));
   
-  if(Niagara::display_log) log_print("[SX1262] Initializing... ");
+  log_print("[SX1262] Initializing...", "Init Radio...");
   /* The module is being initialized with all the default begin() settings
    * The only settings changed are the following:
    * - The frequency, according to the EU868 standard must be 868MHz, the default frequency is 434MHz
@@ -82,17 +125,20 @@ SX1262* Niagara::init_radio() {
    */
   int state = radio->begin(868.0 /*EU868 frequency*/, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0 /*This is not the default value*/, false);
   if(state != RADIOLIB_ERR_NONE) {
-    if(Niagara::display_log) log_printf("Initialization Failed!\nError code: %d\n", state);
-    	return nullptr;
+    if(log_level == TERMINAL) log_printf(" Initialization Failed!\nError code: %d\n", state);
+    else log_printf("!\nError code: %d\n", state);
+    return nullptr;
   }
-  if(Niagara::display_log) log_print("Initialization successful!\n");
+  log_print(" Initialization successful!\n", "OK.\n");
   return radio;
 }
 #endif
 
-Niagara::Niagara(NiagaraLogHandler _log_handler) {
+Niagara::Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level) {
   //Save the log handler callback pointer
   Niagara::log_handler = _log_handler;
+  //Save the log level enum
+  Niagara::log_level = _log_level;
   
   #if defined(ARDUINO)
   //Initialise the display and heltec library
@@ -116,7 +162,7 @@ Niagara::Niagara(NiagaraLogHandler _log_handler) {
 }
 
 /* If the boolean for the log variable isn't defined, then just don't define a log handler */
-Niagara::Niagara() : Niagara(nullptr) {}
+Niagara::Niagara() : Niagara(nullptr, NONE) {}
 
 Niagara::~Niagara() {
   if(Niagara::lora) {
@@ -133,6 +179,8 @@ Niagara::~Niagara() {
 }
 
 bool Niagara::set_identifier(str _identifier) {
+  if(Niagara::lora == nullptr) return false;
+
   if(!check_identifier(_identifier))
     return false;
 
@@ -143,7 +191,7 @@ bool Niagara::set_identifier(str _identifier) {
 Niagara_Ret Niagara::receive(str* output, str* source) {
   //Check if the identifier hasn't yet been initialised
   if(identifier.length() == 0) {
-    log_print("Cannot start receive - identifier not set yet.\n");
+    log_print("Cannot start receive - identifier not set yet.\n", "[RECV] No identifier!\n");
     return NIAGARA_NO_IDENTIFIER;
   }
 
@@ -170,14 +218,14 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
   //Start the timer to count for timeouts
   session_timer.start();
 
-  log_print("Starting message receive..\n");
+  log_print("Starting message receive..\n", "[RECV] Start.\n");
 
   //Keep reiterating until the amount of retransmissions reaches the maximum amount of retransmissions
   while(true) {
-    log_printf("Session timer: %ldms\n", session_timer.elapsed());
+    log_printf(TERMINAL, "[RECV] Session timer: %ldms\n", session_timer.elapsed());
     //Check if the session time has exceeded the timeout in which case stop the communication
     if(session_timer.elapsed() > MAX_RECV_WAIT){
-      log_print("Timeout!\n");
+      log_print("[RECV] Timeout!\n");
       return NIAGARA_TIMEOUT;
     }
 
@@ -188,7 +236,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
      * received isn't destined for this device, then try receiving data again.
      */
     if(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION) {
-      log_print("Retrying.\n");
+      log_print("[RECV] Retrying.\n");
       continue;
     }
 
@@ -196,7 +244,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
     if(status != NIAGARA_OK)
       return NIAGARA_RECEIVE_ERROR;
 
-    log_printf("Received Data - [Current Remote Device] : '%s' - [Receive source] : '%s' - [Handshake Status] : %d - [Control Message] : %d - [Payload] : '%s'\n", device.c_str(), source->c_str(), static_cast<int>(state), static_cast<int>(control), payload.c_str());
+    log_printf(TERMINAL, "[RECV] Received Data - [Current Remote Device] : '%s' - [Receive source] : '%s' - [Handshake Status] : %d - [Control Message] : %d - [Payload] : '%s'\n", device.c_str(), source->c_str(), static_cast<int>(state), static_cast<int>(control), payload.c_str());
 
     /*
      * Check if the remote device has been set and it's the source of this message,
@@ -205,7 +253,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
      * side and the other side sent the message again with the control message set as a SYN.
     */
     if(device == *source && control == SYN) {
-      log_print("SYN Request received, restarting handshake.\n");
+      log_print("[RECV] SYN Request received, restarting handshake.\n", "[RECV] reSYN.\n");
       state = RxState::WAIT_SYN;
     }
 
@@ -213,15 +261,15 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
     switch(state) {
       //If the handshake is waiting for a SYN message and it got received
       case RxState::WAIT_SYN:
-        log_print("==== [WAITING FOR MESSAGE SYN] ====");
+        log_print("==== [WAITING FOR MESSAGE SYN] ====\n", "[RECV] Waiting for SYN\n");
         //If the maximum retransmission amount was reached on the remote side then close
         if(control == RETRANSMISSION_TIMEOUT) {
-          log_print("Max retransmission amount reached!\n");
+          log_print("[RECV] Max retransmission amount reached!\n", "MAX RETRANSMISSIONS!\n");
           return NIAGARA_RETRANSMISSION_ERROR;
         }
         //Check if the control message is SYN, otherwise ignore this message
         if(control != SYN) {
-          log_print("Ignoring non-SYN request in WAIT_SYN state.\n");
+          if(log_level == TERMINAL) log_print("[RECV] Ignoring non-SYN request in WAIT_SYN state.\n");
           break;
         }
 
@@ -232,9 +280,9 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
         {
           //Compute the CRC to send back to the remote device
           str crc = crc32_to_str(crc32(payload));
-          log_printf("Computed payload CRC [%s]\n", crc.c_str());
+          log_printf(TERMINAL, "[RECV] Computed payload CRC [%s]\n", crc.c_str());
           //Send the crc back as the payload of the acknowledgement
-          log_print("==== [SENDING CRC ACKNOWLEDGEMENT] ====");
+          log_print("==== [SENDING CRC ACKNOWLEDGEMENT] ====\n", "[RECV] Sending ACK\n");
           if(Niagara::send_raw(device, ACK, crc) != NIAGARA_OK)
             return NIAGARA_SEND_ERROR; //In case of any send error then propagate it to the whole method
         }
@@ -243,23 +291,23 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
         state = RxState::WAIT_FINAL_ACK;
         //Reset the session timer
         session_timer.start();
-        log_print("State set to WAIT_FINAL_ACK. Restarted session timer.\n");
+        if(log_level == TERMINAL) log_print("[RECV] State set to WAIT_FINAL_ACK. Restarted session timer.\n");
         //Go back and wait for data to receive
         break;
 
       //If the handshake was pending for final acknowledgement
       case RxState::WAIT_FINAL_ACK:
-        log_print("==== [WAITING FOR FINAL ACKNOWLEDGEMENT] ====");
+        log_print("==== [WAITING FOR FINAL ACKNOWLEDGEMENT] ====\n", "[RECV] Waiting for ACK\n");
 
         //Check if the source is the remote device we're communicating with
         if(*source != device) {
-          log_printf("Message source [%s] isn't the handshake device [%s]!\n", source->c_str(), device.c_str());
+          log_printf(TERMINAL, "[RECV] Message source [%s] isn't the handshake device [%s]!\n", source->c_str(), device.c_str());
           break;
         }
 
         //If the control message matches with the requested acknowledgement
         if(control == ACK) {
-          log_print("Message received.\n");
+          log_print("[RECV] Done receive.\n");
           //Return the output and return the OK status
           *output = payload;
           return NIAGARA_OK;
@@ -267,7 +315,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 
         //If the maximum retransmission amount was reached on the remote side then close
         if(control == RETRANSMISSION_TIMEOUT) {
-          log_print("Max retransmission amount reached!\n");
+          log_print("[RECV] Max retransmission amount reached!\n", "MAX RETRANSMISSIONS!\n");
           return NIAGARA_RETRANSMISSION_ERROR;
         }
 
@@ -290,7 +338,7 @@ bool Niagara::check_crc(str received_crc, str expected_crc) {
 
   //If the crc changed then print the log of it
   if(received_crc != received_crc_clean)
-    log_printf("(Cleaned received crc before checking: [%s] -> [%s])", received_crc.c_str(), received_crc_clean.c_str());
+    log_printf(TERMINAL, "(Cleaned received crc before checking: [%s] -> [%s])", received_crc.c_str(), received_crc_clean.c_str());
   
 
   //Now that the received crc is clean, it can be checked with the expected one
@@ -300,7 +348,7 @@ bool Niagara::check_crc(str received_crc, str expected_crc) {
 Niagara_Ret Niagara::send(str destination, str message) {
   //Check if the identifier hasn't yet been initialised
   if(identifier.length() == 0) {
-    log_print("Cannot start send - identifier not set yet.\n");
+    log_print("Cannot start receive - identifier not set yet.\n", "[SEND] No identifier!\n");
     return NIAGARA_NO_IDENTIFIER;
   }
 
@@ -328,17 +376,17 @@ Niagara_Ret Niagara::send(str destination, str message) {
 
   //Compute the crc of the message being sent so it can be checked
   str expected_crc = crc32_to_str(crc32(message));
-  log_printf("Computed input CRC [%s].\n", expected_crc.c_str());
+  log_printf(TERMINAL, "[SEND] Computed input CRC [%s].\n", expected_crc.c_str());
 
   //Start the timer counting for retransmissions
   timer.start();
-  log_print("Starting send...\n");
+  log_print("Starting send...\n", "[SEND] Start.");
   //Loop until the maximum amount of retransmissions is reached
   while(retransmissions < NIAGARA_RETRANSMISSIONS) {
-    log_printf("Current State - [Current Remote Device] : '%s' - [Handshake Status] : %d\n", remote.c_str(), static_cast<int>(control));
+    log_printf(TERMINAL, "[SEND] Current State - [Current Remote Device] : '%s' - [Handshake Status] : %d\n", remote.c_str(), static_cast<int>(control));
     switch(state) { //Check the current state of the handshake
       case TxState::SEND_SYN: //If the SYN request should be sent:
-        log_print("==== [SENDING MESSAGE SYN] ====");
+        log_print("==== [SENDING MESSAGE SYN] ====\n", "[SEND] Sending SYN.\n");
         //Send the SYN request with the message as payload
         if(Niagara::send_raw(destination, SYN, message) != NIAGARA_OK)
           return NIAGARA_SEND_ERROR; //In case of any error propagate it to the whole method
@@ -351,12 +399,13 @@ Niagara_Ret Niagara::send(str destination, str message) {
 
       //If the ACK should be received
       case TxState::WAIT_ACK:
-        log_print("==== [WAITING FOR CRC ACKNOWLEDGEMENT] ====");
+        log_print("==== [WAITING FOR CRC ACKNOWLEDGEMENT] ====\n", "[SEND] Waiting ACK.\n");
         //In case the acknowledgement timed out then try to retransmit the message
         if(timer.elapsed() > MAX_RECV_WAIT) {
           //Increment the retransmission counter
           retransmissions++;
-          log_printf("Timeout! %d retransmissions, retrying.\n", retransmissions);
+          if(log_level == TERMINAL) log_printf("Timeout! %d retransmissions, retrying.\n", retransmissions);
+          else log_printf("[SEND] Timeout [%d]\n", retransmissions);
           //Go back to the SYN
           state = TxState::SEND_SYN;
           //Exit from the switch condition
@@ -376,36 +425,38 @@ Niagara_Ret Niagara::send(str destination, str message) {
 
         //If the remote device isn't correct or the control message isn't an acknowledgement then ignore this message
         if(remote != destination || control != ACK) {
-          log_print("Message received is irrelevant to the handshake.\n");
+          if(log_level == TERMINAL) log_print("Message received is irrelevant to the handshake.\n");
           break;
         }
 
-        log_print("Checking CRC... ");
+        log_print("Checking CRC... ", "[SEND] Error check\n");
         //If the CRC check doesn't work correctly then go back to the SYN and retransmit
         if(!check_crc(received_crc, expected_crc)) {
           //Increase the retransmission counter
           retransmissions++;
-          log_printf(" Invalid! Received [%s], Expected [%s].\n%d retransmissions. Retrying.\n", received_crc.c_str(), expected_crc.c_str(), retransmissions);
+          if(log_level == TERMINAL) log_printf(" Invalid! Received [%s], Expected [%s].\n%d retransmissions. Retrying.\n", received_crc.c_str(), expected_crc.c_str(), retransmissions);
+          else log_print("[SEND] Check invalid\n");
           //Go back to sending the SYN request
           state = TxState::SEND_SYN;
           //Exit from the switch condition
           break;
         }
 
-        log_print("==== [SENDING FINAL ACKNOWLEDGEMENT] ====");
+        log_print("==== [SENDING FINAL ACKNOWLEDGEMENT] ====\n", "[SEND] Check OK.\n");
         //Send the final acknowledgement with no payload and exit
         status = Niagara::send_raw(destination, ACK, "");
         //If there has been a problem sending the message then propagate that problem back to the whole method
         if(status != NIAGARA_OK)
           return NIAGARA_SEND_ERROR;
         //If the final acknowledgement had no internal error then the message got sent correctly
-        log_print("Message sent.\n");
+        log_print("Message sent.\n", "[SEND] Done.\n");
         return NIAGARA_OK;
     }
   }
 
   //In case of no retransmissions left then send a retransmission timeout message and exit
-  log_printf("Maximum retransmissions reached [%d]! - Sending retransmission timeout packet!\n", NIAGARA_RETRANSMISSIONS);
+  if(log_level == TERMINAL) log_printf("Maximum retransmissions reached [%d]! - Sending retransmission timeout packet!\n", NIAGARA_RETRANSMISSIONS);
+  else log_print("MAX RETRANSMISSIONS!\n");
   Niagara::send_raw(destination, RETRANSMISSION_TIMEOUT, "");
   return NIAGARA_TIMEOUT;
 }
@@ -415,35 +466,36 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
 
-  log_print("Receiving packet... ");
+  log_print(TERMINAL, "\t [RECV_RAW] Receiving packet... ");
   char receive_output[Niagara::chip_mtu];
   int status = Niagara::lora->receive((uint8_t*)receive_output, Niagara::chip_mtu);
   if(status == RADIOLIB_ERR_RX_TIMEOUT) {
-    log_print("Timeout!\n");
+    log_print(TERMINAL, "Timeout!\n");
     return NIAGARA_TIMEOUT;
   }
   if(status != RADIOLIB_ERR_NONE) {
-    log_printf("Error [%d]!\n", status);
+    if(log_level == TERMINAL) log_printf("Error [%d]!\n", status);
+    else log_printf("[RAW_RX] Error %d\n", status);
     return RADIOLIB_ERROR;
   }
-  log_print(" OK.\n");
+  log_print(TERMINAL, " OK.\n");
   str receive_output_str(receive_output);
   str processed_output[3];
-  log_print("Processing packet... ");
+  log_print(TERMINAL, "\t [RECV_RAW] Processing packet... ");
   //Check for errors on the process message method
   status = Niagara::process_message(processed_output, receive_output_str);
   if(status == 6) {
-    log_print("This is not the destination!\n");
+    log_print(TERMINAL, "This is not the destination!\n");
     return NIAGARA_NOT_DESTINATION;
   }
   else if(status != 0) {
-    log_print("\n");
+    log_print(TERMINAL, "\n");
     return NIAGARA_INVALID_DATA;
   }
 
   int control_value = processed_output[1].toInt();
 
-  log_printf("Done! -> src[%s], ctrl[%d], msg[%s]\n", processed_output[0].c_str(), control_value, processed_output[2].c_str());
+  log_printf(TERMINAL, "Done! -> src[%s], ctrl[%d], msg[%s]\n", processed_output[0].c_str(), control_value, processed_output[2].c_str());
 
   *source = processed_output[0];
   *control_output = static_cast<Niagara_Control>(control_value);
@@ -455,18 +507,18 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
 int Niagara::process_message(str* output, str message) {
   //If the identifier is empty and not yet initialized then return an error
   if(identifier.length() == 0) {
-    log_print("INVALID process_message CALL! - identifier is not set!");
+    log_print("INVALID process_message CALL! - identifier is not set!", "[RX_PROC] Error 1\n");
     return 1;
   }
   if(message.length() == 0) {
-    log_print("INVALID process_message CALL! - message is empty!");
+    log_print("INVALID process_message CALL! - message is empty!", "[RX_PROC] Error 2\n");
     return 2;
   }
 
   //In case the message destination isn't this board then exit
   int separatorIndex = message.indexOf('|');
   if(separatorIndex <= 0) {
-    log_print("INVALID process_message CALL! - missing '|' separator!");
+    log_print("INVALID process_message CALL! - missing '|' separator!", "[RX_PROC] Error 3\n");
     return 3;
   }
   str callsign = message.substring(0, separatorIndex);
@@ -474,22 +526,23 @@ int Niagara::process_message(str* output, str message) {
   str sourceID, destinationID;
   int identifierSeparator = callsign.indexOf('.');
   if(identifierSeparator <= 0 || identifierSeparator >= callsign.length() - 1 || callsign.length() <= identifierSeparator) {
-    log_print("INVALID process_message CALL! - missing callsign separator!");
+    log_print("INVALID process_message CALL! - missing callsign separator!", "[RX_PROC] Error 4\n");
     return 4;
   }
   sourceID = callsign.substring(0, identifierSeparator);
   destinationID = callsign.substring(identifierSeparator + 1);
   if(!valid_destination(destinationID)) {
-    log_printf("INVALID process_message CALL! - invalid destination ['%s'] !", destinationID.c_str());
+    if(log_level == TERMINAL) log_printf("INVALID process_message CALL! - invalid destination ['%s'] !", destinationID.c_str());
+    else log_print(, "[RX_PROC] Error 5\n");
     return 5;
   }
   if(message.length() <= separatorIndex + 1) {
-    log_print("INVALID process_message CALL! - missing message chunk!");
+    log_print("INVALID process_message CALL! - missing message chunk!", "[RX_PROC] Error 6\n");
     return 6;
   }
   int secondSeparatorIndex = message.substring(separatorIndex + 1).indexOf('|') + separatorIndex + 1;
   if(secondSeparatorIndex <= 0) {
-    log_print("INVALID process_message CALL! - missing second separator!");
+    log_print("INVALID process_message CALL! - missing second separator!", "[RX_PROC] Error 7\n");
     return 7;
   }
   
@@ -508,51 +561,55 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
 
-  log_print("Sending packet [");
+  log_print(TERMINAL, "\t [SEND_RAW] Sending packet [");
   str formattedMessage = Niagara::format_message(destination, control, message);
   if(formattedMessage.length() == 0) {
-    log_print("] Error!\n");
+    log_print(TERMINAL, "] Error!\n");
     return NIAGARA_INVALID_DATA;
   }
-  log_printf("%s]... ", formattedMessage.c_str());
+  log_printf(TERMINAL, "%s]... ", formattedMessage.c_str());
   //Check if the formatted message to send is bigger than the maximum transmission unit to send over the radio
   if(formattedMessage.length() >= Niagara::chip_mtu) return NIAGARA_TOO_LARGE;
   int status = Niagara::lora->transmit(formattedMessage.c_str());
   if(status == RADIOLIB_ERR_TX_TIMEOUT) {
-    log_print("Timeout!\n");
+    log_print(TERMINAL, "Timeout!\n");
     return NIAGARA_TIMEOUT;
   }
   if(status != RADIOLIB_ERR_NONE) {
-    log_printf("Error [%d]!\n", status);
+    if(log_level == TERMINAL) log_printf("Error [%d]!\n", status);
+    else log_printf("[RAW_TX] Error %d\n", status);
     return RADIOLIB_ERROR;
   }
-  log_print(" OK.\n");
+  log_print(TERMINAL, " OK.\n");
   return NIAGARA_OK;
 }
 
 str Niagara::format_message(str destination, Niagara_Control control, str message) {
     if(identifier.length() == 0) {
-      log_print("INVALID format_message CALL! - identifier is not set!");
+      log_print("INVALID format_message CALL! - identifier is not set!", "[TX_PROC] Error 1\n");
       return "";
     }
 
     if(destination.length() == 0) {
-      log_print("INVALID format_message CALL! - destination is empty!");
+      log_print("INVALID format_message CALL! - destination is empty!", "[TX_PROC] Error 2\n");
       return "";
     }
 
     if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0) {
-      log_printf("INVALID format_message CALL! - destination ['%s'] contains illegal characters.", destination.c_str());
+      if(log_level == TERMINAL) log_printf("INVALID format_message CALL! - destination ['%s'] contains illegal characters.", destination.c_str());
+      else log_print("[TX_PROC] Error 3\n")
       return "";
     }
 
     if(message.indexOf('|') >= 0) {
-      log_printf("INVALID format_message CALL! - message ['%s'] contains illegal characters.", message.c_str());
+      if(log_level == TERMINAL) log_printf("INVALID format_message CALL! - message ['%s'] contains illegal characters.", message.c_str());
+      else log_print("[TX_PROC] Error 4\n")
       return "";
     }
 
     if(control < 0 || control >= END) {
-      log_printf("INVALID format_message CALL! - control [%d] is invalid.", static_cast<int>(control));
+      if(log_level == TERMINAL) log_printf("INVALID format_message CALL! - control [%d] is invalid.", static_cast<int>(control));
+      else log_print("[TX_PROC] Error 5\n");
       return "";
     }
 
@@ -587,15 +644,16 @@ bool Niagara::valid_destination(str destination) {
 
 bool Niagara::check_identifier(str identifier) {
   //Print to the log the check for the identifier
-  log_printf("Checking identifier: '%s'.. ", identifier.c_str());
+  if(log_level == TERMINAL) log_printf("Checking identifier: '%s'.. ", identifier.c_str());
+  else log_print("Checking callsign.\n");
   //The identifier should be between 4 and 12 characters long
   size_t len = identifier.length();
   if (len < 4 || len > 12) {
-    log_print("Invalid size (must be between 4 and 12 characters).\n");
+    log_print("Invalid size (must be between 4 and 12 characters).\n", "Invalid size.\n");
     return false;
   }
   if(identifier == BROADCAST) {
-    log_print("Invalid, it's broadcast.\n");
+    log_print("Invalid, it's broadcast.\n", "Can't be broadcast.\n");
     return false;
   }
 
@@ -604,21 +662,21 @@ bool Niagara::check_identifier(str identifier) {
   for (int i = 0; i < len; ++i) {
       char c = identifier[i];
       if (!isAlphaNumeric(c)) {
-        log_printf("Invalid, character %d isn't alphanumeric (%c)", i, c);
+        if(log_level == TERMINAL) log_printf("Invalid, character %d isn't alphanumeric (%c)", i, c);
+        else log_print("Invalid characters.\n");
         return false;
       }
   }
-  log_print("Valid.\n");
-  return true;
   #else
   const char* identifier_array = identifier.c_str();
   for (int i = 0; i < identifier.length(); i++) {
       if (!std::isalnum(static_cast<unsigned char>(identifier_array[i]))) {
-        log_printf("Invalid, character %d isn't alphanumeric (%c)", i, identifier_array[i]);
+        if(log_level == TERMINAL) log_printf("Invalid, character %d isn't alphanumeric (%c)", i, identifier_array[i]);
+        else log_print("Invalid characters.\n");
         return false;
       }
   }
+  #endif
   log_print("Valid.\n");
   return true;
-  #endif
 }
