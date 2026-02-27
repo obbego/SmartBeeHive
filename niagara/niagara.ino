@@ -1,8 +1,18 @@
 #include "niagara.h"
+#include <heltec_unofficial.h>
+
+void log_handler(const char* text) {
+	display.print(text);
+}
 
 void setup() {
-	//Initialise the device.
-	Niagara device;
+	//Initialise the display and heltec library
+	heltec_setup();
+	display.init();
+	display.setFont(ArialMT_Plain_10);
+
+	//Initialise the device with its log handler.
+	Niagara device(log_handler, Niagara_LogLevel::DISPLAY);
 	if(!device.set_identifier("ESP32")) {
 		device.display_print("Error while setting identifier.\n");
 		while(true); //Infinite loop to halt
@@ -22,21 +32,13 @@ void loop() {
 		send_timer = millis();
 
 		error = device.send("RASPI", "Hello from ESP!");
-		if(error != NIAGARA_OK) {
-			device.display_printf("Error while sending data: %d\n", static_cast<int>(error));
-			return;
-		}
-		
-		device.display_print("Successful send.\n");
+		if(error != NIAGARA_OK) return;
 	}
 
 	str receive;
 	str source;
 	error = device.receive(&source, &receive);
-	if(error != NIAGARA_OK) {
-		device.display_printf("Error while receiving data: %d\n", static_cast<int>(error));
-		return;
-	}
+	if(error != NIAGARA_OK) return;
 	
 	device.display_printf("Received: '%s'\n", receive);
 }
