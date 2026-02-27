@@ -80,7 +80,13 @@ enum Niagara_Ret {
     /*
      * When an error occurred while sending
      */
-    NIAGARA_SEND_ERROR
+    NIAGARA_SEND_ERROR,
+    /*
+     * Returned when a receive function which is defragmenting a message
+     * encounters a parsing problem which forces the fragment stream
+     * to be halted.
+    */
+    NIAGARA_INVALID_FRAGMENT
 };
 
 /**
@@ -111,15 +117,16 @@ class Niagara {
     Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level);
     Niagara();
     ~Niagara();
-    
+
     /**
-     * Waits for an incoming connection from a device and
-     * accepts it.
+     * Waits for an incoming message and accepts each fragment of it,
+     * if more than one. Then reconstructs the final message, outputting
+     * it and its source.
      */
     Niagara_Ret receive(str* output, str* source);
     /**
-     * Sends a connection request to another specified
-     * device.
+     * Sends a message to a remote device, fragmenting it if
+     * needed.
      */
     Niagara_Ret send(str destination, str message);
 
@@ -134,6 +141,23 @@ class Niagara {
     Niagara_Ret receive_raw(str* source, Niagara_Control* control_output, str* message_output);
     /*Sends a raw message to a specific destination */
     Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
+    
+    /**
+     * Waits for an incoming packet from a device and
+     * accepts it. This method doesn't handle
+     * packet fragments so it's limited to the device's MTU.
+     * 
+     * A filter can be specified in case it's required to receive a packet
+     * from a specific source, which callsign can be set in there, otherwise, 
+     * if not set, this method will just receive the first packet available.
+     */
+    Niagara_Ret receive_fragment(str* output, str* source, str filter);
+    /**
+     * Sends a packet handshake to another specified
+     * device. This method doesn't handle
+     * packet fragments so it's limited to the device's MTU.
+     */
+    Niagara_Ret send_fragment(str destination, str message);
 
     /*Log print methods which use the handler if available. */
     void log_printf(const char* format, ...);

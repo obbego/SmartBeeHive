@@ -1,6 +1,7 @@
 #include "niagara.h"
 #include "Timer.h"
 #include "Hash.h"
+#include "fragmenter.h"
 
 void Niagara::vlog_printf(const char* format, va_list args) {
   // Ignore logging if log handler isn't set
@@ -188,7 +189,66 @@ bool Niagara::set_identifier(str _identifier) {
   return true;
 }
 
+Niagara_Ret Niagara::send(str destination, str message) {
+  //Istance a new fragmenter with the message passed
+  FragmentConstructor fragmenter(message, chip_mtu);
+
+  //Keep sending data to the specified destination using the fragments created
+  int more_fragments;
+  do {
+    //Get the next fragment
+    str chunk;
+    more_fragments = fragmenter.next_fragment(&chunk);
+
+    //Send this fragment
+    int status = Niagara::send_fragment(destination, chunk);
+    if(status != NIAGARA_OK) return status; //In case the function produced an error then return it and stop
+  } while(more_fragments > 0); //Keep sending fragments while there are more available
+
+  //Return OK once done
+  return NIAGARA_OK;
+}
+
 Niagara_Ret Niagara::receive(str* output, str* source) {
+  //Create the object to handle fragmented data
+  FragmentDestructor defragmenter;
+
+  //Buffers for the data received
+  str current_payload, source;
+
+  //Receive the first fragmented packet from whoever is available
+  int status;
+  do {
+    status = receive_fragment(&current_payload, &source); //Receive a fragment
+    if(status != NIAGARA_OK) continue; //If an error occurred try receiving again
+
+    //Add this first fragment to the fragmenter
+    status = defragmenter.add_fragment(current_payload);
+  } while(status < 0); //Repeat in case the status is negative
+
+  // Save the source of this fragment to filter all newly received packets
+  str remote_dev = source;
+
+  // Keep executing while there still are fragments left to read
+  while (status > 0) {
+    //Don't allow incoming packets from external sources other than the remote device we're communicating with
+    status = receive_fragment(&current_payload, &source, remote_dev);
+    if(status != NIAGARA_OK) return status; //If an error occurred then return that error and exit
+
+    //Add the new fragment
+    status = defragmenter.add_fragment(current_payload);
+    if(status < 0) return NIAGARA_INVALID_FRAGMENT; //In case a problem occurred while defragmenting then exit
+  }
+
+  //Once there are no more packets to receive, then save the result in the output
+  *source = remote_dev;
+  *output = defragmenter.get_message();
+
+  //Now return status OK
+  return NIAGARA_OK;
+}
+
+Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter = "") {
   //Check if the identifier hasn't yet been initialised
   if(identifier.length() == 0) {
     log_print("Cannot start receive - identifier not set yet.\n", "[RECV] No identifier!\n");
@@ -207,7 +267,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
   Timer session_timer;
 
   //The remote device's identifier to communicate with
-  str device = "";
+  str device = filter;
   //Buffer for the payload
   str payload;
   //Buffer for the control message
@@ -273,8 +333,12 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
           break;
         }
 
-        //The remote device we're communicating with is the source of this message
-        device = *source;
+        //Check if a remote device's filter is specified
+        if(device == "") 
+          //The remote device we're communicating with is the source of this message
+          device = *source;
+        else if(device != *source) //If a remote device has been specified already and it's different from this packet's source, then ignore this packet
+          break;
 
         //Reply with the acknowledgement 
         {
@@ -345,7 +409,7 @@ bool Niagara::check_crc(str received_crc, str expected_crc) {
   return received_crc_clean == expected_crc;
 }
 
-Niagara_Ret Niagara::send(str destination, str message) {
+Niagara_Ret Niagara::send_fragment(str destination, str message) {
   //Check if the identifier hasn't yet been initialised
   if(identifier.length() == 0) {
     log_print("Cannot start receive - identifier not set yet.\n", "[SEND] No identifier!\n");
