@@ -1,110 +1,120 @@
 #include "fragmenter.h"
 
-// --- FragmentConstructor ---
+// === FragmentConstructor ===
 
-FragmentConstructor::FragmentConstructor(str data, const int _max_size = 256) {
+FragmentConstructor::FragmentConstructor(str data, const int _max_size) {
+    // Initialise values
     _data = data;
     _cursor = 0;
     _current_index = 0;
-    FRAG_SIZE = _max_size;
+    FRAG_SIZE = _max_size; // Defines the maximum size of a single packet.
     
+    // Retrieve the fragment amount
     int len = _data.length();
     if (len == 0) {
         _total_fragments = 0;
     } else {
-        // Calcolo dei frammenti necessari
+        // Computed necessary fragments
         _total_fragments = (len + FRAG_SIZE - 1) / FRAG_SIZE;
     }
 }
 
 int FragmentConstructor::next_fragment(str* output) {
-    if (_current_index >= _total_fragments || _total_fragments == 0) {
-        return -1; 
-    }
+    // If all fragments have been received then ignore call
+    if (_current_index >= _total_fragments || _total_fragments == 0)
+        return -1; //No more fragments
 
+    // Define the index of this fragment's end character
     int end = _cursor + FRAG_SIZE;
     if (end > _data.length()) end = _data.length();
-    
+    //Retrieve the fragment's substring of the whole data
     str payload = _data.substring(_cursor, end);
 
-    // Costruzione pacchetto: "indice|totale|payload"
-    // Assumiamo che str(int) o l'operatore + gestisca la conversione
-    *output = str(_current_index) + "|" + str(_total_fragments) + "|" + payload;
+    // Packet's construction: "indice#totale#payload"
+    *output = str(_current_index) + "#" + str(_total_fragments) + "#" + payload;
 
+    //Set the start of the new fragment to the end of this one
     _cursor = end;
+    //Increment the fragment index
     _current_index++;
 
-    // Ritorna quanti frammenti rimangono da inviare
+    // Return the amount of fragments left
     return _total_fragments - _current_index;
 }
 
-// --- FragmentDestructor ---
+// === FragmentDestructor ===
 
 FragmentDestructor::FragmentDestructor() {
+    // Initialise values
     _expected_total = -1;
     _next_expected_index = 0;
     _buffer = "";
 }
 
 int FragmentDestructor::add_fragment(str data) {
-    int firstPipe = data.indexOf('|');
-    int secondPipe = data.indexOf('|', firstPipe + 1);
+    //Retrieve the separator indexes
+    int firstSep = data.indexOf('#');
+    int secondSepRelative = data.substring(firstSep + 1).indexOf('#');
+    int secondSep = firstSep + 1 + secondSepRelative;
 
-    // 1. Controllo integrità header (presenza dei delimitatori)
-    if (firstPipe <= 0 || secondPipe <= firstPipe + 1) {
-        return -2; // Errore: Header malformato
+    // Check separator presence
+    if (firstSep <= 0 || secondSepRelative < 0 || secondSep <= firstSep + 1) {
+        return -2; // Malformed header
     }
 
-    int index = data.substring(0, firstPipe).toInt();
-    int total = data.substring(firstPipe + 1, secondPipe).toInt();
-    str payload = data.substring(secondPipe + 1);
+    //Retrieve the three parameters contained in the header
+    int index = data.substring(0, firstSep).toInt();
+    int total = data.substring(firstSep + 1, secondSep).toInt();
+    str payload = data.substring(secondSep + 1);
 
-    // 2. Controllo errori di conversione toInt()
+    // Check for errors in toInt() conversion
     if (index == -1 || total == -1) {
-        return -3; // Errore: Indici non numerici
+        return -3; // Non-numeric indexes
     }
 
-    // 3. Gestione nuovo messaggio o reset forzato
-    // Se arriva l'indice 0, resettiamo sempre il buffer (nuova trasmissione)
+    // Handling new messages or fragment reset
+    // If a fragment with index 0 is received, always reset the buffer and restart
     if (index == 0) {
         _buffer = "";
         _next_expected_index = 0;
         _expected_total = total;
     } 
 
-    // 4. Controllo Sincronizzazione
-    // Se non abbiamo ancora un 'total' valido o l'indice non è quello che aspettiamo
+    // Synchronization check
+    // If a valid total hasn't been specified or the index value isn't expected
     if (_expected_total == -1 || index != _next_expected_index) {
-        return -4; // Errore: Frammento fuori sequenza o orfano
+        return -4; // Error: out-of-sequence or orphan fragment
     }
 
-    // 5. Controllo consistenza 'total'
-    // Se a metà opera il mittente cambia idea sul totale, c'è un problema grave
+    // Total consistency
+    // Check if fragments start modifying their total amount
     if (total != _expected_total) {
-        _expected_total = -1; // Invalida lo stato
+        _expected_total = -1; // Invalid state
         return -5; 
     }
 
-    // 6. Accettazione del payload
+    // Now accept the payload
     _buffer += payload;
     _next_expected_index++;
 
-    // Controllo completamento
+    // Check if the fragments have been completed
     if (_next_expected_index == _expected_total) {
-        return 0; // Messaggio pronto
+        return 0; // Message ready
     }
 
-    // Ritorna il numero di frammenti mancanti
+    // Return amount of fragments left
     return _expected_total - _next_expected_index;
 }
 
 str FragmentDestructor::get_message() {
+    // Move the buffer to a string containing the result
     str result = _buffer;
     
-    // Reset completo dello stato interno
+    // Reset the internal state
     _buffer = "";
     _expected_total = -1;
     _next_expected_index = 0;
     
+    //Return the result
     return result;
 }

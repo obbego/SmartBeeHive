@@ -11,7 +11,7 @@ class FragmentConstructor {
          * An optional second parameter constitutes the maximum size
          * for each fragment, which should be set to the device's MTU.
         */
-        FragmentConstructor(str data, const int max_size);
+        FragmentConstructor(str data, const int max_size = 256);
 
         /*
          * Constructs the next fragment to send, returns the amount

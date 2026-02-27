@@ -190,8 +190,11 @@ bool Niagara::set_identifier(str _identifier) {
 }
 
 Niagara_Ret Niagara::send(str destination, str message) {
+  log_print("[SEND START]\n");
+
   //Istance a new fragmenter with the message passed
   FragmentConstructor fragmenter(message, chip_mtu);
+  if(log_level == TERMINAL) log_printf("Initialised fragmenter for send - MTU: %d\n", chip_mtu);
 
   //Keep sending data to the specified destination using the fragments created
   int more_fragments;
@@ -199,35 +202,52 @@ Niagara_Ret Niagara::send(str destination, str message) {
     //Get the next fragment
     str chunk;
     more_fragments = fragmenter.next_fragment(&chunk);
+    
 
-    //Send this fragment
-    int status = Niagara::send_fragment(destination, chunk);
-    if(status != NIAGARA_OK) return status; //In case the function produced an error then return it and stop
+    if(more_fragments >= 0) {
+      if(log_level == TERMINAL) log_printf("Fragments left: %d\n", more_fragments);
+      else log_printf("%d Frag left.\n", more_fragments);
+      //Send this fragment
+      int status = Niagara::send_fragment(destination, chunk);
+      if(status != NIAGARA_OK) return status; //In case the function produced an error then return it and stop
+    }
   } while(more_fragments > 0); //Keep sending fragments while there are more available
+
+  log_print("[SEND DONE]\n");
 
   //Return OK once done
   return NIAGARA_OK;
 }
 
 Niagara_Ret Niagara::receive(str* output, str* source) {
+  log_print("[RECV START]\n");
+
   //Create the object to handle fragmented data
   FragmentDestructor defragmenter;
 
   //Buffers for the data received
   str current_payload, source;
 
+  log_print("Receiving first fragment...\n", "First fragment.\n");
   //Receive the first fragmented packet from whoever is available
   int status;
   do {
     status = receive_fragment(&current_payload, &source); //Receive a fragment
-    if(status != NIAGARA_OK) continue; //If an error occurred try receiving again
+    if(status != NIAGARA_OK) return status; //If an error occurred then exit
 
     //Add this first fragment to the fragmenter
     status = defragmenter.add_fragment(current_payload);
+    if(status < 0) {
+      log_printf(TERMINAL, "Error while defragmenting! [%d]\n", status);
+      log_printf(DISPLAY, "Frag Err [%d]\n", status);
+    } else log_print(TERMINAL, "Succesful defragmentation.\n");
   } while(status < 0); //Repeat in case the status is negative
 
   // Save the source of this fragment to filter all newly received packets
   str remote_dev = source;
+
+  log_printf(TERMINAL, "Established connection with remote device: '%s' - Looking for additional fragments..\n", remote_dev);
+  log_printf(DISPLAY, "Remote: '%s'\n", remote_dev);
 
   // Keep executing while there still are fragments left to read
   while (status > 0) {
@@ -237,12 +257,20 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 
     //Add the new fragment
     status = defragmenter.add_fragment(current_payload);
-    if(status < 0) return NIAGARA_INVALID_FRAGMENT; //In case a problem occurred while defragmenting then exit
+    if(status < 0) { //In case a problem occurred while defragmenting then exit
+      log_printf(TERMINAL, "Error while defragmenting! [%d]\n", status);
+      log_printf(DISPLAY, "Frag Err [%d]\n", status);
+      return NIAGARA_INVALID_FRAGMENT; 
+    } else log_print(TERMINAL, "Succesful defragmentation.\n");
   }
 
+  log_print(TERMINAL, "Retrieving final message...");
+
   //Once there are no more packets to receive, then save the result in the output
-  *source = remote_dev;
+  if(source != nullptr) *source = remote_dev;
   *output = defragmenter.get_message();
+
+  log_print("[RECV DONE]\n");
 
   //Now return status OK
   return NIAGARA_OK;
