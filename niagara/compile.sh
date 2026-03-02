@@ -1,1 +1,1 @@
-g++ main.cpp niagara.cpp -o main -llgpio -lRadioLib
+g++ *.cpp -o main -llgpio -lRadioLib

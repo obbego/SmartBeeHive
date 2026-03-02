@@ -2,7 +2,7 @@
 #include "Timer.h"
 #include "Hash.h"
 #include "fragmenter.h"
-
+                              
 void Niagara::vlog_printf(const char* format, va_list args) {
   // Ignore logging if log handler isn't set
   if(Niagara::log_handler == nullptr || Niagara::log_level == NONE) return;
@@ -84,7 +84,7 @@ void Niagara::log_print(str extended, str concise) {
 
 void Niagara::log_print(Niagara_LogLevel level, str text) {
   if(Niagara::log_level != level) return;
-  log_print(str);
+  log_print(text);
 }
 
 #if defined(ARDUINO)
@@ -208,7 +208,7 @@ Niagara_Ret Niagara::send(str destination, str message) {
       if(log_level == TERMINAL) log_printf("Fragments left: %d\n", more_fragments);
       else log_printf("%d Frag left.\n", more_fragments);
       //Send this fragment
-      int status = Niagara::send_fragment(destination, chunk);
+      Niagara_Ret status = Niagara::send_fragment(destination, chunk);
       if(status != NIAGARA_OK) return status; //In case the function produced an error then return it and stop
     }
   } while(more_fragments > 0); //Keep sending fragments while there are more available
@@ -226,25 +226,27 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
   FragmentDestructor defragmenter;
 
   //Buffers for the data received
-  str current_payload, source;
+  str current_payload;
+  str message_source;
 
   log_print("Receiving first fragment...\n", "First fragment.\n");
   //Receive the first fragmented packet from whoever is available
-  int status;
+  Niagara_Ret status;
+  int frag_status;
   do {
-    status = receive_fragment(&current_payload, &source); //Receive a fragment
+    status = receive_fragment(&current_payload, &message_source); //Receive a fragment
     if(status != NIAGARA_OK) return status; //If an error occurred then exit
 
     //Add this first fragment to the fragmenter
-    status = defragmenter.add_fragment(current_payload);
-    if(status < 0) {
-      log_printf(TERMINAL, "Error while defragmenting! [%d]\n", status);
-      log_printf(DISPLAY, "Frag Err [%d]\n", status);
+    frag_status = defragmenter.add_fragment(current_payload);
+    if(frag_status < 0) {
+      log_printf(TERMINAL, "Error while defragmenting! [%d]\n", frag_status);
+      log_printf(DISPLAY, "Frag Err [%d]\n", frag_status);
     } else log_print(TERMINAL, "Succesful defragmentation.\n");
   } while(status < 0); //Repeat in case the status is negative
 
   // Save the source of this fragment to filter all newly received packets
-  str remote_dev = source;
+  str remote_dev = message_source;
 
   log_printf(TERMINAL, "Established connection with remote device: '%s' - Looking for additional fragments..\n", remote_dev);
   log_printf(DISPLAY, "Remote: '%s'\n", remote_dev);
@@ -252,14 +254,14 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
   // Keep executing while there still are fragments left to read
   while (status > 0) {
     //Don't allow incoming packets from external sources other than the remote device we're communicating with
-    status = receive_fragment(&current_payload, &source, remote_dev);
+    status = receive_fragment(&current_payload, &message_source, remote_dev);
     if(status != NIAGARA_OK) return status; //If an error occurred then return that error and exit
 
     //Add the new fragment
-    status = defragmenter.add_fragment(current_payload);
-    if(status < 0) { //In case a problem occurred while defragmenting then exit
-      log_printf(TERMINAL, "Error while defragmenting! [%d]\n", status);
-      log_printf(DISPLAY, "Frag Err [%d]\n", status);
+    frag_status = defragmenter.add_fragment(current_payload);
+    if(frag_status < 0) { //In case a problem occurred while defragmenting then exit
+      log_printf(TERMINAL, "Error while defragmenting! [%d]\n", frag_status);
+      log_printf(DISPLAY, "Frag Err [%d]\n", frag_status);
       return NIAGARA_INVALID_FRAGMENT; 
     } else log_print(TERMINAL, "Succesful defragmentation.\n");
   }
@@ -276,7 +278,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
   return NIAGARA_OK;
 }
 
-Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter = "") {
+Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
   //Check if the identifier hasn't yet been initialised
   if(identifier.length() == 0) {
     log_print("Cannot start receive - identifier not set yet.\n", "[RECV] No identifier!\n");
@@ -625,7 +627,7 @@ int Niagara::process_message(str* output, str message) {
   destinationID = callsign.substring(identifierSeparator + 1);
   if(!valid_destination(destinationID)) {
     if(log_level == TERMINAL) log_printf("INVALID process_message CALL! - invalid destination ['%s'] !", destinationID.c_str());
-    else log_print(, "[RX_PROC] Error 5\n");
+    else log_print("[RX_PROC] Error 5\n");
     return 5;
   }
   if(message.length() <= separatorIndex + 1) {
@@ -689,13 +691,13 @@ str Niagara::format_message(str destination, Niagara_Control control, str messag
 
     if(destination.indexOf('|') >= 0 || destination.indexOf('.') >= 0) {
       if(log_level == TERMINAL) log_printf("INVALID format_message CALL! - destination ['%s'] contains illegal characters.", destination.c_str());
-      else log_print("[TX_PROC] Error 3\n")
+      else log_print("[TX_PROC] Error 3\n");
       return "";
     }
 
     if(message.indexOf('|') >= 0) {
       if(log_level == TERMINAL) log_printf("INVALID format_message CALL! - message ['%s'] contains illegal characters.", message.c_str());
-      else log_print("[TX_PROC] Error 4\n")
+      else log_print("[TX_PROC] Error 4\n");
       return "";
     }
 

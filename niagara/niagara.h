@@ -20,6 +20,7 @@
 #include "hal/RPi/PiHal.h"
 #endif
 
+#include <stdarg.h>
 #include "str.h"
 
 /**
@@ -227,7 +228,7 @@ class Niagara {
      * from a specific source, which callsign can be set in there, otherwise, 
      * if not set, this method will just receive the first packet available.
      */
-    Niagara_Ret receive_fragment(str* output, str* source, str filter);
+    Niagara_Ret receive_fragment(str* output, str* source, str filter = "");
     /**
      * Sends a packet handshake to another specified
      * device. This method doesn't handle
