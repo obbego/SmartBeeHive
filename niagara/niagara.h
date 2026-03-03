@@ -31,7 +31,7 @@
 /** Maximum amount of retransmissions to be sent before the send method throws an error */
 #define NIAGARA_RETRANSMISSIONS 10
 /** Amount of time that the handshake waits for the other device to reply before trying a retransmission */
-#define MAX_RECV_WAIT 30000
+#define MAX_RECV_WAIT 5000
 
 /**
  * @typedef NiagaraLogHandler
@@ -129,11 +129,11 @@ enum Niagara_Control {
  */
 enum Niagara_LogLevel {
     /** Used when the log should be concise because it's being output to a display */
-    DISPLAY,
+    LOG_DISPLAY,
     /** Used when the log can be extended because it's being output to a terminal */
-    TERMINAL, 
+    LOG_TERMINAL, 
     /** Used when no log should be used. */
-    NONE 
+    NO_LOG
 };
 
 /**
@@ -255,7 +255,7 @@ class Niagara {
     NiagaraLogHandler log_handler = nullptr;
     /* This value determines how much the log should be concise.
     */
-    Niagara_LogLevel log_level = NONE;
+    Niagara_LogLevel log_level = NO_LOG;
     /* Chip's hardware MTU */
     uint16_t chip_mtu;
     

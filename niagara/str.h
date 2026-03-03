@@ -10,7 +10,7 @@
 #endif
 
 #if defined(ARDUINO)
-bool isValidInteger(String input) {
+inline bool isValidInteger(String input) {
   boolean isNum=false;
   for(byte i=0;i<input.length();i++) {
     isNum = isDigit(input[i]) || input[i] == '+' || input[i] == '.' || input[i] == '-';
@@ -54,7 +54,11 @@ public:
         s += other.s;
         return *this;
     }
-    
+    str& operator+=(char c) {
+        s += c;
+        return *this;
+    }
+
     char operator[](size_t index) const {
         #if defined(ARDUINO)
             if(index < s.length()) return s[index];
