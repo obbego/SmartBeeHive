@@ -1,0 +1,73 @@
+/* Stili specifici per la vista dettaglio */
+.status-banner-red {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border: 1px solid #ef4444 !important;
+    color: #ef4444 !important;
+}
+
+.status-banner-green {
+    background: rgba(16, 185, 129, 0.15) !important;
+    border: 1px solid #10b981 !important;
+    color: #10b981 !important;
+}
+
+.chart-box {
+    padding: 20px;
+    min-height: 350px;
+}
+
+.history-list .border-bottom:last-child {
+    border-bottom: none !important;
+}
+
+.glass-panel {
+    background: rgba(255, 255, 255, 0.03);
+    /* Sfondo quasi invisibile */
+    backdrop-filter: blur(10px);
+    /* Sfocatura dello sfondo */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    /* Bordo sottile */
+    border-radius: 16px;
+    /* Angoli più smussati */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Effetto glow per i valori importanti */
+.stat-value {
+    text-shadow: 0 0 20px rgba(255, 193, 7, 0.2);
+    letter-spacing: -1px;
+}
+
+/* Badge per gli allarmi */
+.history-list div {
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.history-list div:hover {
+    transform: translateX(5px);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sensor-status-panel {
+    padding: 1rem;
+    /* più spazio interno */
+    margin-bottom: 1rem;
+    /* distanzia il pannello dagli altri */
+}
+
+.sensor-status-panel h5.chart-title {
+    margin-bottom: 0.5rem;
+    /* stacco più piccolo sotto il titolo */
+    font-size: 1.05rem;
+    /* leggermente più piccolo */
+}
+
+#statusSemaforo {
+    font-size: 0.95rem;
+    /* stato ottimale più proporzionato */
+    padding: 0.5rem 0.75rem;
+    /* stacco interno equilibrato */
+    margin-bottom: 0.5rem;
+    /* spazio tra semaforo e R² */
+}
