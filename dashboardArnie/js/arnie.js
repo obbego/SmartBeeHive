@@ -1,231 +1,163 @@
-// Database Mock (In produzione sarà una chiamata API a ThingsBoard)
+// Configurazione globale Chart.js (uniformata all'index)
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Recupero ID dall'URL
     const params = new URLSearchParams(window.location.search);
     const hiveId = parseInt(params.get('id'));
-
-    // 2. Trovo i dati dell'arnia
     const hive = hivesData.find(h => h.id === hiveId) || hivesData[0];
 
-    // 3. Popolo i testi
+    // Popolamento testi
     document.getElementById('hiveName').innerText = hive.name;
-    document.getElementById('valTempIn').innerText = hive.t + '°C';    // Era tIn
+    document.getElementById('valTempIn').innerText = hive.t + '°C';
     document.getElementById('valTempOut').innerText = hive.tOut + '°C';
     document.getElementById('valWeight').innerText = hive.w + 'kg';
     document.getElementById('valHum').innerText = hive.h + '%';
+    // ... sotto la riga di valHum
+    document.getElementById('barMiele').style.width = hive.pct + '%';
+    document.getElementById('valMiele').innerText = hive.pct + '%';
     document.getElementById('lastUpdate').innerText = 'Ultimo aggiornamento: ' + hive.lastUpdate;
 
-    // 4. Gestione Semaforo (Cap 3.2 Analisi Funzionale)
-    // ... dentro il DOMContentLoaded dopo aver trovato l'oggetto 'hive'
-    // ... dentro il find dell'arnia e il popolamento dei testi ...
+
+    // Gestione Semaforo con classi CSS custom
     const semaforo = document.getElementById('statusSemaforo');
 
     if (hive.status === 'green') {
-        semaforo.className = 'alert alert-success d-flex align-items-center gap-2 border-0';
-        semaforo.style.color = '#10b981'; // Verde smeraldo
+        semaforo.className = 'status-alert ottimale';
         semaforo.innerHTML = '<i data-lucide="check-circle"></i> Stato Ottimale: Tutto sotto controllo';
-    }
-    else if (hive.status === 'yellow') {
-        semaforo.className = 'alert alert-warning d-flex align-items-center gap-2 border-0';
-        semaforo.style.backgroundColor = 'rgba(251, 191, 36, 0.1)';
-        semaforo.style.color = '#fbbf24';
+    } else if (hive.status === 'yellow') {
+        semaforo.className = 'status-alert instabile';
         semaforo.innerHTML = '<i data-lucide="help-circle"></i> Stato Instabile: Monitorare variazioni';
-    }
-    else if (hive.status === 'red') {
-        semaforo.className = 'alert alert-danger d-flex align-items-center gap-2 border-0';
-        semaforo.style.color = '#ef4444'; // Rosso alert
+    } else if (hive.status === 'red') {
+        semaforo.className = 'status-alert allarme';
         semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Intervento richiesto';
     }
 
-    // Re-inizializza le icone per mostrare quella corretta nel semaforo
-    lucide.createIcons();
+    /// Popolamento Allarmi multipli
+    const historyDiv = document.getElementById('localHistory');
 
-    // Ricorda di chiamare lucide dopo aver iniettato l'HTML
-    lucide.createIcons();
+    // Simulazione di più allarmi
+    const alerts = [
+        {
+            text: "Temperatura fuori soglia",
+            date: hive.lastUpdate,
+            status: "open"
+        },
+        {
+            text: "Variazione peso anomala",
+            date: "02/03/2026 14:32",
+            status: "closed"
+        }
+    ];
 
-    // 5. Inizializzo icone e grafici
-    lucide.createIcons();
+    historyDiv.innerHTML = "";
+
+    alerts.forEach(alert => {
+        historyDiv.innerHTML += `
+        <div class="history-item px-0 mb-3">
+            <div>
+                <div style="font-weight:600; color:white;">${alert.text}</div>
+                <div style="font-size:12px; color:var(--text-muted);">${alert.date}</div>
+            </div>
+            <span class="tag ${alert.status}">
+                ${alert.status === "open" ? "APERTO" : "RISOLTO"}
+            </span>
+        </div>
+    `;
+    });
+
     initDetailCharts();
+
+    // Inizializzo le icone una sola volta alla fine
+    lucide.createIcons();
 });
 
 function initDetailCharts() {
-    //Grafico Temperatura Interna vs Esterna
-    const ctxTemp = document.getElementById('tempInOutChart').getContext('2d');
+    // Opzioni condivise per i grafici per mantenere coerenza
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 } }
+            },
+            y: {
+                border: { dash: [4, 4] },
+                ticks: { font: { size: 11 } }
+            }
+        }
+    };
 
-    new Chart(ctxTemp, {
+    // 1. Temperatura Interna vs Esterna
+    new Chart(document.getElementById('tempInOutChart').getContext('2d'), {
         type: 'line',
         data: {
             labels: ['00', '04', '08', '12', '16', '20', '24'],
             datasets: [
                 {
-                    label: 'Temp Interna',
+                    label: 'Temp In',
                     data: [34.5, 35, 35.8, 36.2, 35.9, 35.2, 34.8],
-                    borderColor: '#fbbf24',
-                    backgroundColor: 'rgba(251,191,36,0.15)',
-                    fill: true,
-                    tension: 0.4
+                    borderColor: '#fbbf24', // --honey-glow
+                    backgroundColor: 'rgba(251,191,36,0.1)',
+                    fill: true, tension: 0.4
                 },
                 {
-                    label: 'Temp Esterna',
+                    label: 'Temp Out',
                     data: [18, 19, 23, 27, 26, 22, 20],
-                    borderColor: '#60a5fa',
-                    backgroundColor: 'rgba(96,165,250,0.1)',
-                    fill: true,
-                    tension: 0.4
+                    borderColor: '#60a5fa', // blue
+                    fill: false, tension: 0.4
                 }
             ]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true
-                }
-            },
-            scales: {
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Gradi [°C]',
-                        color: '#94a3b8',
-                        font: { size: 12 }
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Ora',
-                        color: '#94a3b8',
-                        font: { size: 12 }
-                    }
-                }
-            }
-        }
+        options: { ...commonOptions, plugins: { legend: { display: true, labels: { color: '#94a3b8' } } } }
     });
 
-    // Grafico FFT (Frequenza vs Ampiezza)
-    const ctxFft = document.getElementById('fftChart').getContext('2d');
-    new Chart(ctxFft, {
+    // 2. Grafico FFT
+    new Chart(document.getElementById('fftChart').getContext('2d'), {
         type: 'line',
         data: {
-            labels: ['100Hz', '200Hz', '250Hz', '300Hz', '400Hz', '500Hz'],
+            labels: ['100', '200', '250', '300', '400', '500'],
             datasets: [{
-                label: 'Ampiezza (dB)',
                 data: [20, 45, 90, 120, 60, 30],
                 borderColor: '#fbbf24',
-                fill: true,
                 backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                tension: 0.4
+                fill: true, tension: 0.4
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Frequenza [Hz]',
-                        color: '#94a3b8',
-                        font: { size: 12 }
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Ampiezza [dB]',
-                        color: '#94a3b8',
-                        font: { size: 12 }
-                    }
-                }
-            },
-            plugins: {
-                legend: { display: false }
-            }
-        }
+        options: commonOptions
     });
 
-    // Grafico Variazione Peso (Derivata Prima)
-    const ctxWeight = document.getElementById('weightFlowChart').getContext('2d');
-    new Chart(ctxWeight, {
+    // 3. Variazione Peso
+    new Chart(document.getElementById('weightFlowChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: ['08:00', '10:00', '12:00', '14:00', '16:00'],
             datasets: [{
-                label: 'Variazione Peso (kg/h)',
                 data: [0.1, 0.4, 0.8, -0.2, -0.5],
-                backgroundColor: '#10b981'
+                backgroundColor: '#10b981', // --success
+                borderRadius: 4
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Ora',
-                        color: '#94a3b8',
-                        font: { size: 12 }
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Variazione Peso [kg/h]',
-                        color: '#94a3b8',
-                        font: { size: 12 }
-                    }
-                }
-            },
-            plugins: {
-                legend: { display: false }
-            }
-        }
+        options: commonOptions
     });
 
-    // Grafico Umidità
-    const ctxHum = document.getElementById('humidityChart').getContext('2d');
-    new Chart(ctxHum, {
+    // 4. Umidità
+    new Chart(document.getElementById('humidityChart').getContext('2d'), {
         type: 'line',
         data: {
             labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
             datasets: [{
-                label: 'Umidità (%)',
-                data: [55, 58, 60, 62, 59, 57, 55], // valori di esempio, sostituire con dati reali
-                borderColor: '#3b82f6', // blu
+                data: [55, 58, 60, 62, 59, 57, 55],
+                borderColor: '#3b82f6',
                 backgroundColor: 'rgba(59,130,246,0.1)',
-                fill: true,
-                tension: 0.4
+                fill: true, tension: 0.4
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: true }
-            },
-            scales: {
-                y: {
-                    min: 0,
-                    max: 100,
-                    title: {
-                        display: true,
-                        text: 'Umidità (%)',
-                        color: '#94a3b8',
-                        font: { size: 12 }
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Ora',
-                        color: '#94a3b8',
-                        font: { size: 12 }
-                    }
-                }
-            }
-        }
+        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { min: 0, max: 100 } } }
     });
 }
