@@ -105,6 +105,33 @@ Queste informazioni sono le seguenti:
 
 # Classe per la conversione in JSON dei dati
 È stata implementata una classe per gestire la conversione in JSON dei dati inviati verso il lato ricevente, al fine di semplificarne l'invio a ThingsBoard, sebbene tale funzionalità non sia ancora stata effettivamente implementata dal punto di vista pratico.
+La classe in questione si chiama **Measure** e contiene i seguenti attributi:
+- *measureType* grandezza fisica misurata
+- *value* valore di misurazione (per default viene impostata come tipo float)
+- *timestamp* timestamp della misurazione nel momento in cui è stata effettuata
+
+```c++
+private:
+    char measureType[20];
+    float value;
+    unsigned long timestamp;
+```
+
+All'interno contiene il metodo per la conversione in una stringa JSON con un formato adattato a ThingsBoard. La funzione è la seguente:
+```c++
+    /**
+     * function to convert the measure to a JSON string
+     * @return JSON string with the data of the measure
+     */
+    const char *toJSON()
+    {
+        static char buffer[MAX_LENGTH_JSON_STRING];
+        sprintf(buffer, "{\"ts\":%lu, \"values\"={\"%s\"=%f}}", timestamp, measureType, value);
+        return buffer;
+    }
+```
+
+Nonostante non dovrebbe essere necessario per il ricevitore, è presente anche una funziona statica per la conversione della stringa in formato JSON in un oggetto **Measure**. 
 
 # Frammentazione
 Il protocollo implementa un fragmenter che gestisce la frammentazione (`FragmentConstructor`) e la deframmentazione (`FragmentDestructor`) dei pacchetti. Segue una descrizione della gestione della frammentazione:
