@@ -86,15 +86,12 @@ fi
 # compile the main script including the
 # libraries used 
 mkdir -p $OUTPUT_DIR
-g++ "$SOURCE_FILE" $NIAGARA_SOURCE -std=c++17 \
+g++ "$SOURCE_FILE" "$NIAGARA_SOURCE" -std=c++17 \
     -I../niagara \
     -I/usr/local/include \
     -L/usr/local/lib \
-    -lRadioLib \
-    -lgpio -lrt -lpthread \
-    -lspdlog \
-    -lcurl \
-    -o "$OUTPUT_DIR/$OUTPUT_FILE"
+    -o "$OUTPUT_DIR/$OUTPUT_FILE" \
+    -lRadioLib -llgpio -lrt -lpthread -lspdlog -lcurl
 
 # start the code in background
 echo "Eseguo $OUTPUT_FILE in background..."
