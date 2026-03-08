@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('valWeight').innerText = hive.w + 'kg';
     document.getElementById('valHum').innerText = hive.h + '%';
     // ... sotto la riga di valHum
-    document.getElementById('barMiele').style.width = hive.pct + '%';
+    document.getElementById('barMiele').style.height = hive.pct + '%';
     document.getElementById('valMiele').innerText = hive.pct + '%';
     document.getElementById('lastUpdate').innerText = 'Ultimo aggiornamento: ' + hive.lastUpdate;
 
@@ -48,6 +48,46 @@ document.addEventListener('DOMContentLoaded', () => {
             text: "Variazione peso anomala",
             date: "02/03/2026 14:32",
             status: "closed"
+        },
+        {
+            text: "Batteria sensore quasi scarica",
+            date: "03/03/2026 07:48",
+            status: "closed"
+        },
+        {
+            text: "Sensore temperatura non risponde",
+            date: "04/03/2026 11:20",
+            status: "open"
+        },
+        {
+            text: "Umidità troppo alta",
+            date: "05/03/2026 16:05",
+            status: "closed"
+        },
+        {
+            text: "Possibile apertura arnia rilevata",
+            date: "06/03/2026 08:54",
+            status: "closed"
+        },
+        {
+            text: "Calo rapido del peso",
+            date: "06/03/2026 19:12",
+            status: "open"
+        },
+        {
+            text: "Connessione sensori instabile",
+            date: "07/03/2026 10:41",
+            status: "closed"
+        },
+        {
+            text: "Temperatura interna troppo bassa",
+            date: "07/03/2026 23:18",
+            status: "open"
+        },
+        {
+            text: "Livello miele critico",
+            date: "08/03/2026 09:07",
+            status: "open"
         }
     ];
 
