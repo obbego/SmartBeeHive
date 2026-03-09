@@ -132,6 +132,7 @@ All'interno contiene il metodo per la conversione in una stringa JSON con un for
 ```
 
 Nonostante non dovrebbe essere necessario per il ricevitore, è presente anche una funziona statica per la conversione della stringa in formato JSON in un oggetto **Measure**. 
+Ulteriori informazioni sull'output atteso in JSON e la comunicazione con ThingsBoard consultare la [documentazione di progetto](./ThingsBoard.md/#esempio-con-http). 
 
 # Frammentazione
 Il protocollo implementa un fragmenter che gestisce la frammentazione (`FragmentConstructor`) e la deframmentazione (`FragmentDestructor`) dei pacchetti. Segue una descrizione della gestione della frammentazione:

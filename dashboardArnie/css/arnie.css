@@ -43,13 +43,6 @@ header a:hover {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.fixed-alert-height {
-    max-height: 200px;
-    /* altezza fissa */
-    overflow-y: auto;
-    /* abilita scroll verticale */
-}
-
 /* Layout orizzontale: barra e testo sulla stessa riga */
 .honey-tank-wrapper-horizontal {
     display: flex;
@@ -86,4 +79,73 @@ header a:hover {
     color: var(--honey-glow, #fbbf24);
     min-width: 45px;
     text-align: right;
+}
+
+/* La lista interna degli allarmi */
+.history-list {
+    height: 430px;
+    /* Altezza FISSA: non cambia mai */
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+/* Il contenitore esterno dello Storico (il glass-panel) */
+.col-lg-6 .glass-panel.h-100 {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* Forza il pareggio con la colonna sinistra */
+}
+
+/* Tank Miele Verticale - Versione "Cicciotta" */
+.honey-tank-vertical-wrapper {
+    height: 180px;
+    width: 45px;
+    /* Aumentata la larghezza per occupare lo spazio */
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    /* Arrotondamento meno estremo per un look più solido */
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.4);
+    /* Ombra interna più marcata */
+}
+
+.honey-tank-vertical {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.honey-liquid-vertical {
+    width: 100%;
+    background: var(--honey-gradient);
+    position: relative;
+    transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Rimosso il border-radius esagerato sotto per riempire bene il fondo */
+    box-shadow: 0 0 20px var(--honey-primary);
+}
+
+/* Effetto riflesso specchiato (più largo per seguire la barra) */
+.honey-liquid-vertical::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    /* Un po' più spesso per visibilità */
+    background: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.honey-pct-vertical {
+    font-size: 18px;
+    /* Numeri leggermente più grandi per bilanciare */
+    font-weight: 800;
+    color: var(--honey-glow);
+    margin-top: 10px;
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
 }
