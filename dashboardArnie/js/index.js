@@ -199,5 +199,105 @@ document.addEventListener('DOMContentLoaded', () => {
   renderHistory();
   initAllCharts();
   lucide.createIcons(); // Inizializza icone statiche se ce ne sono
+});
+
+// ==========================
+// THINGSBOARD CONFIG
+// ==========================
+const HOST = "https://eu.thingsboard.cloud";
+const USERNAME = "francesco.bego@iisviolamarchesini.edu.it";
+const PASSWORD = "ApiApi1234!";
+const DEVICE_ID = "83ada8d0-171e-11f1-acb1-ebc343e93a59";
+
+
+// ==========================
+// LOGIN
+// ==========================
+async function getToken() {
+
+  const res = await fetch(`${HOST}/api/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      username: USERNAME,
+      password: PASSWORD
+    })
+  });
+
+  if (!res.ok) {
+    throw new Error("Login fallito");
+  }
+
+  const data = await res.json();
+  return data.token;
+}
+
+
+// ==========================
+// TELEMETRIA
+// ==========================
+async function getTelemetry(token) {
+
+  const res = await fetch(
+      `${HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/timeseries?keys=temperature,humidity,weight,battery`,
+      {
+        headers: {
+          "X-Authorization": `Bearer ${token}`
+        }
+      }
+  );
+
+  if (!res.ok) {
+    throw new Error("Errore recupero telemetria");
+  }
+
+  return await res.json();
+}
+
+
+// ==========================
+// CARICA DATI REALI
+// ==========================
+async function loadRealData() {
+
+  try {
+
+    const token = await getToken();
+    const telemetry = await getTelemetry(token);
+
+    console.log("Telemetry ricevuta:", telemetry);
+
+    const lastTemp = telemetry.temperature?.slice(-1)[0];
+    const lastHum = telemetry.humidity?.slice(-1)[0];
+    const lastWeight = telemetry.weight?.slice(-1)[0];
+
+    hivesData[0].t = parseFloat(lastTemp?.value || 0);
+    hivesData[0].h = parseFloat(lastHum?.value || 0);
+    hivesData[0].w = parseFloat(lastWeight?.value || 0);
+
+    renderHives();
+
+  } catch (error) {
+
+    console.error("Errore ThingsBoard:", error);
+
+    renderHives(); // fallback ai dati statici
+
+  }
+
+}
+
+
+// ==========================
+// AVVIO DATI REALI
+// ==========================
+document.addEventListener('DOMContentLoaded', () => {
+
+  loadRealData();
+
+  // aggiorna ogni 30 secondi
+  setInterval(loadRealData, 30000);
 
 });
