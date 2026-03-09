@@ -32,6 +32,10 @@
 #define NIAGARA_RETRANSMISSIONS 10
 /** Amount of time that the handshake waits for the other device to reply before trying a retransmission */
 #define MAX_RECV_WAIT 5000
+/** Amount of ms to check for received data in a loop during receive operations in the handshake.
+ * Decreasing this value increases responsiveness and possible lost packages but increases load.
+ */
+#define RECEIVE_CHECK_MS 100
 
 /**
  * @typedef NiagaraLogHandler
@@ -72,6 +76,17 @@ enum Niagara_Ret {
      * which can be sent at a time.
     */
     NIAGARA_TOO_LARGE,  
+    /**
+     * Returned by the underlying asynchronous receive retrieve data method when no
+     * data has been received in the background thus no data could've been
+     * retrieved.
+     */
+    NIAGARA_NO_DATA,
+    /**
+     * Returned by the underlying asynchronous receive retrieve data method when
+     * the reception hasn't started at the moment of the method's call.
+     */
+    NIAGARA_NOT_RECEIVING,
     /**
      * Returned by the raw receive method when the
      * message received's destination isn't this device
@@ -214,8 +229,16 @@ class Niagara {
     bool set_identifier(str identifier);
     
   private:
-    /*Receives a raw message from the LoRa device */
-    Niagara_Ret receive_raw(str* source, Niagara_Control* control_output, str* message_output);
+    /* Contacts the radio chip and sets in it RX receive mode, so that from this method's call
+     * it can receive data asynchronously, which can then be received later.
+     */
+    int start_receive_raw();
+    /*
+     * If data is available for reception, then it returns it.
+     * This method must be called after the chip has started an asynchronous reception
+     * through start_receive_raw().
+    */
+    Niagara_Ret get_received_data(str* source, Niagara_Control* control_output, str* message_output);
     /*Sends a raw message to a specific destination */
     Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
     
@@ -248,6 +271,11 @@ class Niagara {
 
     /* RadioLib pointer to the LoRa chip */
     SX1262* lora = nullptr;
+    /* Flag which keeps track of whether the asynchronous reception has been started.
+     * (It saves whether a call to start_receive_raw has been made, and it's reset when data
+     * is read through get_received_data).
+    */
+    bool rxActive = false;
     /* Niagara identifier for this device */
     str identifier;
     /* If this value is set to something other than nullptr,
@@ -259,7 +287,8 @@ class Niagara {
     /* Chip's hardware MTU */
     uint16_t chip_mtu;
     
-    #ifndef ARDUINO
+    #if defined(ARDUINO)
+    #else
     // instance of the HAL class
     PiHal* hal;
     #endif
