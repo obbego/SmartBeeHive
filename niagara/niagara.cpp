@@ -341,6 +341,12 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
         //Receive raw data from the radio module and process it at the lower layer
         status = Niagara::get_received_data(source, &control, &payload);
       }
+
+      // If the status matches no destination, set the chip back into RX mode
+      if(status == NIAGARA_NOT_DESTINATION) {
+        int rx_set_status = lora->start_receive_raw();
+        log_printf(LOG_TERMINAL, "Setting chip back into RX mode [%d]\n", rx_set_status);
+      }
     } while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); //Keep running while no data is received until external timeout is reached
 
     //If the receive returned an error then propagate it to the whole method
@@ -546,6 +552,12 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
             //Wait for it to be actually received
             status = Niagara::get_received_data(&remote, &control, &received_crc);
           }
+
+          // If the status matches no destination, set the chip back into RX mode
+          if(status == NIAGARA_NOT_DESTINATION) {
+            int rx_set_status = lora->start_receive_raw();
+            log_printf(LOG_TERMINAL, "Setting chip back into RX mode [%d]\n", rx_set_status);
+          }
         } while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); // Keep receiving until valid data is received or external timeout is reached
         //If the state has changed, exit from the switch's condition and restart
         if(state == TxState::SEND_SYN) break;
@@ -652,7 +664,7 @@ Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_out
   log_print(LOG_TERMINAL, "\t [RECV_RAW] Processing packet... ");
   //Check for errors on the process message method
   state = Niagara::process_message(processed_output, receive_output_str);
-  if(state == 6) {
+  if(state == 5) {
     log_print(LOG_TERMINAL, "This is not the destination!\n");
     return NIAGARA_NOT_DESTINATION;
   }
