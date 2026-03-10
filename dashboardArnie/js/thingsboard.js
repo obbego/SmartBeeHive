@@ -16,7 +16,6 @@ let TB_TOKEN = null;
 
 // login
 async function tbLogin() {
-
     if (TB_TOKEN) return TB_TOKEN;
 
     const res = await fetch(`${TB_HOST}/api/auth/login`, {
@@ -35,11 +34,11 @@ async function tbLogin() {
 }
 
 async function tbGetTelemetry(deviceId) {
-
     const token = await tbLogin();
 
+    // Aggiunto honeyPct nella richiesta in caso in futuro lo integrerai
     const res = await fetch(
-        `${TB_HOST}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=temperature,humidity,weight,battery`,
+        `${TB_HOST}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=temperature,humidity,weight,battery,honeyPct`,
         {
             headers: {
                 "X-Authorization": `Bearer ${token}`
@@ -52,33 +51,44 @@ async function tbGetTelemetry(deviceId) {
 
 // aggiorna tutte le arnie
 async function tbLoadAllHives() {
-
     for (const hiveId in TB_DEVICES) {
-
         const deviceId = TB_DEVICES[hiveId];
+        const hive = hivesData.find(h => h.id == hiveId);
+
+        if (!hive) continue;
 
         try {
-
             const telemetry = await tbGetTelemetry(deviceId);
 
-            const temp = telemetry.temperature?.slice(-1)[0]?.value;
-            const hum = telemetry.humidity?.slice(-1)[0]?.value;
-            const weight = telemetry.weight?.slice(-1)[0]?.value;
+            // Prendi l'ultimo valore, se non c'è imposta a 0
+            const temp = telemetry.temperature ? telemetry.temperature.slice(-1)[0].value : 0;
+            const hum = telemetry.humidity ? telemetry.humidity.slice(-1)[0].value : 0;
+            const weight = telemetry.weight ? telemetry.weight.slice(-1)[0].value : 0;
+            const pct = telemetry.honeyPct ? telemetry.honeyPct.slice(-1)[0].value : 0;
 
-            const hive = hivesData.find(h => h.id == hiveId);
+            // Aggiorna l'oggetto hive con i dati a 1 decimale
+            hive.t = parseFloat(temp).toFixed(1);
+            hive.h = parseFloat(hum).toFixed(1);
+            hive.w = parseFloat(weight).toFixed(1);
+            hive.pct = parseFloat(pct).toFixed(0);
 
-            if (!hive) continue;
-
-            hive.t = parseFloat(temp || 0);
-            hive.h = parseFloat(hum || 0);
-            hive.w = parseFloat(weight || 0);
+            // Calcola lo stato del "semaforo" della card in base ai dati veri
+            if (temp == 0 && hum == 0 && weight == 0) {
+                hive.status = 'yellow'; // Nessun dato ricevuto
+            } else if (temp > 40 || temp < -5) {
+                hive.status = 'red'; // Allarme temperatura
+            } else {
+                hive.status = 'green'; // Tutto ok
+            }
 
         } catch (err) {
-
             console.error("Errore arnia", hiveId, err);
-
+            // In caso di errore o disconnessione forza tutto a 0
+            hive.t = 0;
+            hive.h = 0;
+            hive.w = 0;
+            hive.pct = 0;
+            hive.status = 'offline';
         }
-
     }
-
 }
