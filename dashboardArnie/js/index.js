@@ -33,38 +33,48 @@ function renderHives() {
       <div class="glass-panel hive-card h-100" 
            onclick="window.location.href='arnie.html?id=${hive.id}'"
            style="cursor: pointer; transition: transform 0.2s;">
+
+        <!-- contenitore con le informazioni delle arnie (nome, stato, metriche) --> 
         <div class="hive-info">
+
+          <!-- nome e pallino -->
           <div class="hive-header">
             <div class="hive-name text-truncate">${hive.name}</div>
             <div class="status-dot status-${hive.status === 'offline' ? 'yellow' : hive.status}"></div>
           </div>
-          <div class="hive-metrics">
-            <div class="metric-box">
-              <div class="metric-label">TEMP</div>
-              <div class="metric-val">${hive.t}°C</div>
+
+          <div class="columns_arnie">
+          <!-- miele -->
+            <div class="honey-tank-wrapper ms-3 col-6">
+              <div class="honey-tank" title="Riempimento: ${hive.pct}%">
+                <div class="honey-liquid" style="height: ${hive.pct}%"></div>
+              </div>
+              <span class="honey-pct">${hive.pct}%</span>
             </div>
+
+            <!-- informazioni  -->
+            <div class="hive-metrics">
             <div class="metric-box">
-              <div class="metric-label">UMIDITÀ</div>
-              <div class="metric-val">${hive.h}%</div>
-            </div>
-            <div class="metric-box">
-              <div class="metric-label">PESO</div>
-              <div class="metric-val">${hive.w}kg</div>
-            </div>
-            <div class="metric-box">
-              <div class="metric-label">STATO</div>
-              <div class="metric-val" style="font-size:12px; line-height:22px;">
-                ${statusText}
+                <div class="metric-label">PESO</div>
+                <div class="metric-val">${hive.w}kg</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">STATO</div>
+                <div class="metric-val" style="font-size:12px; line-height:22px;">
+                  ${statusText}
+                </div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">TEMP</div>
+                <div class="metric-val">${hive.t}°C</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">UMIDITÀ</div>
+                <div class="metric-val">${hive.h}%</div>
               </div>
             </div>
           </div>
-        </div>
         
-        <div class="honey-tank-wrapper ms-3">
-          <div class="honey-tank" title="Riempimento: ${hive.pct}%">
-            <div class="honey-liquid" style="height: ${hive.pct}%"></div>
-          </div>
-          <span class="honey-pct">${hive.pct}%</span>
         </div>
       </div>
     </div>
