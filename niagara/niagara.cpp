@@ -351,9 +351,6 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
     //As soon as the received data method returns some data, put the chip right back into receiving state
     Niagara::start_receive_raw();
 
-    //As soon as the received data method returns some data, put the chip right back into receiving state
-    Niagara::start_receive_raw();
-
     log_printf(LOG_TERMINAL, "[RECV] Received Data - [Current Remote Device] : '%s' - [Receive source] : '%s' - [Handshake Status] : %d - [Control Message] : %d - [Payload] : '%s'\n", device.c_str(), source->c_str(), static_cast<int>(state), static_cast<int>(control), payload.c_str());
 
     /*
@@ -550,6 +547,8 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
             status = Niagara::get_received_data(&remote, &control, &received_crc);
           }
         } while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); // Keep receiving until valid data is received or external timeout is reached
+        //If the state has changed, exit from the switch's condition and restart
+        if(state == TxState::SEND_SYN) break;
 
         //If the receive method returned an error then propagate it to the whole method
         if(status != NIAGARA_OK)
