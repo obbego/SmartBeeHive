@@ -201,18 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons(); // Inizializza icone statiche se ce ne sono
 });
 
-// ==========================
-// THINGSBOARD CONFIG
-// ==========================
 const HOST = "https://eu.thingsboard.cloud";
 const USERNAME = "francesco.bego@iisviolamarchesini.edu.it";
 const PASSWORD = "ApiApi1234!";
 const DEVICE_ID = "83ada8d0-171e-11f1-acb1-ebc343e93a59";
 
-
-// ==========================
-// LOGIN
-// ==========================
 async function getToken() {
 
   const res = await fetch(`${HOST}/api/auth/login`, {
@@ -234,10 +227,6 @@ async function getToken() {
   return data.token;
 }
 
-
-// ==========================
-// TELEMETRIA
-// ==========================
 async function getTelemetry(token) {
 
   const res = await fetch(
@@ -256,10 +245,6 @@ async function getTelemetry(token) {
   return await res.json();
 }
 
-
-// ==========================
-// CARICA DATI REALI
-// ==========================
 async function loadRealData() {
 
   try {
@@ -289,10 +274,6 @@ async function loadRealData() {
 
 }
 
-
-// ==========================
-// AVVIO DATI REALI
-// ==========================
 document.addEventListener('DOMContentLoaded', () => {
 
   loadRealData();
