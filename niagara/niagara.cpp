@@ -343,8 +343,8 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
       }
 
       // If the status matches no destination, set the chip back into RX mode
-      if(status == NIAGARA_NOT_DESTINATION) {
-        int rx_set_status = lora->start_receive_raw();
+      if(status == NIAGARA_NOT_DESTINATION && !rxActive) {
+        int rx_set_status = start_receive_raw();
         log_printf(LOG_TERMINAL, "Setting chip back into RX mode [%d]\n", rx_set_status);
       }
     } while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); //Keep running while no data is received until external timeout is reached
@@ -554,8 +554,8 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
           }
 
           // If the status matches no destination, set the chip back into RX mode
-          if(status == NIAGARA_NOT_DESTINATION) {
-            int rx_set_status = lora->start_receive_raw();
+          if(status == NIAGARA_NOT_DESTINATION && !rxActive) {
+            int rx_set_status = start_receive_raw();
             log_printf(LOG_TERMINAL, "Setting chip back into RX mode [%d]\n", rx_set_status);
           }
         } while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); // Keep receiving until valid data is received or external timeout is reached
