@@ -1,11 +1,12 @@
-// DATI MOCK
-const alertsHistory = [
+// DATI MOCK PER GLI ALLARMI
+const mockAlertsHistory = [
   { hive: 'Arnia 02', msg: 'Temperatura critica', time: 'Oggi 14:23', status: 'open' },
   { hive: 'Arnia 04', msg: 'Calo peso anomalo', time: 'Oggi 11:15', status: 'open' },
   { hive: 'Arnia 01', msg: 'Umidità bassa', time: 'Ieri 16:40', status: 'closed' },
   { hive: 'Arnia 03', msg: 'Vibrazione anomala', time: '17/01/26', status: 'closed' },
   { hive: 'Arnia 05', msg: 'Batteria scarica', time: '15/01/26', status: 'closed' }
 ];
+let alertsHistory = [];
 
 // RENDER ARNIE
 function renderHives() {
@@ -22,7 +23,11 @@ function renderHives() {
       else if (remainder === 2) desktopClass = 'col-lg-12';
     }
 
-    // AGGIUNTA: onclick="location.href='...'" rende tutta la card cliccabile
+    let statusText = 'OFFLINE';
+    if (hive.status === 'green') statusText = 'ONLINE';
+    if (hive.status === 'yellow') statusText = 'ATTENZIONE';
+    if (hive.status === 'red') statusText = 'ALLARME';
+
     return `
     <div class="col-12 ${desktopClass}">
       <div class="glass-panel hive-card h-100" 
@@ -31,7 +36,7 @@ function renderHives() {
         <div class="hive-info">
           <div class="hive-header">
             <div class="hive-name text-truncate">${hive.name}</div>
-            <div class="status-dot status-${hive.status}"></div>
+            <div class="status-dot status-${hive.status === 'offline' ? 'yellow' : hive.status}"></div>
           </div>
           <div class="hive-metrics">
             <div class="metric-box">
@@ -49,7 +54,7 @@ function renderHives() {
             <div class="metric-box">
               <div class="metric-label">STATO</div>
               <div class="metric-val" style="font-size:12px; line-height:22px;">
-                ${hive.status === 'green' ? 'ONLINE' : hive.status === 'yellow' ? 'ATTENZIONE' : 'OFFLINE'}
+                ${statusText}
               </div>
             </div>
           </div>
@@ -68,9 +73,12 @@ function renderHives() {
   lucide.createIcons();
 }
 
-// RENDER STORICO
 function renderHistory() {
   const list = document.getElementById('historyList');
+  if (alertsHistory.length === 0) {
+    list.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
+    return;
+  }
   list.innerHTML = alertsHistory.map(alert => `
     <div class="history-item">
       <div>
@@ -82,222 +90,69 @@ function renderHistory() {
   `).join('');
 }
 
-// GESTIONE TABS
 window.switchTab = function (tabName, btn) {
-
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + tabName).classList.add('active');
 };
 
-// CONFIGURAZIONE CHART.JS
 Chart.defaults.color = '#94a3b8';
 Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
 Chart.defaults.font.family = "'Inter', sans-serif";
 
 function initAllCharts() {
-  const commonOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: { x: { grid: { display: false } } }
-  };
-
-  // Temperatura
-  new Chart(document.getElementById('tempChart'), {
-    type: 'line',
-    data: {
-      labels: ['00', '04', '08', '12', '16', '20', '24'],
-      datasets: [{
-        data: [34, 34.2, 35.5, 36.1, 35.8, 35.0, 34.5],
-        borderColor: '#fbbf24',
-        backgroundColor: 'rgba(251, 191, 36, 0.1)',
-        fill: true, tension: 0.4
-      }]
-    }, options: commonOptions
-  });
-
-  // Umidità
-  new Chart(document.getElementById('humidityChart'), {
-    type: 'line',
-    data: {
-      labels: ['00', '04', '08', '12', '16', '20', '24'],
-      datasets: [{
-        data: [58, 60, 55, 52, 54, 58, 62],
-        borderColor: '#10b981',
-        tension: 0.4
-      }]
-    }, options: commonOptions
-  });
-
-  // Miele
-  new Chart(document.getElementById('honeyChart'), {
-    type: 'bar',
-    data: {
-      labels: ['L', 'M', 'M', 'G', 'V', 'S', 'D'],
-      datasets: [{
-        data: [1.2, 1.5, 0.8, 2.1, 2.5, 1.9, 1.0],
-        backgroundColor: '#fbbf24',
-        borderRadius: 4
-      }]
-    }, options: commonOptions
-  });
-
-  // Suono
-  new Chart(document.getElementById('soundChart'), {
-    type: 'line',
-    data: {
-      labels: Array.from({ length: 12 }, (_, i) => i * 2),
-      datasets: [{
-        data: [280, 285, 290, 310, 305, 295, 290, 285, 280, 275, 280, 282],
-        borderColor: '#a78bfa',
-        tension: 0.4
-      }]
-    }, options: commonOptions
-  });
-
-  // Correlazione
+  const commonOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } } } };
+  new Chart(document.getElementById('tempChart'), { type: 'line', data: { labels: ['00', '04', '08', '12', '16', '20', '24'], datasets: [{ data: [34, 34.2, 35.5, 36.1, 35.8, 35.0, 34.5], borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', fill: true, tension: 0.4 }] }, options: commonOptions });
+  new Chart(document.getElementById('humidityChart'), { type: 'line', data: { labels: ['00', '04', '08', '12', '16', '20', '24'], datasets: [{ data: [58, 60, 55, 52, 54, 58, 62], borderColor: '#10b981', tension: 0.4 }] }, options: commonOptions });
+  new Chart(document.getElementById('honeyChart'), { type: 'bar', data: { labels: ['L', 'M', 'M', 'G', 'V', 'S', 'D'], datasets: [{ data: [1.2, 1.5, 0.8, 2.1, 2.5, 1.9, 1.0], backgroundColor: '#fbbf24', borderRadius: 4 }] }, options: commonOptions });
+  new Chart(document.getElementById('soundChart'), { type: 'line', data: { labels: Array.from({ length: 12 }, (_, i) => i * 2), datasets: [{ data: [280, 285, 290, 310, 305, 295, 290, 285, 280, 275, 280, 282], borderColor: '#a78bfa', tension: 0.4 }] }, options: commonOptions });
   const scatterData = Array.from({ length: 30 }, () => ({ x: Math.random() * 10 + 15, y: Math.random() * 8 + 30 }));
-  new Chart(document.getElementById('correlationChart'), {
-    type: 'scatter',
-    data: { datasets: [{ data: scatterData, backgroundColor: '#fbbf24' }] },
-    options: commonOptions
-  });
-
-  // Derivata
-  new Chart(document.getElementById('derivative1Chart'), {
-    type: 'line',
-    data: {
-      labels: ['00', '04', '08', '12', '16', '20'],
-      datasets: [{
-        data: [0.2, 0.5, 0.1, -0.2, -0.4, 0.1],
-        borderColor: '#ef4444',
-        tension: 0.4
-      }]
-    }, options: commonOptions
-  });
-
-  // Derivata Peso
-  new Chart(document.getElementById('weightDerivativeChart'), {
-    type: 'bar',
-    data: {
-      labels: ['L', 'M', 'M', 'G', 'V', 'S', 'D'],
-      datasets: [{
-        data: [0.1, 0.2, 0.15, 0.3, 0.25, 0.1, 0.05],
-        backgroundColor: '#10b981',
-        borderRadius: 4
-      }]
-    }, options: commonOptions
-  });
+  new Chart(document.getElementById('correlationChart'), { type: 'scatter', data: { datasets: [{ data: scatterData, backgroundColor: '#fbbf24' }] }, options: commonOptions });
+  new Chart(document.getElementById('derivative1Chart'), { type: 'line', data: { labels: ['00', '04', '08', '12', '16', '20'], datasets: [{ data: [0.2, 0.5, 0.1, -0.2, -0.4, 0.1], borderColor: '#ef4444', tension: 0.4 }] }, options: commonOptions });
+  new Chart(document.getElementById('weightDerivativeChart'), { type: 'bar', data: { labels: ['L', 'M', 'M', 'G', 'V', 'S', 'D'], datasets: [{ data: [0.1, 0.2, 0.15, 0.3, 0.25, 0.1, 0.05], backgroundColor: '#10b981', borderRadius: 4 }] }, options: commonOptions });
 }
 
-// INIT
-document.addEventListener('DOMContentLoaded', () => {
-  renderHives();
-  renderHistory();
-  initAllCharts();
-  lucide.createIcons(); // Inizializza icone statiche se ce ne sono
-});
-
-// ==========================
-// THINGSBOARD CONFIG
-// ==========================
-const HOST = "https://eu.thingsboard.cloud";
-const USERNAME = "francesco.bego@iisviolamarchesini.edu.it";
-const PASSWORD = "ApiApi1234!";
-const DEVICE_ID = "83ada8d0-171e-11f1-acb1-ebc343e93a59";
-
-
-// ==========================
-// LOGIN
-// ==========================
-async function getToken() {
-
-  const res = await fetch(`${HOST}/api/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      username: USERNAME,
-      password: PASSWORD
-    })
-  });
-
-  if (!res.ok) {
-    throw new Error("Login fallito");
-  }
-
-  const data = await res.json();
-  return data.token;
-}
-
-
-// ==========================
-// TELEMETRIA
-// ==========================
-async function getTelemetry(token) {
-
-  const res = await fetch(
-      `${HOST}/api/plugins/telemetry/DEVICE/${DEVICE_ID}/values/timeseries?keys=temperature,humidity,weight,battery`,
-      {
-        headers: {
-          "X-Authorization": `Bearer ${token}`
-        }
-      }
-  );
-
-  if (!res.ok) {
-    throw new Error("Errore recupero telemetria");
-  }
-
-  return await res.json();
-}
-
-
-// ==========================
-// CARICA DATI REALI
-// ==========================
 async function loadRealData() {
-
   try {
-
-    const token = await getToken();
-    const telemetry = await getTelemetry(token);
-
-    console.log("Telemetry ricevuta:", telemetry);
-
-    const lastTemp = telemetry.temperature?.slice(-1)[0];
-    const lastHum = telemetry.humidity?.slice(-1)[0];
-    const lastWeight = telemetry.weight?.slice(-1)[0];
-
-    hivesData[0].t = parseFloat(lastTemp?.value || 0);
-    hivesData[0].h = parseFloat(lastHum?.value || 0);
-    hivesData[0].w = parseFloat(lastWeight?.value || 0);
-
+    await tbLoadAllHives();
     renderHives();
-
-  } catch (error) {
-
-    console.error("Errore ThingsBoard:", error);
-
-    renderHives(); // fallback ai dati statici
-
+  } catch (err) {
+    console.error("Errore caricamento ThingsBoard", err);
+    renderHives();
   }
-
 }
 
-
-// ==========================
-// AVVIO DATI REALI
-// ==========================
+// INIT PRINCIPALE CON LOGICA SWITCH
 document.addEventListener('DOMContentLoaded', () => {
+  const mockSwitch = document.getElementById('mockDataSwitch');
+  const isMockMode = localStorage.getItem('mockMode') === 'true'; // Legge la scelta salvata
 
-  loadRealData();
+  if (mockSwitch) {
+    mockSwitch.checked = isMockMode;
+    mockSwitch.addEventListener('change', (e) => {
+      localStorage.setItem('mockMode', e.target.checked);
+      window.location.reload(); // Ricarica la pagina applicando la nuova modalità
+    });
+  }
 
-  // aggiorna ogni 30 secondi
-  setInterval(loadRealData, 30000);
+  if (isMockMode) {
+    // MODALITA' DEMO: Usiamo i dati mock precaricati da dati.js
+    alertsHistory = [...mockAlertsHistory];
+    renderHives();
+    renderHistory();
+    initAllCharts();
+    lucide.createIcons();
+  } else {
+    // MODALITA' REALE: Azzeriamo i dati mock e peschiamo da ThingsBoard
+    hivesData.forEach(hive => { hive.t = 0; hive.h = 0; hive.w = 0; hive.pct = 0; hive.status = 'offline'; });
+    alertsHistory = []; // Nessun allarme finto
+    renderHives();
+    renderHistory();
+    initAllCharts();
+    lucide.createIcons();
 
+    loadRealData();
+    setInterval(loadRealData, 30000);
+  }
 });

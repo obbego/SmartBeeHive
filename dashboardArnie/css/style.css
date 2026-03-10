@@ -409,3 +409,31 @@ h1 {
   color: var(--success);
   border-color: var(--success);
 }
+
+.columns{
+  display: grid;
+  grid-template-columns: 30% 70%; /* due colonne */
+  gap: 20px;
+  grid-template-rows: auto;
+}
+
+
+.left{
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+
+.right{
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+
+.left .tabs-container h3 {
+  display: inline-flex;
+  align-items: center;
+  height: 54px;
+  padding: 0 12px;
+  margin: 0;
+}
