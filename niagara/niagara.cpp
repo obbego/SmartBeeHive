@@ -314,7 +314,7 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
   //Start receiving
   int result = start_receive_raw();
   //Check if the method terminated correctly
-  if(result != RADIOLIB_ERROR_NONE) {
+  if(result != RADIOLIB_ERR_NONE) {
     log_print("Error while starting message receive.. Terminating.\n", "[RECV] Error.\n");
     return NIAGARA_RECEIVE_ERROR;
   }
@@ -338,17 +338,9 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
         //Receive raw data from the radio module and process it at the lower layer
         status = Niagara::get_received_data(source, &control, &payload);
       }
-    } while(status == NIAGARA_NO_DATA); //Keep running while the read status shows niagara no data error
+    } while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); //Keep running while no data is received until external timeout is reached
     //As soon as the received data method returns some data, put the chip right back into receiving state
     Niagara::start_receive_raw();
-
-    /* If the receive went into timeout state or the packet which got
-     * received isn't destined for this device, then try receiving data again.
-     */
-    if(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION) {
-      log_print("[RECV] Retrying.\n");
-      continue;
-    }
 
     //If the receive returned an error then propagate it to the whole method
     if(status != NIAGARA_OK)
@@ -542,11 +534,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
             //Wait for it to be actually received
             status = Niagara::get_received_data(&remote, &control, &received_crc);
           }
-        } while(status == NIAGARA_NO_DATA);
-
-        //In case this isn't the destination or the radio timed out waiting for packets then try receiving again
-        if(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION)
-          continue;
+        } while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); // Keep receiving until valid data is received or external timeout is reached
 
         //If the receive method returned an error then propagate it to the whole method
         if(status != NIAGARA_OK)
@@ -596,7 +584,7 @@ int Niagara::start_receive_raw() {
 
   log_print(LOG_TERMINAL, "\t[RECV_RAW] Starting receive... ");
   // Start the asynchronous reception
-  int state = radio.startReceive();
+  int state = lora->startReceive();
   if(state != RADIOLIB_ERR_NONE) {
     if(log_level == LOG_TERMINAL) log_printf("Error [%d]!\n", state);
     else log_printf("[RAW_RX] Error %d\n", state);
@@ -617,19 +605,11 @@ Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_out
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
 
-  // Get the chip's IRQ
-  uint16_t irq = radio.getIrqStatus();
-  //Check if the RX_DONE flag in the IRQ is set
-  if(!(irq & RADIOLIB_SX126X_IRQ_RX_DONE))
-    return NIAGARA_NO_DATA; // No data available
-  //Clear the IRQ
-  radio.clearIrqStatus();
-
   log_print(LOG_TERMINAL, "\t [RECV_RAW] Reading packet... ");
   // Buffer used to receive output data
   char receive_output[Niagara::chip_mtu];
   //Read the data into the buffer
-  int state = radio.readData((uint8_t*)rxBuffer, Niagara::chip_mtu);
+  int state = lora->readData((uint8_t*)receive_output, Niagara::chip_mtu);
   if(state == RADIOLIB_ERR_RX_TIMEOUT) {
     log_print(LOG_TERMINAL, "Timeout!\n");
     return NIAGARA_TIMEOUT;
