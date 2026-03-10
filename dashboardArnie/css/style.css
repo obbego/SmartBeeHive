@@ -437,3 +437,10 @@ h1 {
   padding: 0 12px;
   margin: 0;
 }
+
+.columns_arnie{
+  display: grid;
+  grid-template-columns: 20% 80%; /* due colonne */
+  gap: 5px;
+  grid-template-rows: auto;
+}
