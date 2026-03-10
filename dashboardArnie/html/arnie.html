@@ -38,14 +38,16 @@
     <div class="container d-flex justify-content-between align-items-center">
       <h1>
         <a href="index.html" class="text-white me-3" style="opacity: 0.8; transition: 0.2s;"><i
-                data-lucide="arrow-left"></i></a>
+            data-lucide="arrow-left"></i></a>
         <span id="hiveName">Caricamento...</span>
       </h1>
 
       <div class="d-flex align-items-center gap-4">
         <div class="form-check form-switch d-flex align-items-center mb-0">
-          <input class="form-check-input me-2" type="checkbox" role="switch" id="mockDataSwitch" style="cursor: pointer; width: 2.5em; height: 1.25em; border-color: rgba(255,255,255,0.5);">
-          <label class="form-check-label text-white" for="mockDataSwitch" style="font-size: 13px; cursor: pointer;">Modalità Demo</label>
+          <input class="form-check-input me-2" type="checkbox" role="switch" id="mockDataSwitch"
+            style="cursor: pointer; width: 2.5em; height: 1.25em; border-color: rgba(255,255,255,0.5);">
+          <label class="form-check-label text-white" for="mockDataSwitch"
+            style="font-size: 13px; cursor: pointer;">Modalità Demo</label>
         </div>
 
         <div id="lastUpdate" style="font-size: 13px; color: var(--text-muted);">Ultimo dato: --:--</div>
@@ -57,35 +59,6 @@
     <div class="row g-4 mb-4 align-items-start">
       <div class="col-lg-6">
         <div class="row g-3">
-          <div class="col-9">
-            <div class="row g-3">
-              <div class="col-6">
-                <div class="glass-panel stat-card h-100 text-center">
-                  <div class="stat-label mb-2 justify-content-center"><i data-lucide="thermometer"></i> Temp In</div>
-                  <div class="stat-value" id="valTempIn">--</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="glass-panel stat-card h-100 text-center">
-                  <div class="stat-label mb-2 justify-content-center"><i data-lucide="cloud"></i> Temp Out</div>
-                  <div class="stat-value" id="valTempOut">--</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="glass-panel stat-card h-100 text-center">
-                  <div class="stat-label mb-2 justify-content-center"><i data-lucide="scale"></i> Peso</div>
-                  <div class="stat-value" id="valWeight">--</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="glass-panel stat-card h-100 text-center">
-                  <div class="stat-label mb-2 justify-content-center"><i data-lucide="droplets"></i> Umidità</div>
-                  <div class="stat-value" id="valHum">--</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div class="col-3">
             <div class="glass-panel stat-card h-100 d-flex flex-column align-items-center justify-content-between py-3"
               style="border-color: var(--honey-glow);">
@@ -99,6 +72,35 @@
               </div>
               <span id="valMiele" class="honey-pct-vertical"
                 style="color: var(--honey-glow); font-weight: 700;">--%</span>
+            </div>
+          </div>
+
+          <div class="col-9">
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="glass-panel stat-card h-100 text-center">
+                  <div class="stat-label mb-2 justify-content-center"><i data-lucide="scale"></i> Peso</div>
+                  <div class="stat-value" id="valWeight">--</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="glass-panel stat-card h-100 text-center">
+                  <div class="stat-label mb-2 justify-content-center"><i data-lucide="droplets"></i> Umidità</div>
+                  <div class="stat-value" id="valHum">--</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="glass-panel stat-card h-100 text-center">
+                  <div class="stat-label mb-2 justify-content-center"><i data-lucide="thermometer"></i> Temp In</div>
+                  <div class="stat-value" id="valTempIn">--</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="glass-panel stat-card h-100 text-center">
+                  <div class="stat-label mb-2 justify-content-center"><i data-lucide="cloud"></i> Temp Out</div>
+                  <div class="stat-value" id="valTempOut">--</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -163,4 +165,5 @@
   <script src="../js/thingsboard.js"></script>
   <script src="../js/arnie.js"></script>
 </body>
+
 </html>
