@@ -23,7 +23,8 @@ int main(void) {
 	send_timer.start();
 	
 	//Start infinite loop
-	for(;;) {
+	//for(;;) {
+		/*
 		//If the send timer has elapsed then send a new packet
 		if(send_timer.elapsed() > send_time) {
 			send_timer.start();
@@ -34,6 +35,7 @@ int main(void) {
 				continue;
 			}
 		}
+		*/
 
 		//Try to receive
 		str receive;
@@ -41,9 +43,12 @@ int main(void) {
 		error = device.receive(&source, &receive);
 		if(error != NIAGARA_OK) {
 			fprintf(stderr, "Error while receiving data: %d\n", static_cast<int>(error));
-			continue;
+			error = device.receive(&source, &receive);
+			fprintf(stderr, error != NIAGARA_OK ? "Error while receiving data: %d\n" : "Receive OK: %d\n", static_cast<int>(error));
+			//continue;
 		}
 
 		printf("Received: %s\n", receive.c_str());
-	}
+		//break;
+	//}
 }
