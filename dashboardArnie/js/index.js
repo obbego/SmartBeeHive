@@ -15,16 +15,16 @@ function renderHives() {
   grid.innerHTML = hivesData.map((hive, index) => {
     const remainder = totalHives % 3;
     const startOfLastRow = totalHives - remainder;
-    let desktopClass = 'col-lg-4';
+    let desktopClass = 'col-lg-12';
 
     if (remainder > 0 && index >= startOfLastRow) {
       if (remainder === 1) desktopClass = 'col-lg-12';
-      else if (remainder === 2) desktopClass = 'col-lg-6';
+      else if (remainder === 2) desktopClass = 'col-lg-12';
     }
 
     // AGGIUNTA: onclick="location.href='...'" rende tutta la card cliccabile
     return `
-    <div class="col-12 col-md-6 ${desktopClass}">
+    <div class="col-12 ${desktopClass}">
       <div class="glass-panel hive-card h-100" 
            onclick="window.location.href='arnie.html?id=${hive.id}'"
            style="cursor: pointer; transition: transform 0.2s;">

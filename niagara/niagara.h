@@ -75,13 +75,7 @@ enum Niagara_Ret {
      * which is to be sent over the radio exceedes the maximum size
      * which can be sent at a time.
     */
-    NIAGARA_TOO_LARGE,  
-    /**
-     * Returned by the underlying asynchronous receive retrieve data method when no
-     * data has been received in the background thus no data could've been
-     * retrieved.
-     */
-    NIAGARA_NO_DATA,
+    NIAGARA_TOO_LARGE,
     /**
      * Returned by the underlying asynchronous receive retrieve data method when
      * the reception hasn't started at the moment of the method's call.

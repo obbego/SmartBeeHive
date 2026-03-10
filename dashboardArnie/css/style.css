@@ -409,3 +409,20 @@ h1 {
   color: var(--success);
   border-color: var(--success);
 }
+
+.columns{
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* due colonne */
+  gap: 20px;
+  grid-template-rows: auto;
+}
+
+.left{
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.right{
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
