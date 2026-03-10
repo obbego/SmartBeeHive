@@ -8,7 +8,7 @@ void logger(const char* message) {
 
 int main(void) {
 	//Initialise the device
-	Niagara device(logger, Niagara_LogLevel::TERMINAL);
+	Niagara device(logger, Niagara_LogLevel::LOG_TERMINAL);
 	if(!device.set_identifier("RASPI")) {
 		fprintf(stderr, "Error while setting identifier.\n");
 		return 1;

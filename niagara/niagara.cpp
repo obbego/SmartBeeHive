@@ -315,7 +315,8 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
   int result = start_receive_raw();
   //Check if the method terminated correctly
   if(result != RADIOLIB_ERR_NONE) {
-    log_print("Error while starting message receive.. Terminating.\n", "[RECV] Error.\n");
+	if(log_level == LOG_TERMINAL) log_printf("Error while starting message receive: %d\n", result);
+	else log_printf("[RECV] Start err: %d\n", result);
     return NIAGARA_RECEIVE_ERROR;
   }
 
@@ -495,14 +496,19 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
   while(retransmissions < NIAGARA_RETRANSMISSIONS) {
     log_printf(LOG_TERMINAL, "[SEND] Current State - [Current Remote Device] : '%s' - [Handshake Status] : %d\n", remote.c_str(), static_cast<int>(control));
     switch(state) { //Check the current state of the handshake
-      case TxState::SEND_SYN: //If the SYN request should be sent:
+      case TxState::SEND_SYN: { //If the SYN request should be sent:
         log_print("==== [SENDING MESSAGE SYN] ====\n", "[SEND] Sending SYN.\n");
         //Send the SYN request with the message as payload
         if(Niagara::send_raw(destination, SYN, message) != NIAGARA_OK)
           return NIAGARA_SEND_ERROR; //In case of any error propagate it to the whole method
 
         //Put the chip in RX_WAIT state
-        Niagara::start_receive_raw();
+        int result = Niagara::start_receive_raw();
+		if(result != RADIOLIB_ERR_NONE) {
+			if(log_level == LOG_TERMINAL) log_printf("Error while starting ACK receive: %d\n", result);
+			else log_printf("[SEND] RX Err: %d\n", result);
+			return NIAGARA_RECEIVE_ERROR;
+		}
         //Start the timer counting for retransmission timeouts
         timer.start();
         //Wait for the acknowledgement
@@ -510,6 +516,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
         //Start the reception timer
         receive_timer.start();
         break;
+	  }	
 
       //If the ACK should be received
       case TxState::WAIT_ACK:
