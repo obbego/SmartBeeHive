@@ -108,7 +108,7 @@ h1 {
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 20px;
   color: var(--text-muted);
   display: flex;
   gap: 8px;
@@ -291,6 +291,8 @@ h1 {
 .tab-content {
   display: none;
   animation: fadeIn 0.4s ease;
+  justify-content: center; /* centro orizzontale */
+  align-items: center;
 }
 
 .tab-content.active {
@@ -415,6 +417,7 @@ h1 {
   grid-template-columns: 30% 70%; /* due colonne */
   gap: 20px;
   grid-template-rows: auto;
+  align-items: flex-start;
 }
 
 
@@ -443,4 +446,19 @@ h1 {
   grid-template-columns: 20% 80%; /* due colonne */
   gap: 5px;
   grid-template-rows: auto;
+}
+
+@media (max-width: 992px) {
+  .columns{
+    display: flex;
+    flex-direction: column;
+  }
+
+  .left{
+    order: 2;
+  }
+
+  .right{
+    order: 1;
+  }
 }
