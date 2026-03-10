@@ -508,7 +508,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 
         //Put the chip in RX_WAIT state
         int result = Niagara::start_receive_raw();
-        if(result != RADIOLIB_ERR_NONE) {
+        if(result != RADIOLIB_ERR_NONE && result != -1) {
           if(log_level == LOG_TERMINAL) log_printf("Error while starting ACK receive: %d\n", result);
           else log_printf("[SEND] RX Err: %d\n", result);
           return NIAGARA_RECEIVE_ERROR;
@@ -622,11 +622,19 @@ Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_out
   if(Niagara::identifier.length() == 0)
     return NIAGARA_NO_IDENTIFIER;
 
-  log_print(LOG_TERMINAL, "\t[RECV_RAW] Reading packet... ");
+  log_print(LOG_TERMINAL, "\t[RECV_RAW] Reading packet ");
+  // Retrieve the amount of data received
+  size_t received_len = lora->getPacketLength();
+  log_printf(LOG_TERMINAL, "[%d bytes]...", received_len);
+  //If no data has been received then exit with timeout error
+  if(received_len < 1) {
+    log_print(LOG_TERMINAL, "No data received\n");
+    return NIAGARA_TIMEOUT;
+  }
   // Buffer used to receive output data
-  char receive_output[Niagara::chip_mtu];
+  char receive_output[received_len];
   //Read the data into the buffer
-  int state = lora->readData((uint8_t*)receive_output, Niagara::chip_mtu);
+  int state = lora->readData((uint8_t*)receive_output, received_len);
   if(state == RADIOLIB_ERR_RX_TIMEOUT) {
     log_print(LOG_TERMINAL, "Timeout!\n");
     return NIAGARA_TIMEOUT;
