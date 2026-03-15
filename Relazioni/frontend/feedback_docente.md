@@ -108,3 +108,20 @@ Per la parte audio è necessario chiarire quali dati vengono effettivamente tras
 **Scelta architetturale del frontend**
 È opportuno esplicitare se il frontend sarà realizzato principalmente tramite dashboard della piattaforma IoT oppure come webapp personalizzata, così da evitare sovrapposizioni e chiarire il perimetro di sviluppo.
 
+15/03/2026
+# Feedback Docente – Gantt e Project Plan
+
+## Diagramma di Gantt
+
+Il diagramma di Gantt risulta ben strutturato e coerente con la pianificazione richiesta.  
+Le attività principali del progetto sono rappresentate in modo chiaro e organizzate secondo una sequenza temporale plausibile.  
+
+È positiva anche l’indicazione dei membri del gruppo coinvolti nelle diverse attività, che permette di comprendere come il lavoro sia distribuito nel tempo e come le attività si sviluppino lungo le milestone previste.
+
+## Project Plan
+
+Il Project Plan è complessivamente corretto e contiene gli elementi fondamentali richiesti: obiettivi del progetto, ambito di lavoro, milestone e criteri di verifica.
+
+Per renderlo uno strumento di gestione del progetto ancora più efficace, sarebbe opportuno dettagliare maggiormente la **suddivisione operativa delle responsabilità durante lo sviluppo**. Attualmente i ruoli sono indicati principalmente in relazione alla redazione dei documenti, mentre sarebbe utile esplicitare con maggiore chiarezza chi si occupa delle diverse attività pratiche del progetto (sviluppo delle funzionalità del frontend, integrazione con il backend, test e gestione della documentazione).
+
+Nel complesso i documenti risultano coerenti con la consegna assegnata; il miglioramento principale riguarda quindi un maggiore livello di dettaglio nell’organizzazione operativa del lavoro all’interno del Project Plan.
