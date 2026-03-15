@@ -122,21 +122,29 @@
 
       <!-- div starico, pnoramica e analisi avanzata -->
        <div class="right">
-        <div class="tabs-container mb-4">
-          <nav class="tabs-nav d-inline-flex gap-1">
-            <button class="tab-btn active" onclick="switchTab('history', this)">Storico Allarmi</button>
-            <button class="tab-btn" onclick="switchTab('overview', this)">Panoramica</button>
-            <button class="tab-btn" onclick="switchTab('analysis', this)">Analisi Avanzata</button>
-          </nav>
+        <div class="tabs-container mb-4 ">
+          <div class="row g-4 d-flex justify-content-center">
+          <div class="col-12 col-lg-11">
+            <nav class="tabs-nav d-inline-flex gap-1">
+              <button class="tab-btn active" onclick="switchTab('history', this)">Storico Allarmi</button>
+              <button class="tab-btn" onclick="switchTab('overview', this)">Panoramica</button>
+              <button class="tab-btn" onclick="switchTab('analysis', this)">Analisi Avanzata</button>
+            </nav>
+          </div>
+          </div>
         </div>
 
 
         <div id="tab-history" class="tab-content active">
-          <div class="glass-panel chart-box p-0 " style="height: auto; min-height: 400px;">
-            <div class="p-3 border-bottom border-white border-opacity-10 ">
-              <div class="chart-title mb-0 ">Log Eventi e Allarmi</div>
-            </div>
-            <div id="historyList" class="history-list p-3">
+          <div class="row g-4 d-flex justify-content-center">
+            <div class="col-12 col-lg-11">
+              <div class="glass-panel chart-box" style="height: auto; min-height: 400px;">
+                <div class="p-3 border-bottom border-white border-opacity-10 ">
+                  <div class="chart-title mb-0 ">Log Eventi e Allarmi</div>
+                </div>
+                <div id="historyList" class="history-list p-3">
+                </div>
+              </div>
             </div>
           </div>
         </div>
