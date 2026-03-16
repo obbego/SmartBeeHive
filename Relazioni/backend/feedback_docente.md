@@ -38,5 +38,19 @@ Indicazione per il gruppo: esplicitare cosa è core nella prima iterazione e def
 **Dipendenze critiche e meccanismi di fallback**
 Poiché l’architettura introduce componenti critiche (scheduler esterno e RPC), va esplicitato cosa accade in caso di indisponibilità o fallimento di tali componenti e quali meccanismi minimi di fallback e logging sono previsti, così da rendere verificabile l’affidabilità complessiva del backend.
 
-**Verifica tecnica end-to-end**
-Si consiglia di includere almeno uno scenario di test tecnico end-to-end che descriva condizioni iniziali, flusso e risultato atteso, così da verificare l’integrazione complessiva dell’architettura.
+15/03/2026
+# Feedback Docente – Gantt e Project Plan
+
+## Diagramma di Gantt
+
+Il diagramma di Gantt risulta coerente con la pianificazione richiesta e rappresenta in modo chiaro le principali fasi del progetto. Le attività sono organizzate secondo una sequenza temporale plausibile e allineata con le milestone indicate nella consegna. È positivo anche il fatto che il Gantt evidenzi l’evoluzione del lavoro dopo i feedback ricevuti, mostrando una pianificazione realistica delle attività di sviluppo, integrazione e verifica.
+
+Nel complesso il Gantt può essere considerato uno strumento utile di pianificazione del lavoro. Un possibile miglioramento potrebbe riguardare un maggiore dettaglio di alcune attività tecniche intermedie, in modo da rendere ancora più evidente il progresso del progetto tra una milestone e l’altra.
+
+## Project Plan
+
+Il Project Plan risulta ben impostato e mostra una buona comprensione del significato di questo documento. Sono presenti gli elementi principali richiesti: obiettivi del progetto, ambito di lavoro, architettura del sistema, milestone e criteri di verifica.
+
+Rispetto alla versione precedente si osserva un miglioramento nella definizione dei ruoli e delle responsabilità del gruppo. Per rendere il documento ancora più efficace come strumento di gestione del progetto, sarebbe utile esplicitare con maggiore dettaglio alcune responsabilità operative durante lo sviluppo, ad esempio per quanto riguarda attività di test, integrazione tra componenti e gestione della documentazione.
+
+Nel complesso il Project Plan è coerente con la consegna assegnata e rappresenta una buona base per la gestione e il monitoraggio dell’avanzamento del progetto.

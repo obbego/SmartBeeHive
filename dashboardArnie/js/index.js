@@ -29,7 +29,7 @@ function renderHives() {
     if (hive.status === 'red') statusText = 'ALLARME';
 
     return `
-    <div class="col-12 ${desktopClass}">
+    <div class="col-12  ${desktopClass}">
       <div class="glass-panel hive-card h-100" 
            onclick="window.location.href='arnie.html?id=${hive.id}'"
            style="cursor: pointer; transition: transform 0.2s;">
@@ -45,11 +45,11 @@ function renderHives() {
 
           <div class="columns_arnie">
           <!-- miele -->
-            <div class="honey-tank-wrapper ms-3 col-6">
-              <div class="honey-tank" title="Riempimento: ${hive.pct}%">
-                <div class="honey-liquid" style="height: ${hive.pct}%"></div>
-              </div>
-              <span class="honey-pct">${hive.pct}%</span>
+            <div class="honey-tank-wrapper me-3">
+                <div class="honey-tank" title="Riempimento: ${hive.pct}%">
+                    <div class="honey-liquid" style="height: ${hive.pct}%"></div>
+                </div>
+                <span class="honey-pct">${hive.pct}%</span>
             </div>
 
             <!-- informazioni  -->

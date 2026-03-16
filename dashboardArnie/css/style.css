@@ -108,7 +108,7 @@ h1 {
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 20px;
   color: var(--text-muted);
   display: flex;
   gap: 8px;
@@ -291,6 +291,8 @@ h1 {
 .tab-content {
   display: none;
   animation: fadeIn 0.4s ease;
+  justify-content: center; /* centro orizzontale */
+  align-items: center;
 }
 
 .tab-content.active {
@@ -415,6 +417,7 @@ h1 {
   grid-template-columns: 30% 70%; /* due colonne */
   gap: 20px;
   grid-template-rows: auto;
+  align-items: flex-start;
 }
 
 
@@ -443,4 +446,58 @@ h1 {
   grid-template-columns: 20% 80%; /* due colonne */
   gap: 5px;
   grid-template-rows: auto;
+}
+
+@media (max-width: 992px) {
+  .columns{
+    display: flex;
+    flex-direction: column;
+  }
+
+  .left{
+    order: 2;
+  }
+
+  .right{
+    order: 1;
+  }
+}
+
+
+@media (max-width: 576px) {
+  /* Ridurre il padding del corpo pagina e dell'header */
+  body { padding-bottom: 20px; }
+  header { padding: 12px 0; margin-bottom: 15px; }
+  h1 { font-size: 18px; }
+
+  /* Ridurre le card delle statistiche (quelle in alto) */
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 22px; margin: 5px 0; }
+  .stat-label { font-size: 14px; }
+
+  /* OTTIMIZZAZIONE CARD ARNIE */
+  .hive-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  /* Rimpicciolire il serbatoio del miele per non rubare spazio */
+  .honey-tank-wrapper { width: 35px; }
+  .honey-tank { height: 60px; width: 12px; }
+  .honey-pct { font-size: 11px; margin-top: 5px; }
+
+  /* Rendere le metriche (Peso, Temp, etc) più compatte */
+  .hive-metrics {
+    grid-template-columns: 1fr 1fr; /* Mantiene 2 colonne ma riduce i testi */
+    gap: 6px;
+  }
+  .metric-box { padding: 4px 8px; }
+  .metric-label { font-size: 9px; }
+  .metric-val { font-size: 13px; }
+
+  /* Grafici: ridurre l'altezza fissa per evitare che uno solo riempia lo schermo */
+  .chart-box { height: 280px; padding: 12px; }
+  
+  /* Tabs: pulsanti più piccoli */
+  .tab-btn { padding: 8px 12px; font-size: 13px; }
 }

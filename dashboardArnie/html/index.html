@@ -66,8 +66,8 @@
 
     <div class="row g-3 mb-4">
       <div class="col-12 col-sm-6 col-lg-3">
-        <div class="glass-panel stat-card h-100" style="border-color: var(--honey-glow);">
-          <div class="stat-label mb-2" style="color: var(--honey-glow);"><i data-lucide="archive"></i> Miele Totale
+        <div class="glass-panel stat-card h-100 text-center" style="border-color: var(--honey-glow);">
+          <div class="stat-label mb-2 justify-content-center" style="color: var(--honey-glow);"><i data-lucide="archive"></i> Miele Totale
           </div>
           <div class="stat-value" style="color: var(--honey-glow);">12.8 kg</div>
           <div class="stat-detail">Ottima produzione</div>
@@ -76,8 +76,8 @@
 
 
       <div class="col-12 col-sm-6 col-lg-3">
-        <div class="glass-panel stat-card h-100" style="border-color: var(--danger);">
-          <div class="stat-label mb-2" style="color: var(--danger);"><i data-lucide="alert-octagon"
+        <div class="glass-panel stat-card h-100 text-center" style="border-color: var(--danger);">
+          <div class="stat-label mb-2 justify-content-center" style="color: var(--danger);"><i data-lucide="alert-octagon"
               color="var(--danger)"></i> Allarmi</div>
           <div class="stat-value" style="color: var(--danger);">2</div>
           <div class="stat-detail">Attenzione richiesta</div>
@@ -86,8 +86,8 @@
 
 
       <div class="col-12 col-sm-6 col-lg-3">
-        <div class="glass-panel stat-card h-100">
-          <div class="stat-label mb-2"><i data-lucide="thermometer"></i> Temp. Media</div>
+        <div class="glass-panel stat-card h-100 text-center">
+          <div class="stat-label mb-2 justify-content-center"><i data-lucide="thermometer"></i> Temp. Media</div>
           <div class="stat-value">32.4°C</div>
           <div class="stat-detail">+0.4°C vs ieri</div>
         </div>
@@ -95,8 +95,8 @@
 
 
       <div class="col-12 col-sm-6 col-lg-3">
-        <div class="glass-panel stat-card h-100">
-          <div class="stat-label mb-2"><i data-lucide="droplets"></i> Umidità Media</div>
+        <div class="glass-panel stat-card h-100 text-center">
+          <div class="stat-label mb-2 justify-content-center"><i data-lucide="droplets"></i> Umidità Media</div>
           <div class="stat-value">58%</div>
           <div class="stat-detail">Stabile</div>
         </div>
@@ -122,47 +122,55 @@
 
       <!-- div starico, pnoramica e analisi avanzata -->
        <div class="right">
-        <div class="tabs-container mb-4">
-          <nav class="tabs-nav d-inline-flex gap-1">
-            <button class="tab-btn active" onclick="switchTab('history', this)">Storico Allarmi</button>
-            <button class="tab-btn" onclick="switchTab('overview', this)">Panoramica</button>
-            <button class="tab-btn" onclick="switchTab('analysis', this)">Analisi Avanzata</button>
-          </nav>
+        <div class="tabs-container mb-4 ">
+          <div class="row g-4 d-flex justify-content-center">
+          <div class="col-12 col-lg-11">
+            <nav class="tabs-nav d-inline-flex gap-1">
+              <button class="tab-btn active" onclick="switchTab('history', this)">Storico Allarmi</button>
+              <button class="tab-btn" onclick="switchTab('overview', this)">Panoramica</button>
+              <button class="tab-btn" onclick="switchTab('analysis', this)">Analisi Avanzata</button>
+            </nav>
+          </div>
+          </div>
         </div>
 
 
         <div id="tab-history" class="tab-content active">
-          <div class="glass-panel chart-box p-0" style="height: auto; min-height: 400px;">
-            <div class="p-3 border-bottom border-white border-opacity-10">
-              <div class="chart-title mb-0">Log Eventi e Allarmi</div>
-            </div>
-            <div id="historyList" class="history-list p-3">
+          <div class="row g-4 d-flex justify-content-center">
+            <div class="col-12 col-lg-11">
+              <div class="glass-panel chart-box" style="height: auto; min-height: 400px;">
+                <div class="p-3 border-bottom border-white border-opacity-10 ">
+                  <div class="chart-title mb-0 ">Log Eventi e Allarmi</div>
+                </div>
+                <div id="historyList" class="history-list p-3">
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
 
-        <div id="tab-overview" class="tab-content">
-          <div class="row g-4">
-            <div class="col-12 col-lg-6">
+        <div id="tab-overview" class="tab-content ">
+          <div class="row g-4 d-flex justify-content-center">
+            <div class="col-12 col-lg-11">
               <div class="glass-panel chart-box">
                 <div class="chart-title">Andamento Temperature</div>
                 <div class="chart-area"><canvas id="tempChart"></canvas></div>
               </div>
             </div>
-            <div class="col-12 col-lg-6">
+            <div class="col-12 col-lg-11">
               <div class="glass-panel chart-box">
                 <div class="chart-title">Livelli Umidità</div>
                 <div class="chart-area"><canvas id="humidityChart"></canvas></div>
               </div>
             </div>
-            <div class="col-12 col-lg-6">
+            <div class="col-12 col-lg-11">
               <div class="glass-panel chart-box">
                 <div class="chart-title">Produzione Giornaliera</div>
                 <div class="chart-area"><canvas id="honeyChart"></canvas></div>
               </div>
             </div>
-            <div class="col-12 col-lg-6">
+            <div class="col-12 col-lg-11">
               <div class="glass-panel chart-box">
                 <div class="chart-title">Frequenza Sonora (Hz)</div>
                 <div class="chart-area"><canvas id="soundChart"></canvas></div>
@@ -172,9 +180,9 @@
         </div>
 
 
-        <div id="tab-analysis" class="tab-content">
-          <div class="row g-4">
-            <div class="col-12 col-lg-4">
+        <div id="tab-analysis" class="tab-content text-center" >
+          <div class="row g-4 d-flex justify-content-center">
+            <div class="col-12 col-lg-11">
               <div class="glass-panel chart-box">
                 <div class="chart-title">Correlazione Temp. Int/Est</div>
                 <div
@@ -183,13 +191,13 @@
                 <div class="chart-area"><canvas id="correlationChart"></canvas></div>
               </div>
             </div>
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-11">
               <div class="glass-panel chart-box">
                 <div class="chart-title">Derivata Temp (Velocità)</div>
                 <div class="chart-area"><canvas id="derivative1Chart"></canvas></div>
               </div>
             </div>
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-11">
               <div class="glass-panel chart-box">
                 <div class="chart-title">Derivata Peso (Rateo)</div>
                 <div class="chart-area"><canvas id="weightDerivativeChart"></canvas></div>
