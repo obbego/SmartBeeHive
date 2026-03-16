@@ -233,6 +233,11 @@ class Niagara {
      * through start_receive_raw().
     */
     Niagara_Ret get_received_data(str* source, Niagara_Control* control_output, str* message_output);
+    /*
+     * Method which is called when data is non-blockingly received from the chip.
+     * This sets the flag which signals the rest of the code for available data. 
+     */
+    void received_data_handler();
     /*Sends a raw message to a specific destination */
     Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
     
@@ -270,6 +275,10 @@ class Niagara {
      * is read through get_received_data).
     */
     bool rxActive = false;
+    /* Flag which is asynchronously set when data is received
+     * by the non-blocking chip receive
+    */
+    virtual bool received_data = false;
     /* Niagara identifier for this device */
     str identifier;
     /* If this value is set to something other than nullptr,

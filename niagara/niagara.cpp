@@ -624,11 +624,19 @@ int Niagara::start_receive_raw() {
   return RADIOLIB_ERR_NONE;
 }
 
+void received_data_handler() {
+  this.received_data = true;
+}
+
 Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_output, str* message_output) {
   /* Cannot call this method before starting a reception */
   if(!rxActive) {
     log_print("\t[RECV_RAW] Error! Not in RX state! Cannot get received data.\n", "[RECV_RAW] NO RX!\n");
     return NIAGARA_NOT_RECEIVING;
+  }
+  if(!this.received_data) {
+    log_print("\t[RECV_RAW] Error! No data available for receive.", "[RECV_RAW] NO DATA!\n");
+    return NIAGARA_TIMEOUT;
   }
   //If the identifier is empty and not yet initialized then return an error
   if(Niagara::identifier.length() == 0)
@@ -644,13 +652,17 @@ Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_out
     return NIAGARA_TIMEOUT;
   }
   // Buffer used to receive output data
-  char receive_output[received_len];
+  char receive_output[received_len + 1];
   //Read the data into the buffer
   int state = lora->readData((uint8_t*)receive_output, received_len);
+  // Reset the flag indicating data received
+  this.received_data = false;
   if(state == RADIOLIB_ERR_RX_TIMEOUT) {
     log_print(LOG_TERMINAL, "Timeout!\n");
     return NIAGARA_TIMEOUT;
   }
+  // Null-terminate the output
+  receive_output[received_len] = '\0';
   // Reset the flag indicating active read
   rxActive = false;
   if(state != RADIOLIB_ERR_NONE) {
