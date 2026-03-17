@@ -36,7 +36,6 @@ async function tbLogin() {
 async function tbGetTelemetry(deviceId) {
     const token = await tbLogin();
 
-    // Aggiunto honeyPct nella richiesta in caso in futuro lo integrerai
     const res = await fetch(
         `${TB_HOST}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=temperature,humidity,weight,battery,honeyPct`,
         {
