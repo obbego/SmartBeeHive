@@ -111,6 +111,8 @@ SX1262* Niagara::init_radio() {
     else log_printf("!\nCRC Error: %d\n", state);
     return nullptr;
   }
+  // Set up the interrupt service routine for received data
+  radio->setDio1Action(received_data_handler);
   log_print(" Initialization successful!\n", "OK.\n");
   return radio;
 }
@@ -132,6 +134,8 @@ SX1262* Niagara::init_radio() {
     else log_printf("!\nError code: %d\n", state);
     return nullptr;
   }
+  // Set up the interrupt service routine for received data
+  radio->setDio1Action(received_data_handler);
   log_print(" Initialization successful!\n", "OK.\n");
   return radio;
 }
@@ -625,7 +629,7 @@ int Niagara::start_receive_raw() {
 }
 
 void received_data_handler() {
-  this.received_data = true;
+  received_data = true;
 }
 
 Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_output, str* message_output) {
@@ -634,7 +638,7 @@ Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_out
     log_print("\t[RECV_RAW] Error! Not in RX state! Cannot get received data.\n", "[RECV_RAW] NO RX!\n");
     return NIAGARA_NOT_RECEIVING;
   }
-  if(!this.received_data) {
+  if(!received_data) {
     log_print("\t[RECV_RAW] Error! No data available for receive.", "[RECV_RAW] NO DATA!\n");
     return NIAGARA_TIMEOUT;
   }
@@ -656,7 +660,7 @@ Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_out
   //Read the data into the buffer
   int state = lora->readData((uint8_t*)receive_output, received_len);
   // Reset the flag indicating data received
-  this.received_data = false;
+  received_data = false;
   if(state == RADIOLIB_ERR_RX_TIMEOUT) {
     log_print(LOG_TERMINAL, "Timeout!\n");
     return NIAGARA_TIMEOUT;

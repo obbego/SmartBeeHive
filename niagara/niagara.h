@@ -278,7 +278,7 @@ class Niagara {
     /* Flag which is asynchronously set when data is received
      * by the non-blocking chip receive
     */
-    virtual bool received_data = false;
+    volatile bool received_data = false;
     /* Niagara identifier for this device */
     str identifier;
     /* If this value is set to something other than nullptr,
