@@ -154,6 +154,16 @@ Niagara::Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level) {
   Niagara::hal = new PiHal(1);
   #endif
 
+  /*
+   * Save this object's pointer to the static class'
+   * pointer so ISR callbacks for the receive function
+   * will edit this object's flag containing whether data is received.
+   * This static parameter set is the reason why creating multiple istances
+   * of this class on the same code is not supported, any additional
+   * istance of this class will override this static object and
+   * make receiving data not work because the flag would never be set.
+   */
+  this_object = this;
   //Initialize the radio module
   SX1262* radio_return = init_radio();
   if(radio_return == nullptr) return;
@@ -628,8 +638,8 @@ int Niagara::start_receive_raw() {
   return RADIOLIB_ERR_NONE;
 }
 
-void received_data_handler() {
-  received_data = true;
+void Niagara::received_data_handler() {
+  Niagara::this_object->received_data = true;
 }
 
 Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_output, str* message_output) {

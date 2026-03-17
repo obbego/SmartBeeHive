@@ -234,10 +234,15 @@ class Niagara {
     */
     Niagara_Ret get_received_data(str* source, Niagara_Control* control_output, str* message_output);
     /*
+     * Niagara object which is accessed by the ISR during receive
+     * operations to set the callback flag for received data
+     */
+    static Niagara* this_object;
+    /*
      * Method which is called when data is non-blockingly received from the chip.
      * This sets the flag which signals the rest of the code for available data. 
      */
-    void received_data_handler();
+    static void received_data_handler();
     /*Sends a raw message to a specific destination */
     Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
     
