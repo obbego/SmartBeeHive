@@ -2,6 +2,10 @@
 #include "Timer.h"
 #include "Hash.h"
 #include "fragmenter.h"
+
+// Initialization of the static variable referencing the object
+// Practice done to avoid "undefined reference" errors in the linker
+Niagara* Niagara::this_object = nullptr;
                               
 void Niagara::vlog_printf(const char* format, va_list args) {
   // Ignore logging if log handler isn't set
