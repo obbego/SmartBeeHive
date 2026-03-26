@@ -74,6 +74,34 @@ Ogni dispositivo dovrà avere i seguenti attributi impostati come `SHARED`:
 Nella sezione `ASSET` è necessario creare un asset comune che abbia una relazione di `CONTAINS` con tutti i dispositivi associati alle arnie. 
 Tale soluzione contribuisce in fase di controllo del dato ad estrapolare anche i dati di altre arnie per effettuare meglio un confronto. 
 
+### Inizializzazione dispositivi
+Punto importante per la configurazione del server ThingsBoard è l'inizializzazione dei dispositivi. Per questo si è pensato di creare un profilo per i dispositivi corrispondenti alle arnie con attributi statici e campi calcolati che verranno definiti dal gruppo del frontend. I profili infatti contengono informazioni utili per l'output delle telemetrie nel frontend. 
+
+L'aspetto che invece interessa il backend è la scelta di quali grandezze fisiche occorre accettare nelle telemetrie. Di default ThingsBoard accetta qualsiasi chiave inserita, ma per una migliore tolleranza agli errori potrebbe risultare conveniente specificare sin da subito quali grandezze fisiche ammettere. 
+Infatti durante la fase di trasmissione, a causa della corruzione delle informazioni trasmesse o per un'errata configurazione dei dispositivi, potrebbe essere possibile avere delle telemetrie con nomi diversi da quelli attesi. 
+
+**N.B.** *Tale funzionalità vuole essere solo un miglioramento che non costituisce una necessità. Il sistema funzionerà ugualmente anche senza sviluppare questo aspetto, semplicemente non definendo la lista di telemetrie da ammettere*.
+
+Per gestire solo alcune grandezze fisiche come telemetrie, occorre sviluppare i seguenti punti:
+
+#### Script di inizializzazione attributi
+Questo script avviato una volta installato ThingsBoard si impegna a popolare i dispositivi inseriti nella piattaforma con un attributo condiviso contenente la stringa in formato JSON di tutte le grandezze fisiche accettate per la telemetria.
+
+Tale script leggerà le telemetrie accettate da un file `allowed_keys.json` e deve rispettare il seguente formato:
+```json
+[
+    {
+        "devices":["device1", "device2"],
+        "keys":["humidity", "temperature", "weight", "noise_intensity", "noise_frequency"]
+    }
+]
+```
+Come è possibile notare il file può gestire anche più liste di telemetrie diverse associate a dispositivi diversi. 
+
+#### Rule node di controllo
+All'interno della rule chain che sarà amputata al controllo della telemetria in ingresso che dovrà controllare la lista di telemetrie valide (se presente) e, se in tal caso non c'è corrispondenza, generare un allarme senza salvare la telemetria.
+
+
 ### Rule chains
 Nel server Thingsboard, per rispondere alle esigenze individuate nell'analisi funzionale inerente al server, occorre creare / modificare i seguenti nodi. 
 
@@ -143,6 +171,7 @@ La seguente sezione indica i possibili allarmi che potrebbero essere generati da
 | `ErrorTimeseriesWeightDevice` | Minor | L'arricchimento con le telemetrie di peso del dispositivo non è riuscito. |
 | `HoneyReady` | Warning | Avviso che è possibile raccogliere il miele |
 | `FailedAssetAttributes` | Minor | Recupero degli attributi dell'asset non riuscito. |
+| `TelemetryInvalidKey` (Opzionale) | Major | Telemetria inserita non ha il nome della chiave corrispondente a quelli accettati dal server riguardo il dispositivo. |
 
 ### Database
 Il database ThingsBoard dispone anche della possibilità di aggiungere tabelle aggiuntive utilizzando il motore Cassandra. 
