@@ -1,0 +1,6 @@
+[
+    {
+        "devices":["tevWRCdJC7IYUPl3ha4F"],
+        "keys":["humidity", "temperature", "weight", "noise_intensity", "noise_frequency"]
+    }
+]
