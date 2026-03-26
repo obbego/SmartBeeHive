@@ -53,7 +53,7 @@ foreach ($TB_DEVICES as $hiveId => $deviceId) {
     // Se il frontend ha chiesto un'arnia specifica, salto le altre
     if ($requestedId && $requestedId !== $hiveId) continue;
 
-    $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries?keys=temperature,humidity,weight,battery,honeyPct,tempOut";
+    $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries?keys=tempIn,humidity,weight,battery,honeyPct,tempOut";
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [

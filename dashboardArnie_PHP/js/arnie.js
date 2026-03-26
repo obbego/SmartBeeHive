@@ -83,31 +83,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             const telemetry = await tbGetTelemetry(hiveId);
 
             if (telemetry && Object.keys(telemetry).length > 0) {
-                const tempVal = telemetry.temperature ? telemetry.temperature.slice(-1)[0].value : 0;
+                const temInVal = telemetry.tempIn ? telemetry.tempIn.slice(-1)[0].value : 0;
                 const humVal = telemetry.humidity ? telemetry.humidity.slice(-1)[0].value : 0;
                 const weightVal = telemetry.weight ? telemetry.weight.slice(-1)[0].value : 0;
                 const tOutVal = telemetry.tempOut ? telemetry.tempOut.slice(-1)[0].value : 0; 
                 const pctVal = telemetry.honeyPct ? telemetry.honeyPct.slice(-1)[0].value : 0;
 
-                document.getElementById('valTempIn').innerText = parseFloat(tempVal).toFixed(1) + '°C';
+                document.getElementById('valTempIn').innerText = parseFloat(temInVal).toFixed(1) + '°C';
                 document.getElementById('valHum').innerText = parseFloat(humVal).toFixed(1) + '%';
                 document.getElementById('valWeight').innerText = parseFloat(weightVal).toFixed(1) + 'kg';
                 document.getElementById('valTempOut').innerText = parseFloat(tOutVal).toFixed(1) + '°C';
                 document.getElementById('barMiele').style.height = parseFloat(pctVal).toFixed(0) + '%';
                 document.getElementById('valMiele').innerText = parseFloat(pctVal).toFixed(0) + '%';
 
-                if (telemetry.temperature && telemetry.temperature.length > 0) {
-                    const date = new Date(telemetry.temperature.slice(-1)[0].ts);
+                if (telemetry.tempIn && telemetry.tempIn.length > 0) {
+                    const date = new Date(telemetry.tempIn.slice(-1)[0].ts);
                     document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
                 } else {
                     document.getElementById('lastUpdate').innerText = 'Ultimo dato: Non disponibile';
                 }
 
                 const semaforo = document.getElementById('statusSemaforo');
-                if (tempVal == 0 && weightVal == 0 && humVal == 0) {
+                if (temInVal == 0 && weightVal == 0 && humVal == 0) {
                     semaforo.className = 'status-alert instabile';
                     semaforo.innerHTML = '<i data-lucide="help-circle"></i> Valori a zero - Verificare sensori';
-                } else if (tempVal > 40 || tempVal < -5) {
+                } else if (temInVal > 40 || temInVal < -5) {
                     semaforo.className = 'status-alert allarme';
                     semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Temperatura fuori soglia';
                 } else {

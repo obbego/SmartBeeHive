@@ -24,7 +24,7 @@ async function tbLoadAllHives() {
 
             if (!telemetry) continue;
 
-            const temp = telemetry.temperature ? telemetry.temperature.slice(-1)[0].value : 0;
+            const temp = telemetry.tempIn ? telemetry.tempIn.slice(-1)[0].value : 0;
             const hum = telemetry.humidity ? telemetry.humidity.slice(-1)[0].value : 0;
             const weight = telemetry.weight ? telemetry.weight.slice(-1)[0].value : 0;
             const pct = telemetry.honeyPct ? telemetry.honeyPct.slice(-1)[0].value : 0;
