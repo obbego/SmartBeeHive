@@ -9,7 +9,7 @@
     "additionalInfo": null
   },
   "metadata": {
-    "version": 47,
+    "version": 50,
     "firstNodeIndex": 4,
     "nodes": [
       {
@@ -23,12 +23,13 @@
           "processingSettings": {
             "type": "ON_EVERY_MESSAGE"
           },
-          "scope": "CLIENT_SCOPE",
+          "scope": "SHARED_SCOPE",
           "notifyDevice": false,
           "sendAttributesUpdatedNotification": false,
-          "updateAttributesOnlyOnValueChange": true
+          "updateAttributesOnlyOnValueChange": false
         },
         "additionalInfo": {
+          "description": null,
           "layoutX": 1000,
           "layoutY": 65
         }
@@ -228,8 +229,8 @@
         },
         "additionalInfo": {
           "description": "node to check if the data is correct",
-          "layoutX": 1005,
-          "layoutY": 146
+          "layoutX": 984,
+          "layoutY": 154
         }
       },
       {

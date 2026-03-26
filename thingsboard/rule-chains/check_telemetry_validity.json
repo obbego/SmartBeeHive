@@ -11,7 +11,7 @@
     }
   },
   "metadata": {
-    "version": 62,
+    "version": 66,
     "firstNodeIndex": 0,
     "nodes": [
       {
@@ -67,8 +67,8 @@
         },
         "additionalInfo": {
           "description": "",
-          "layoutX": 2262,
-          "layoutY": 156
+          "layoutX": 2561,
+          "layoutY": 165
         }
       },
       {
@@ -160,8 +160,8 @@
         },
         "additionalInfo": {
           "description": "split the array of telemetries into single messages to process",
-          "layoutX": 1359,
-          "layoutY": 145
+          "layoutX": 1658,
+          "layoutY": 154
         }
       },
       {
@@ -182,8 +182,8 @@
         },
         "additionalInfo": {
           "description": "node to check the value of the telemetry in order to establish if it can replace o be saved to the database",
-          "layoutX": 1630,
-          "layoutY": 143
+          "layoutX": 1929,
+          "layoutY": 152
         }
       },
       {
@@ -192,20 +192,20 @@
         "debugSettings": {
           "failuresEnabled": false,
           "allEnabled": false,
-          "allEnabledUntil": 0
+          "allEnabledUntil": 1774546693420
         },
         "singletonMode": false,
         "queueName": null,
         "configurationVersion": 0,
         "configuration": {
           "scriptLang": "JS",
-          "jsScript": "var result = JSON.parse(metadata.valid); // add this to get the boolean\n\nif(result)\n    return ['valid'];\n\nreturn ['dropped'];",
+          "jsScript": "/* ADDITION TO THE CODE */\n/* before confirming the validity of the telemetry, \ncontrol if the telemetry is among the allowed ones,\nif the list has been set */\nif(\"shared_allowed_telemetry_keys\" in metadata && metadata.shared_allowed_telemetry_keys != null && metadata.shared_allowed_telemetry_keys != undefined){\n    var keyList = JSON.parse(metadata.shared_allowed_telemetry_keys);  \n    if(!keyList.includes(Object.keys(msg)[0])) // verify if the keys has been added\n        return ['invalid_key'];\n}\n\nvar result = JSON.parse(metadata.valid); // add this to get the boolean\n\nif(result)\n    return ['valid'];\n\n\nreturn ['dropped'];",
           "tbelScript": "function nextRelation(metadata, msg) {\n    return ['one','nine'];\n}\nif(msgType == 'POST_TELEMETRY_REQUEST') {\n    return ['two'];\n}\nreturn nextRelation(metadata, msg);"
         },
         "additionalInfo": {
           "description": "switch that process the validity of the message ",
-          "layoutX": 1932,
-          "layoutY": 148
+          "layoutX": 2231,
+          "layoutY": 157
         }
       },
       {
@@ -261,6 +261,57 @@
           "layoutX": 562,
           "layoutY": 218
         }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.metadata.TbGetAttributesNode",
+        "name": "get_allowed-telemetry-keys",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "tellFailureIfAbsent": false,
+          "fetchTo": "METADATA",
+          "clientAttributeNames": [],
+          "sharedAttributeNames": [
+            "allowed_telemetry_keys"
+          ],
+          "serverAttributeNames": [],
+          "latestTsKeyNames": [],
+          "getLatestValueWithTs": false
+        },
+        "additionalInfo": {
+          "description": "node to add the allowed keys for the telemetry and compare them with each message",
+          "layoutX": 1377,
+          "layoutY": 154
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "error_invalid-key-telemetry",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\nif (metadata.prevAlarmDetails != null) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    metadata.remove('prevAlarmDetails');\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "alarmType": "TelemetryInvalidKey",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": false,
+          "propagateToTenant": false,
+          "dynamicSeverity": false
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 2580,
+          "layoutY": 237
+        }
       }
     ],
     "connections": [
@@ -286,13 +337,13 @@
       },
       {
         "fromIndex": 4,
-        "toIndex": 5,
-        "type": "Success"
+        "toIndex": 8,
+        "type": "Failure"
       },
       {
         "fromIndex": 4,
-        "toIndex": 8,
-        "type": "Failure"
+        "toIndex": 10,
+        "type": "Success"
       },
       {
         "fromIndex": 5,
@@ -308,6 +359,16 @@
         "fromIndex": 7,
         "toIndex": 1,
         "type": "valid"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 11,
+        "type": "invalid_key"
+      },
+      {
+        "fromIndex": 10,
+        "toIndex": 5,
+        "type": "Success"
       }
     ],
     "ruleChainConnections": null
