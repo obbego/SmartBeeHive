@@ -1,0 +1,503 @@
+:root {
+  /* Sfondo*/
+  --bg-dark: #0f172a;
+  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+
+  /* Glassmorphism*/
+  --glass-bg: rgba(30, 41, 59, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --glass-blur: blur(16px);
+
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+
+  /* Accenti */
+  --honey-primary: #f59e0b;
+  --honey-glow: #fbbf24;
+  --honey-gradient: linear-gradient(to top, #d97706, #fbbf24);
+
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-dark);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  background-size: cover;
+  color: var(--text-main);
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+.container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Utilità Glass */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 16px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+/* HEADER */
+header {
+  padding: 24px 0;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  letter-spacing: -0.5px;
+}
+
+.brand-icon {
+  color: var(--honey-glow);
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.5));
+}
+
+/* STATS */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  padding: 20px;
+}
+
+.stat-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 10px 0 5px 0;
+  letter-spacing: -1px;
+}
+
+.stat-label {
+  font-size: 20px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stat-detail {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* NUOVE ARNIE - LAYOUT LIQUID BAR */
+.hives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.hive-card {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hive-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--honey-primary);
+}
+
+.hive-info {
+  flex: 1;
+}
+
+.hive-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.hive-name {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.status-green {
+  color: var(--success);
+  background: currentColor;
+}
+
+.status-red {
+  color: var(--danger);
+  background: currentColor;
+}
+
+.status-yellow {
+  color: var(--warning);
+  background: currentColor;
+}
+
+.hive-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.metric-box {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.metric-val {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* IL NUOVO INDICATORE GRAFICO (Liquid Bar) */
+.honey-tank-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+}
+
+.honey-tank {
+  width: 16px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.honey-liquid {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--honey-gradient);
+  transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 0 15px var(--honey-primary);
+}
+
+/* Effetto "livello liquido" */
+.honey-liquid::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.honey-pct {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--honey-glow);
+}
+
+/* TABS NAV */
+.tabs-container {
+  margin-bottom: 20px;
+}
+
+.tabs-nav {
+  display: inline-flex;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 10px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.tab-btn:hover {
+  color: white;
+}
+
+.tab-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--honey-glow);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* CONTENUTO TABS */
+.tab-content {
+  display: none;
+  animation: fadeIn 0.4s ease;
+  justify-content: center; /* centro orizzontale */
+  align-items: center;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* GRIGLIE GRAFICI */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 20px;
+}
+
+.chart-box {
+  padding: 20px;
+  height: 350px;
+  /* Altezza fissa per i grafici */
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: var(--text-main);
+}
+
+.chart-area {
+  flex: 1;
+  position: relative;
+  width: 100%;
+}
+
+/* STORICO TABELLA */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.history-item:last-child {
+  border: none;
+}
+
+.tag {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.tag.open {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.tag.closed {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.btn-back {
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  transition: 0.3s;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.metric-big {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.success {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.columns{
+  display: grid;
+  grid-template-columns: 30% 70%; /* due colonne */
+  gap: 20px;
+  grid-template-rows: auto;
+  align-items: flex-start;
+}
+
+
+.left{
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+
+.right{
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+
+.left .tabs-container h3 {
+  display: inline-flex;
+  align-items: center;
+  height: 54px;
+  padding: 0 12px;
+  margin: 0;
+}
+
+.columns_arnie{
+  display: grid;
+  grid-template-columns: 20% 80%; /* due colonne */
+  gap: 5px;
+  grid-template-rows: auto;
+}
+
+@media (max-width: 992px) {
+  .columns{
+    display: flex;
+    flex-direction: column;
+  }
+
+  .left{
+    order: 2;
+  }
+
+  .right{
+    order: 1;
+  }
+}
+
+
+@media (max-width: 576px) {
+  /* Ridurre il padding del corpo pagina e dell'header */
+  body { padding-bottom: 20px; }
+  header { padding: 12px 0; margin-bottom: 15px; }
+  h1 { font-size: 18px; }
+
+  /* Ridurre le card delle statistiche (quelle in alto) */
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 22px; margin: 5px 0; }
+  .stat-label { font-size: 14px; }
+
+  /* OTTIMIZZAZIONE CARD ARNIE */
+  .hive-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  /* Rimpicciolire il serbatoio del miele per non rubare spazio */
+  .honey-tank-wrapper { width: 35px; }
+  .honey-tank { height: 60px; width: 12px; }
+  .honey-pct { font-size: 11px; margin-top: 5px; }
+
+  /* Rendere le metriche (Peso, Temp, etc) più compatte */
+  .hive-metrics {
+    grid-template-columns: 1fr 1fr; /* Mantiene 2 colonne ma riduce i testi */
+    gap: 6px;
+  }
+  .metric-box { padding: 4px 8px; }
+  .metric-label { font-size: 9px; }
+  .metric-val { font-size: 13px; }
+
+  /* Grafici: ridurre l'altezza fissa per evitare che uno solo riempia lo schermo */
+  .chart-box { height: 280px; padding: 12px; }
+  
+  /* Tabs: pulsanti più piccoli */
+  .tab-btn { padding: 8px 12px; font-size: 13px; }
+}
