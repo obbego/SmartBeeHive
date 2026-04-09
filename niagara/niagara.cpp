@@ -552,6 +552,8 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
       case TxState::WAIT_ACK:
         log_print("==== [WAITING FOR CRC ACKNOWLEDGEMENT] ====\n", "[SEND] Waiting ACK.\n");
 
+        // Before the loop, initialise status as NIAGARA_TIMEOUT so the while loop won't exit immeditaely
+        status = NIAGARA_TIMEOUT;
         do {
           //In case the acknowledgement timed out then try to retransmit the message
           if(timer.elapsed() > MAX_RECV_WAIT) {
@@ -583,8 +585,10 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
         if(state == TxState::SEND_SYN) break;
 
         //If the receive method returned an error then propagate it to the whole method
-        if(status != NIAGARA_OK)
+        if(status != NIAGARA_OK){
+          log_printf("[SEND] Closing send with status code [%d]\n", static_cast<int>(status));
           return NIAGARA_RECEIVE_ERROR;
+        }
 
         //If the remote device isn't correct or the control message isn't an acknowledgement then ignore this message
         if(remote != destination || control != ACK) {
@@ -655,7 +659,7 @@ Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_out
     return NIAGARA_NOT_RECEIVING;
   }
   if(!received_data) {
-    log_print("\t[RECV_RAW] Error! No data available for receive.", "[RECV_RAW] NO DATA!\n");
+    log_print("\t[RECV_RAW] Error! No data available for receive.\n", "[RECV_RAW] NO DATA!\n");
     return NIAGARA_TIMEOUT;
   }
   //If the identifier is empty and not yet initialized then return an error
