@@ -40,7 +40,7 @@ int main(void) {
 		//Try to receive
 		str receive;
 		str source;
-		error = device.receive(&source, &receive);
+		error = device.receive(&receive, &source);
 		if(error != NIAGARA_OK) {
 			fprintf(stderr, "Error while receiving data: %d\n", static_cast<int>(error));
 			continue;
