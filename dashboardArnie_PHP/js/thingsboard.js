@@ -14,7 +14,6 @@ async function tbGetTelemetry(hiveId) {
 
 async function tbLoadAllHives() {
     try {
-        // Chiediamo al PHP i dati di TUTTE le arnie
         const res = await fetch(API_URL);
         const allData = await res.json();
 
@@ -28,11 +27,13 @@ async function tbLoadAllHives() {
             const hum = telemetry.humidity ? telemetry.humidity.slice(-1)[0].value : 0;
             const weight = telemetry.weight ? telemetry.weight.slice(-1)[0].value : 0;
             const pct = telemetry.honeyPct ? telemetry.honeyPct.slice(-1)[0].value : 0;
+            const tOut = telemetry.tempOut ? telemetry.tempOut.slice(-1)[0].value : 0;
 
             hive.t = parseFloat(temp).toFixed(1);
             hive.h = parseFloat(hum).toFixed(1);
             hive.w = parseFloat(weight).toFixed(1);
             hive.pct = parseFloat(pct).toFixed(0);
+            hive.tOut = parseFloat(tOut).toFixed(1);
 
             if (temp == 0 && hum == 0 && weight == 0) {
                 hive.status = 'yellow'; 
