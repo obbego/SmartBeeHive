@@ -5,9 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3be1c6bd-31f8-495c-b0d1-7a03097f68f3" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../dashboardArnie_PHP.zip" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/config.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/thingsboard.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/thingsboard.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api.php" beforeDir="false" afterPath="$PROJECT_DIR$/api.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,7 +71,7 @@
       <workItem from="1774856482969" duration="1311000" />
       <workItem from="1775720505020" duration="4767000" />
       <workItem from="1775727886163" duration="158000" />
-      <workItem from="1775728481743" duration="767000" />
+      <workItem from="1775728481743" duration="2441000" />
     </task>
     <servers />
   </component>
