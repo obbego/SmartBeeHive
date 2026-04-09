@@ -8,6 +8,58 @@ const mockAlertsHistory = [
 ];
 let alertsHistory = [];
 
+// CALCOLO STATISTICHE DINAMICHE
+function computeStats() {
+  const activeHives = hivesData.filter(h => h.status !== 'offline');
+
+  // Miele totale: somma del peso * pct / 100 di ogni arnia
+  const totalHoney = hivesData.reduce((sum, h) => {
+    const honey = (parseFloat(h.pct) / 100) * parseFloat(h.w);
+    return sum + (isNaN(honey) ? 0 : honey);
+  }, 0);
+
+  // Allarmi attivi: arnie con status 'red'
+  const activeAlarms = hivesData.filter(h => h.status === 'red').length;
+
+  // Temperatura interna media
+  const temps = activeHives.map(h => parseFloat(h.t)).filter(v => !isNaN(v) && v > 0);
+  const avgTemp = temps.length > 0 ? (temps.reduce((a, b) => a + b, 0) / temps.length) : 0;
+
+  // Umidità media
+  const hums = activeHives.map(h => parseFloat(h.h)).filter(v => !isNaN(v) && v > 0);
+  const avgHum = hums.length > 0 ? (hums.reduce((a, b) => a + b, 0) / hums.length) : 0;
+
+  // Temperatura esterna: è la stessa per tutte le arnie, prendiamo il primo valore valido disponibile
+  const firstTOut = hivesData.map(h => parseFloat(h.tOut)).find(v => !isNaN(v) && v !== 0 && v !== undefined);
+  const tempOut = (firstTOut !== undefined && firstTOut !== null) ? firstTOut : null;
+
+  return { totalHoney, activeAlarms, avgTemp, avgHum, tempOut };
+}
+
+function renderStats() {
+  const { totalHoney, activeAlarms, avgTemp, avgHum, tempOut } = computeStats();
+
+  const honeyEl = document.getElementById('statHoney');
+  if (honeyEl) honeyEl.innerText = totalHoney.toFixed(1) + ' kg';
+
+  const alarmsEl = document.getElementById('statAlarms');
+  if (alarmsEl) alarmsEl.innerText = activeAlarms;
+
+  const tempEl = document.getElementById('statTemp');
+  if (tempEl) tempEl.innerText = avgTemp > 0 ? avgTemp.toFixed(1) + '°C' : '--';
+
+  const humEl = document.getElementById('statHum');
+  if (humEl) humEl.innerText = avgHum > 0 ? avgHum.toFixed(1) + '%' : '--';
+
+  const tOutEl = document.getElementById('statTempOut');
+  if (tOutEl) tOutEl.innerText = tempOut !== null ? tempOut.toFixed(1) + '°C' : '--';
+
+  const alarmsDetail = document.getElementById('statAlarmsDetail');
+  if (alarmsDetail) {
+    alarmsDetail.innerText = activeAlarms > 0 ? 'Attenzione richiesta' : 'Tutto regolare';
+  }
+}
+
 // RENDER ARNIE
 function renderHives() {
   const grid = document.getElementById('hivesGrid');
@@ -29,22 +81,19 @@ function renderHives() {
     if (hive.status === 'red') statusText = 'ALLARME';
 
     return `
-    <div class="col-12  ${desktopClass}">
+    <div class="col-12 ${desktopClass}">
       <div class="glass-panel hive-card h-100" 
            onclick="window.location.href='arnie.html?id=${hive.id}'"
            style="cursor: pointer; transition: transform 0.2s;">
 
-        <!-- contenitore con le informazioni delle arnie (nome, stato, metriche) --> 
         <div class="hive-info">
 
-          <!-- nome e pallino -->
           <div class="hive-header">
             <div class="hive-name text-truncate">${hive.name}</div>
             <div class="status-dot status-${hive.status === 'offline' ? 'yellow' : hive.status}"></div>
           </div>
 
           <div class="columns_arnie">
-          <!-- miele -->
             <div class="honey-tank-wrapper me-3">
                 <div class="honey-tank" title="Riempimento: ${hive.pct}%">
                     <div class="honey-liquid" style="height: ${hive.pct}%"></div>
@@ -52,9 +101,8 @@ function renderHives() {
                 <span class="honey-pct">${hive.pct}%</span>
             </div>
 
-            <!-- informazioni  -->
             <div class="hive-metrics">
-            <div class="metric-box">
+              <div class="metric-box">
                 <div class="metric-label">PESO</div>
                 <div class="metric-val">${hive.w}kg</div>
               </div>
@@ -81,6 +129,7 @@ function renderHives() {
   `}).join('');
 
   lucide.createIcons();
+  renderStats(); // Aggiorna le statistiche in cima ogni volta che si rendono le arnie
 }
 
 function renderHistory() {
@@ -136,27 +185,25 @@ async function loadRealData() {
 // INIT PRINCIPALE CON LOGICA SWITCH
 document.addEventListener('DOMContentLoaded', () => {
   const mockSwitch = document.getElementById('mockDataSwitch');
-  const isMockMode = localStorage.getItem('mockMode') === 'true'; // Legge la scelta salvata
+  const isMockMode = localStorage.getItem('mockMode') === 'true';
 
   if (mockSwitch) {
     mockSwitch.checked = isMockMode;
     mockSwitch.addEventListener('change', (e) => {
       localStorage.setItem('mockMode', e.target.checked);
-      window.location.reload(); // Ricarica la pagina applicando la nuova modalità
+      window.location.reload();
     });
   }
 
   if (isMockMode) {
-    // MODALITA' DEMO: Usiamo i dati mock precaricati da dati.js
     alertsHistory = [...mockAlertsHistory];
     renderHives();
     renderHistory();
     initAllCharts();
     lucide.createIcons();
   } else {
-    // MODALITA' REALE: Azzeriamo i dati mock e peschiamo da ThingsBoard
-    hivesData.forEach(hive => { hive.t = 0; hive.h = 0; hive.w = 0; hive.pct = 0; hive.status = 'offline'; });
-    alertsHistory = []; // Nessun allarme finto
+    hivesData.forEach(hive => { hive.t = 0; hive.h = 0; hive.w = 0; hive.pct = 0; hive.tOut = 0; hive.status = 'offline'; });
+    alertsHistory = [];
     renderHives();
     renderHistory();
     initAllCharts();
