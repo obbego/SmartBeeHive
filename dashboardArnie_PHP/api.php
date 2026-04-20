@@ -61,7 +61,25 @@ $curl_handles = [];
 foreach ($TB_DEVICES as $hiveId => $deviceId) {
     if ($requestedId && $requestedId !== $hiveId) continue;
 
-    $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries?keys=tempIn,humidity,weight,battery,honeyPct,tempOut";
+    $interval = isset($_GET['interval']) ? $_GET['interval'] : '24h';
+    $endTs = round(microtime(true) * 1000);
+
+    //Calcolo startTs e limite punti in base all'intervallo richiesto
+    if ($interval === '7d') {
+        $startTs = $endTs - (7 * 24 * 60 * 60 * 1000);
+        $limit = 500;
+    } elseif ($interval === '30d') {
+        $startTs = $endTs - (30 * 24 * 60 * 60 * 1000);
+        $limit = 1000;
+    } else { // Default 24h
+        //$startTs = $endTs - (24 * 60 * 60 * 1000);
+        $startTs = $endTs - (10 * 24 * 60 * 60 * 1000);
+        $limit = 100;
+    }
+
+    $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries"
+        . "?keys=tempIn,humidity,weight,battery,honeyPct,tempOut"
+        . "&startTs=$startTs&endTs=$endTs&limit=$limit";
     $ch = curl_init($url);
 
     curl_setopt_array($ch, [
