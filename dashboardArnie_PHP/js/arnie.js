@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     if (isMockMode) {
         // --- MODALITA' DEMO ---
+        // Usiamo i dati reali dell'oggetto 'hive' recuperato da dati.js
         document.getElementById('valTempIn').innerText = hive.t + '°C';
         document.getElementById('valTempOut').innerText = hive.tOut + '°C';
         document.getElementById('valWeight').innerText = hive.w + 'kg';
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('barMiele').style.height = hive.pct + '%';
         document.getElementById('valMiele').innerText = hive.pct + '%';
         document.getElementById('lastUpdate').innerText = 'Ultimo aggiornamento: ' + hive.lastUpdate;
+
         const semaforo = document.getElementById('statusSemaforo');
         if (hive.status === 'green') {
             semaforo.className = 'status-alert ottimale';
@@ -55,16 +57,57 @@ document.addEventListener('DOMContentLoaded', async () => {
             semaforo.className = 'status-alert allarme';
             semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Intervento richiesto';
         }
+
+        // --- GENERAZIONE DATI STORICI MOCK ---
+        // Creiamo una serie di 5 punti per far apparire i grafici "vivi"
+        const ora = Date.now();
+        const unOra = 3600000;
+
+        const mockTelemetry = {
+            tempIn: [
+                { ts: ora - 4*unOra, value: hive.t - 0.5 },
+                { ts: ora - 3*unOra, value: hive.t - 0.2 },
+                { ts: ora - 2*unOra, value: hive.t + 0.3 },
+                { ts: ora - unOra, value: hive.t + 0.1 },
+                { ts: ora, value: hive.t }
+            ],
+            tempOut: [
+                { ts: ora - 4*unOra, value: hive.tOut - 2 },
+                { ts: ora - 3*unOra, value: hive.tOut - 1 },
+                { ts: ora - 2*unOra, value: hive.tOut + 1 },
+                { ts: ora - unOra, value: hive.tOut + 0.5 },
+                { ts: ora, value: hive.tOut }
+            ],
+            humidity: [
+                { ts: ora - 4*unOra, value: hive.h + 2 },
+                { ts: ora - 2*unOra, value: hive.h - 1 },
+                { ts: ora, value: hive.h }
+            ],
+            weight: [
+                { ts: ora - 4*unOra, value: hive.w - 0.3 },
+                { ts: ora - 3*unOra, value: hive.w - 0.2 },
+                { ts: ora - 2*unOra, value: hive.w - 0.1 },
+                { ts: ora, value: hive.w }
+            ],
+            honeyPct: [
+                { ts: ora, value: hive.pct }
+            ]
+        };
+
+        // DISEGNA I GRAFICI CON I DATI SIMULATI
+        initDetailCharts(mockTelemetry);
+
+        // --- STORICO ALERT ---
         historyDiv.innerHTML = "";
         mockAlerts.forEach(alert => {
             historyDiv.innerHTML += `
-            <div class="history-item px-0 mb-3">
-                <div>
-                    <div style="font-weight:600; color:white;">${alert.text}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">${alert.date}</div>
-                </div>
-                <span class="tag ${alert.status}">${alert.status === "open" ? "APERTO" : "RISOLTO"}</span>
-            </div>`;
+        <div class="history-item px-0 mb-3">
+            <div>
+                <div style="font-weight:600; color:white;">${alert.text}</div>
+                <div style="font-size:12px; color:var(--text-muted);">${alert.date}</div>
+            </div>
+            <span class="tag ${alert.status}">${alert.status === "open" ? "APERTO" : "RISOLTO"}</span>
+        </div>`;
         });
     } else {
         // --- MODALITA' REALE ---
@@ -114,7 +157,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
 
     // --- GESTIONE SELETTORE TEMPORALE GRAFICI (STILE DASHBOARD) ---
-    // Nota: cerchiamo .tab-btn invece di .tab
     const timeTabs = document.querySelectorAll('#timeRangeSelector .tab-btn');
 
     timeTabs.forEach(tab => {
