@@ -149,3 +149,11 @@ header a:hover {
     margin-top: 10px;
     text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
 }
+
+/* Rimpicciolisce i bottoni stile tab nel selettore temporale dei grafici */
+#timeRangeSelector .tab-btn {
+    padding: 6px 14px;      /* Riduce lo spazio interno (sopra/sotto e lati) */
+    font-size: 0.85rem;     /* Rimpicciolisce leggermente il testo */
+    height: auto;           /* Annulla eventuali altezze fisse ereditate */
+    min-height: 32px;       /* Imposta un'altezza minima contenuta */
+}
