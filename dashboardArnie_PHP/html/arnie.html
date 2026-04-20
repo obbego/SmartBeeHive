@@ -56,7 +56,7 @@
   </header>
 
   <div class="container">
-    <div class="row g-4 mb-4 align-items-start">
+    <div class="row g-4 mb-4 align-items-stretch">
       <div class="col-lg-6">
         <div class="row g-3">
           <div class="col-3">
@@ -108,8 +108,7 @@
             <div class="glass-panel p-4">
               <div class="chart-title mb-3">Stato Sensori</div>
               <div id="statusSemaforo" class="status-alert mb-3"></div>
-              <div
-                class="d-flex justify-content-between align-items-center pt-3 border-top border-white border-opacity-10">
+              <div class="d-flex justify-content-between align-items-center pt-3">
                 <span style="font-size: 13px; color: var(--text-muted);">Affidabilità R² (In/Out):</span>
                 <strong id="valR2" class="text-white">0.82</strong>
               </div>
@@ -118,15 +117,14 @@
         </div>
       </div>
 
-      <div class="col-lg-6">
-        <div class="glass-panel p-0 h-100 d-flex flex-column">
-          <div class="p-3 border-bottom border-white border-opacity-10">
-            <div class="chart-title mb-0" style="color: var(--danger);">Storico Allarmi</div>
-          </div>
-
-          <div id="localHistory" class="history-list p-3 flex-grow-1">
-          </div>
+      <div class="col-lg-6 col-right-fix"> <div class="glass-panel p-0 flex-grow-1 d-flex flex-column margin-top-align">
+        <div class="p-3 border-bottom border-white border-opacity-10">
+          <div class="chart-title mb-0" style="color: var(--danger);">Storico Allarmi</div>
         </div>
+
+        <div id="localHistory" class="history-list p-3">
+        </div>
+      </div>
       </div>
 
     </div>
