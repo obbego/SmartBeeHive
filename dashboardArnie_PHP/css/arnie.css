@@ -83,7 +83,7 @@ header a:hover {
 
 /* La lista interna degli allarmi */
 .history-list {
-    height: 430px;
+    height: 438px;
     /* Altezza FISSA: non cambia mai */
     overflow-y: auto;
     padding-right: 8px;
