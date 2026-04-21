@@ -1,5 +1,5 @@
 // Percorso del tuo nuovo backend PHP
-const API_URL = "../api.php"; 
+const API_URL = "../api.php";
 
 async function tbGetTelemetry(hiveId, interval = '24') {
     try {
@@ -28,25 +28,27 @@ async function tbLoadAllHives() {
             const weight = telemetry.weight ? telemetry.weight.slice(-1)[0].value : 0;
             const pct = telemetry.honeyPct ? telemetry.honeyPct.slice(-1)[0].value : 0;
             const tOut = telemetry.tempOut ? telemetry.tempOut.slice(-1)[0].value : 0;
+            const peakFreq = telemetry.peakFreq ? telemetry.peakFreq.slice(-1)[0].value : 0;
 
             hive.t = parseFloat(temp).toFixed(1);
             hive.h = parseFloat(hum).toFixed(1);
             hive.w = parseFloat(weight).toFixed(1);
             hive.pct = parseFloat(pct).toFixed(0);
             hive.tOut = parseFloat(tOut).toFixed(1);
+            hive.peakFreq = parseFloat(peakFreq).toFixed(0);
 
             if (temp == 0 && hum == 0 && weight == 0) {
-                hive.status = 'yellow'; 
+                hive.status = 'yellow';
             } else if (temp > 40 || temp < -5) {
-                hive.status = 'red'; 
+                hive.status = 'red';
             } else {
-                hive.status = 'green'; 
+                hive.status = 'green';
             }
         }
     } catch (err) {
         console.error("Errore caricamento dati dal PHP", err);
         hivesData.forEach(hive => {
-            hive.t = 0; hive.h = 0; hive.w = 0; hive.pct = 0; hive.status = 'offline';
+            hive.t = 0; hive.h = 0; hive.w = 0; hive.pct = 0; hive.tOut = 0; hive.peakFreq = 0; hive.status = 'offline';
         });
     }
 }

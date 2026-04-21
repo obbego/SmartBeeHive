@@ -1,12 +1,75 @@
 Chart.defaults.color = '#94a3b8';
 Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
 Chart.defaults.font.family = "'Inter', sans-serif";
+
 const mockAlerts = [
     { text: "Temperatura fuori soglia", date: "10 min fa", status: "open" },
     { text: "Variazione peso anomala", date: "02/03/2026 14:32", status: "closed" },
     { text: "Batteria sensore quasi scarica", date: "03/03/2026 07:48", status: "closed" },
     { text: "Sensore temperatura non risponde", date: "04/03/2026 11:20", status: "open" }
 ];
+
+// ─────────────────────────────────────────────
+// LOGICA COLORI PER I 4 RIQUADRI METRICHE
+// Grigio = ok, Arancio = attenzione, Rosso = allarme
+// ─────────────────────────────────────────────
+
+function applyMetricColors(tempIn, hum, weight, peakFreq) {
+    setMetricColor('valTempIn',   getTempInColor(tempIn));
+    setMetricColor('valHum',      getHumColor(hum));
+    setMetricColor('valWeight',   getWeightColor(weight));
+    setMetricColor('valPeakFreq', getFreqColor(peakFreq));
+}
+
+function setMetricColor(elementId, color) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.style.color = color;
+    el.style.fontWeight = color ? '700' : '';
+}
+
+// Temperatura interna (°C)
+// Ottimale api: 33–38 °C
+function getTempInColor(t) {
+    const v = parseFloat(t);
+    if (isNaN(v) || v <= 0) return '';           // dato assente → default
+    if (v >= 38.5 || v < 30) return 'var(--danger)';   // allarme
+    if (v >= 37.5 || v < 32) return 'var(--warning)';  // attenzione
+    return '';                                           // ok → grigio default
+}
+
+// Umidità interna (%)
+// Ottimale: 40–65%
+function getHumColor(h) {
+    const v = parseFloat(h);
+    if (isNaN(v) || v <= 0) return '';
+    if (v > 75 || v < 25) return 'var(--danger)';
+    if (v > 65 || v < 35) return 'var(--warning)';
+    return '';
+}
+
+// Peso (kg) — segnala solo valori anomali bassi (colonia in calo)
+// Soglie orientative; un'arnia sana pesa 20–60 kg
+function getWeightColor(w) {
+    const v = parseFloat(w);
+    if (isNaN(v) || v <= 0) return '';
+    if (v < 15) return 'var(--danger)';   // colonia molto debole / problemi
+    if (v < 25) return 'var(--warning)';  // sotto il normale
+    return '';
+}
+
+// Frequenza di picco (Hz)
+// Normale: 220–270 Hz
+function getFreqColor(f) {
+    const v = parseFloat(f);
+    if (isNaN(v) || v <= 0) return '';
+    if (v >= 380) return 'var(--danger)';   // sciamatura / allarme
+    if (v >= 270) return 'var(--warning)';  // stress / attenzione
+    return '';
+}
+
+// ─────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', async () => {
     const mockSwitch = document.getElementById('mockDataSwitch');
     const isMockMode = localStorage.getItem('mockMode') === 'true';
@@ -17,34 +80,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.reload();
         });
     }
+
     const params = new URLSearchParams(window.location.search);
     const hiveId = parseInt(params.get('id')) || 1;
     const hive = typeof hivesData !== 'undefined' ? (hivesData.find(h => h.id === hiveId) || hivesData[0]) : null;
     document.getElementById('hiveName').innerText = hive ? hive.name : `Arnia 0${hiveId}`;
+
     const historyDiv = document.getElementById('localHistory');
+
     const impostaZeri = () => {
-        document.getElementById('valTempIn').innerText = '0°C';
-        document.getElementById('valTempOut').innerText = '0°C';
-        document.getElementById('valHum').innerText = '0%';
-        document.getElementById('valWeight').innerText = '0kg';
+        document.getElementById('valTempIn').innerText   = '0°C';
+        document.getElementById('valPeakFreq').innerText = '0 Hz';
+        document.getElementById('valHum').innerText      = '0%';
+        document.getElementById('valWeight').innerText   = '0kg';
         document.getElementById('barMiele').style.height = '0%';
-        document.getElementById('valMiele').innerText = '0%';
-        document.getElementById('lastUpdate').innerText = 'Ultimo dato: ND';
+        document.getElementById('valMiele').innerText    = '0%';
+        document.getElementById('lastUpdate').innerText  = 'Ultimo dato: ND';
         const semaforo = document.getElementById('statusSemaforo');
         semaforo.className = 'status-alert instabile';
         semaforo.innerHTML = '<i data-lucide="help-circle"></i> Sensori non configurati o offline';
         historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme.</div>';
     };
+
     if (isMockMode) {
-        // --- MODALITA' DEMO ---
-        // Usiamo i dati reali dell'oggetto 'hive' recuperato da dati.js
-        document.getElementById('valTempIn').innerText = hive.t + '°C';
-        document.getElementById('valTempOut').innerText = hive.tOut + '°C';
-        document.getElementById('valWeight').innerText = hive.w + 'kg';
-        document.getElementById('valHum').innerText = hive.h + '%';
+        document.getElementById('valTempIn').innerText   = hive.t + '°C';
+        document.getElementById('valPeakFreq').innerText = hive.peakFreq + ' Hz';
+        document.getElementById('valWeight').innerText   = hive.w + 'kg';
+        document.getElementById('valHum').innerText      = hive.h + '%';
         document.getElementById('barMiele').style.height = hive.pct + '%';
-        document.getElementById('valMiele').innerText = hive.pct + '%';
-        document.getElementById('lastUpdate').innerText = 'Ultimo aggiornamento: ' + hive.lastUpdate;
+        document.getElementById('valMiele').innerText    = hive.pct + '%';
+        document.getElementById('lastUpdate').innerText  = 'Ultimo aggiornamento: ' + hive.lastUpdate;
+
+        // Colora tutti e 4 i riquadri
+        applyMetricColors(hive.t, hive.h, hive.w, hive.peakFreq);
 
         const semaforo = document.getElementById('statusSemaforo');
         if (hive.status === 'green') {
@@ -58,81 +126,87 @@ document.addEventListener('DOMContentLoaded', async () => {
             semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Intervento richiesto';
         }
 
-        // --- GENERAZIONE DATI STORICI MOCK ---
-        // Creiamo una serie di 5 punti per far apparire i grafici "vivi"
         const ora = Date.now();
         const unOra = 3600000;
-
         const mockTelemetry = {
-            tempIn: [
+            tempIn:   [
                 { ts: ora - 4*unOra, value: hive.t - 0.5 },
                 { ts: ora - 3*unOra, value: hive.t - 0.2 },
                 { ts: ora - 2*unOra, value: hive.t + 0.3 },
-                { ts: ora - unOra, value: hive.t + 0.1 },
-                { ts: ora, value: hive.t }
+                { ts: ora - unOra,   value: hive.t + 0.1 },
+                { ts: ora,           value: hive.t }
             ],
-            tempOut: [
+            tempOut:  [
                 { ts: ora - 4*unOra, value: hive.tOut - 2 },
                 { ts: ora - 3*unOra, value: hive.tOut - 1 },
                 { ts: ora - 2*unOra, value: hive.tOut + 1 },
-                { ts: ora - unOra, value: hive.tOut + 0.5 },
-                { ts: ora, value: hive.tOut }
+                { ts: ora - unOra,   value: hive.tOut + 0.5 },
+                { ts: ora,           value: hive.tOut }
             ],
             humidity: [
                 { ts: ora - 4*unOra, value: hive.h + 2 },
                 { ts: ora - 2*unOra, value: hive.h - 1 },
-                { ts: ora, value: hive.h }
+                { ts: ora,           value: hive.h }
             ],
-            weight: [
+            weight:   [
                 { ts: ora - 4*unOra, value: hive.w - 0.3 },
                 { ts: ora - 3*unOra, value: hive.w - 0.2 },
                 { ts: ora - 2*unOra, value: hive.w - 0.1 },
-                { ts: ora, value: hive.w }
+                { ts: ora,           value: hive.w }
             ],
-            honeyPct: [
-                { ts: ora, value: hive.pct }
+            honeyPct: [{ ts: ora, value: hive.pct }],
+            peakFreq: [
+                { ts: ora - 4*unOra, value: hive.peakFreq - 10 },
+                { ts: ora - 3*unOra, value: hive.peakFreq - 5  },
+                { ts: ora - 2*unOra, value: hive.peakFreq + 8  },
+                { ts: ora - unOra,   value: hive.peakFreq + 3  },
+                { ts: ora,           value: hive.peakFreq }
             ]
         };
 
-        // DISEGNA I GRAFICI CON I DATI SIMULATI
         initDetailCharts(mockTelemetry);
 
-        // --- STORICO ALERT ---
         historyDiv.innerHTML = "";
         mockAlerts.forEach(alert => {
             historyDiv.innerHTML += `
-        <div class="history-item px-0 mb-3">
-            <div>
-                <div style="font-weight:600; color:white;">${alert.text}</div>
-                <div style="font-size:12px; color:var(--text-muted);">${alert.date}</div>
-            </div>
-            <span class="tag ${alert.status}">${alert.status === "open" ? "APERTO" : "RISOLTO"}</span>
-        </div>`;
+            <div class="history-item px-0 mb-3">
+                <div>
+                    <div style="font-weight:600; color:white;">${alert.text}</div>
+                    <div style="font-size:12px; color:var(--text-muted);">${alert.date}</div>
+                </div>
+                <span class="tag ${alert.status}">${alert.status === "open" ? "APERTO" : "RISOLTO"}</span>
+            </div>`;
         });
+
     } else {
         // --- MODALITA' REALE ---
         let telemetry = null;
         try {
-            // Chiamiamo il nostro PHP passandogli l'ID dell'arnia
             telemetry = await tbGetTelemetry(hiveId);
             if (telemetry && Object.keys(telemetry).length > 0) {
-                const temInVal = telemetry.tempIn ? telemetry.tempIn.slice(-1)[0].value : 0;
-                const humVal = telemetry.humidity ? telemetry.humidity.slice(-1)[0].value : 0;
-                const weightVal = telemetry.weight ? telemetry.weight.slice(-1)[0].value : 0;
-                const tOutVal = telemetry.tempOut ? telemetry.tempOut.slice(-1)[0].value : 0;
-                const pctVal = telemetry.honeyPct ? telemetry.honeyPct.slice(-1)[0].value : 0;
-                document.getElementById('valTempIn').innerText = parseFloat(temInVal).toFixed(1) + '°C';
-                document.getElementById('valHum').innerText = parseFloat(humVal).toFixed(1) + '%';
-                document.getElementById('valWeight').innerText = parseFloat(weightVal).toFixed(1) + 'kg';
-                document.getElementById('valTempOut').innerText = parseFloat(tOutVal).toFixed(1) + '°C';
-                document.getElementById('barMiele').style.height = parseFloat(pctVal).toFixed(0) + '%';
-                document.getElementById('valMiele').innerText = parseFloat(pctVal).toFixed(0) + '%';
+                const temInVal  = telemetry.tempIn   ? telemetry.tempIn.slice(-1)[0].value   : 0;
+                const humVal    = telemetry.humidity  ? telemetry.humidity.slice(-1)[0].value  : 0;
+                const weightVal = telemetry.weight    ? telemetry.weight.slice(-1)[0].value    : 0;
+                const pctVal    = telemetry.honeyPct  ? telemetry.honeyPct.slice(-1)[0].value  : 0;
+                const freqVal   = telemetry.peakFreq  ? telemetry.peakFreq.slice(-1)[0].value  : 0;
+
+                document.getElementById('valTempIn').innerText   = parseFloat(temInVal).toFixed(1)  + '°C';
+                document.getElementById('valHum').innerText      = parseFloat(humVal).toFixed(1)    + '%';
+                document.getElementById('valWeight').innerText   = parseFloat(weightVal).toFixed(1) + 'kg';
+                document.getElementById('valPeakFreq').innerText = parseFloat(freqVal).toFixed(0)   + ' Hz';
+                document.getElementById('barMiele').style.height = parseFloat(pctVal).toFixed(0)    + '%';
+                document.getElementById('valMiele').innerText    = parseFloat(pctVal).toFixed(0)    + '%';
+
+                // Colora tutti e 4 i riquadri
+                applyMetricColors(temInVal, humVal, weightVal, freqVal);
+
                 if (telemetry.tempIn && telemetry.tempIn.length > 0) {
                     const date = new Date(telemetry.tempIn.slice(-1)[0].ts);
-                    document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
+                    document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
                 } else {
                     document.getElementById('lastUpdate').innerText = 'Ultimo dato: Non disponibile';
                 }
+
                 const semaforo = document.getElementById('statusSemaforo');
                 if (temInVal == 0 && weightVal == 0 && humVal == 0) {
                     semaforo.className = 'status-alert instabile';
@@ -144,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     semaforo.className = 'status-alert ottimale';
                     semaforo.innerHTML = '<i data-lucide="check-circle"></i> Dati Ricevuti: Tutto regolare';
                 }
-                //inizializzi i grafici
+
                 initDetailCharts(telemetry);
             } else {
                 impostaZeri();
@@ -154,56 +228,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
     }
+
     lucide.createIcons();
 
-    // --- GESTIONE SELETTORE TEMPORALE GRAFICI (STILE DASHBOARD) ---
+    // --- SELETTORE TEMPORALE ---
     const timeTabs = document.querySelectorAll('#timeRangeSelector .tab-btn');
-
     timeTabs.forEach(tab => {
         tab.addEventListener('click', async (e) => {
-            // 1. GESTIONE ESTETICA: Questo lo facciamo SEMPRE
             timeTabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-
-            // 2. BLOCCO DEMO: Se siamo in modalità demo, fermiamo qui le chiamate
             if (isMockMode) return;
 
-            // 3. RECUPERO DATI REALI
             const selectedInterval = tab.getAttribute('data-value');
-
             try {
-                // Feedback visivo (opacità) sui grafici
-                document.getElementById('tempInOutChart').style.opacity = '0.5';
-                document.getElementById('humidityChart').style.opacity = '0.5';
-                document.getElementById('weightFlowChart').style.opacity = '0.5';
-
-                // Richiesta dati storici
+                ['tempInOutChart', 'humidityChart', 'weightFlowChart', 'peakFreqChart'].forEach(id => {
+                    document.getElementById(id).style.opacity = '0.5';
+                });
                 const storicTelemetry = await tbGetTelemetry(hiveId, selectedInterval);
-
                 if (storicTelemetry && Object.keys(storicTelemetry).length > 0) {
-                    initDetailCharts(storicTelemetry); // Ridisegna i grafici
+                    initDetailCharts(storicTelemetry);
                 }
             } catch (error) {
                 console.error("Errore nel recupero dei dati storici:", error);
             } finally {
-                // Ripristina l'opacità
-                document.getElementById('tempInOutChart').style.opacity = '1';
-                document.getElementById('humidityChart').style.opacity = '1';
-                document.getElementById('weightFlowChart').style.opacity = '1';
+                ['tempInOutChart', 'humidityChart', 'weightFlowChart', 'peakFreqChart'].forEach(id => {
+                    document.getElementById(id).style.opacity = '1';
+                });
             }
         });
     });
-
 });
+
 let charts = {};
+
 function initDetailCharts(telemetry) {
     const commonOptions = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: true } },
     };
-    // --- TEMPERATURA ---
-    const tempIn = parseTelemetrySeries(telemetry.tempIn);
+
+    // Temperatura In/Out
+    const tempIn  = parseTelemetrySeries(telemetry.tempIn);
     const tempOut = parseTelemetrySeries(telemetry.tempOut);
     if (charts.temp) charts.temp.destroy();
     charts.temp = new Chart(document.getElementById('tempInOutChart'), {
@@ -211,73 +277,73 @@ function initDetailCharts(telemetry) {
         data: {
             labels: tempIn.labels,
             datasets: [
-                {
-                    label: 'Temp In',
-                    data: tempIn.data,
-                    borderColor: '#fbbf24',
-                    fill: true
-                },
-                {
-                    label: 'Temp Out',
-                    data: tempOut.data,
-                    borderColor: '#60a5fa',
-                    fill: false
-                }
+                { label: 'Temp In',  data: tempIn.data,  borderColor: '#fbbf24', fill: true },
+                { label: 'Temp Out', data: tempOut.data, borderColor: '#60a5fa', fill: false }
             ]
         },
         options: commonOptions
     });
-    // --- UMIDITÀ ---
+
+    // Umidità
     const hum = parseTelemetrySeries(telemetry.humidity);
     if (charts.hum) charts.hum.destroy();
     charts.hum = new Chart(document.getElementById('humidityChart'), {
         type: 'line',
         data: {
             labels: hum.labels,
-            datasets: [{
-                label: 'Umidità',
-                data: hum.data,
-                borderColor: '#3b82f6',
-                fill: true
-            }]
+            datasets: [{ label: 'Umidità', data: hum.data, borderColor: '#3b82f6', fill: true }]
         },
         options: commonOptions
     });
-    // --- PESO ---
+
+    // Peso
     const weight = parseTelemetrySeries(telemetry.weight);
     if (charts.weight) charts.weight.destroy();
     charts.weight = new Chart(document.getElementById('weightFlowChart'), {
         type: 'bar',
         data: {
             labels: weight.labels,
-            datasets: [{
-                label: 'Peso',
-                data: weight.data,
-                backgroundColor: '#10b981'
-            }]
+            datasets: [{ label: 'Peso', data: weight.data, backgroundColor: '#10b981' }]
         },
         options: commonOptions
     });
+
+    // Frequenza Picco
+    const freq = parseTelemetrySeries(telemetry.peakFreq);
+    if (charts.freq) charts.freq.destroy();
+    charts.freq = new Chart(document.getElementById('peakFreqChart'), {
+        type: 'line',
+        data: {
+            labels: freq.labels,
+            datasets: [{
+                label: 'Frequenza Picco (Hz)',
+                data: freq.data,
+                borderColor: '#a78bfa',
+                backgroundColor: 'rgba(167, 139, 250, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    suggestedMin: 150,
+                    suggestedMax: 600,
+                    ticks: { callback: (val) => val + ' Hz' }
+                }
+            }
+        }
+    });
 }
+
 function parseTelemetrySeries(series) {
     if (!series || series.length === 0) return { labels: [], data: [] };
-
-    // ORDINA PER TIMESTAMP
     series.sort((a, b) => a.ts - b.ts);
-
     const labels = series.map(p => {
         const d = new Date(p.ts);
-        // MODIFICA: Usiamo toLocaleString per avere "GG/MM HH:mm"
-        // Invece del vecchio toLocaleTimeString che dava solo l'ora
-        return d.toLocaleString('it-IT', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     });
-
     const data = series.map(p => p.value);
-
     return { labels, data };
 }

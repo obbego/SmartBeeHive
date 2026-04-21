@@ -72,13 +72,13 @@ foreach ($TB_DEVICES as $hiveId => $deviceId) {
         $startTs = $endTs - (30 * 24 * 60 * 60 * 1000);
         $limit = 1000;
     } else { // Default 24h
-        //$startTs = $endTs - (24 * 60 * 60 * 1000);
         $startTs = $endTs - (10 * 24 * 60 * 60 * 1000);
         $limit = 100;
     }
 
+    // Aggiunto peakFreq alla lista delle chiavi telemetriche richieste
     $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries"
-        . "?keys=tempIn,humidity,weight,battery,honeyPct,tempOut"
+        . "?keys=tempIn,humidity,weight,battery,honeyPct,tempOut,peakFreq"
         . "&startTs=$startTs&endTs=$endTs&limit=$limit";
     $ch = curl_init($url);
 
