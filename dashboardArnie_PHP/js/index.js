@@ -8,79 +8,171 @@ const mockAlertsHistory = [
 ];
 let alertsHistory = [];
 
+// ─────────────────────────────────────────────
+// LOGICA COLORI METRICHE (stessi range di arnie.js)
+// Restituisce una stringa CSS o '' per il default
+// ─────────────────────────────────────────────
+function getTempColor(t) {
+  const v = parseFloat(t);
+  if (isNaN(v) || v <= 0)      return '';
+  if (v >= 38.5 || v < 30)     return 'var(--danger)';
+  if (v >= 37.5 || v < 32)     return 'var(--warning)';
+  return '';
+}
+
+function getHumColor(h) {
+  const v = parseFloat(h);
+  if (isNaN(v) || v <= 0)      return '';
+  if (v > 75 || v < 25)        return 'var(--danger)';
+  if (v > 65 || v < 35)        return 'var(--warning)';
+  return '';
+}
+
+function getWeightColor(w) {
+  const v = parseFloat(w);
+  if (isNaN(v) || v <= 0)      return '';
+  if (v < 15)                  return 'var(--danger)';
+  if (v < 25)                  return 'var(--warning)';
+  return '';
+}
+
+function getFreqColor(f) {
+  const v = parseFloat(f);
+  if (isNaN(v) || v <= 0)      return '';
+  if (v >= 380)                return 'var(--danger)';
+  if (v >= 270)                return 'var(--warning)';
+  return '';
+}
+
+// Converte un colore CSS in stile inline (stringa vuota = nessun override)
+function colorStyle(color) {
+  return color ? `color: ${color}; font-weight: 700;` : '';
+}
+
+// ─────────────────────────────────────────────
+
+// CALCOLO STATISTICHE DINAMICHE
+function computeStats() {
+  const activeHives = hivesData.filter(h => h.status !== 'offline');
+
+  const totalHoney = hivesData.reduce((sum, h) => {
+    const honey = (parseFloat(h.pct) / 100) * parseFloat(h.w);
+    return sum + (isNaN(honey) ? 0 : honey);
+  }, 0);
+
+  const activeAlarms = hivesData.filter(h => h.status === 'red').length;
+
+  const temps = activeHives.map(h => parseFloat(h.t)).filter(v => !isNaN(v) && v > 0);
+  const avgTemp = temps.length > 0 ? (temps.reduce((a, b) => a + b, 0) / temps.length) : 0;
+
+  const hums = activeHives.map(h => parseFloat(h.h)).filter(v => !isNaN(v) && v > 0);
+  const avgHum = hums.length > 0 ? (hums.reduce((a, b) => a + b, 0) / hums.length) : 0;
+
+  const firstTOut = hivesData.map(h => parseFloat(h.tOut)).find(v => !isNaN(v) && v !== 0 && v !== undefined);
+  const tempOut = (firstTOut !== undefined && firstTOut !== null) ? firstTOut : null;
+
+  return { totalHoney, activeAlarms, avgTemp, avgHum, tempOut };
+}
+
+function renderStats() {
+  const { totalHoney, activeAlarms, avgTemp, avgHum, tempOut } = computeStats();
+
+  const honeyEl = document.getElementById('statHoney');
+  if (honeyEl) honeyEl.innerText = totalHoney.toFixed(1) + ' kg';
+
+  const alarmsEl = document.getElementById('statAlarms');
+  if (alarmsEl) alarmsEl.innerText = activeAlarms;
+
+  const tempEl = document.getElementById('statTemp');
+  if (tempEl) tempEl.innerText = avgTemp > 0 ? avgTemp.toFixed(1) + '°C' : '--';
+
+  const humEl = document.getElementById('statHum');
+  if (humEl) humEl.innerText = avgHum > 0 ? avgHum.toFixed(1) + '%' : '--';
+
+  const tOutEl = document.getElementById('statTempOut');
+  if (tOutEl) tOutEl.innerText = tempOut !== null ? tempOut.toFixed(1) + '°C' : '--';
+
+  const alarmsDetail = document.getElementById('statAlarmsDetail');
+  if (alarmsDetail) {
+    alarmsDetail.innerText = activeAlarms > 0 ? 'Attenzione richiesta' : 'Tutto regolare';
+  }
+}
+
 // RENDER ARNIE
 function renderHives() {
   const grid = document.getElementById('hivesGrid');
-  const totalHives = hivesData.length;
 
-  grid.innerHTML = hivesData.map((hive, index) => {
-    const remainder = totalHives % 3;
-    const startOfLastRow = totalHives - remainder;
-    let desktopClass = 'col-lg-12';
+  grid.innerHTML = hivesData.map((hive) => {
 
-    if (remainder > 0 && index >= startOfLastRow) {
-      if (remainder === 1) desktopClass = 'col-lg-12';
-      else if (remainder === 2) desktopClass = 'col-lg-12';
-    }
+    // Testo e colore stato per l'header
+    let statusText  = 'OFFLINE';
+    let statusColor = 'var(--warning)';
+    if (hive.status === 'green')  { statusText = 'ONLINE';     statusColor = 'var(--success)'; }
+    if (hive.status === 'yellow') { statusText = 'ATTENZIONE'; statusColor = 'var(--warning)'; }
+    if (hive.status === 'red')    { statusText = 'ALLARME';    statusColor = 'var(--danger)';  }
 
-    let statusText = 'OFFLINE';
-    if (hive.status === 'green') statusText = 'ONLINE';
-    if (hive.status === 'yellow') statusText = 'ATTENZIONE';
-    if (hive.status === 'red') statusText = 'ALLARME';
+    // Colori metriche — stessa logica di arnie.js
+    const freqVal    = parseFloat(hive.peakFreq);
+    const freqDisplay = (!isNaN(freqVal) && freqVal > 0) ? freqVal + ' Hz' : '--';
+
+    const tempStyle   = colorStyle(getTempColor(hive.t));
+    const humStyle    = colorStyle(getHumColor(hive.h));
+    const weightStyle = colorStyle(getWeightColor(hive.w));
+    const freqStyle   = colorStyle(getFreqColor(hive.peakFreq));
 
     return `
-    <div class="col-12  ${desktopClass}">
-      <div class="glass-panel hive-card h-100" 
+    <div class="col-12">
+      <div class="glass-panel hive-card h-100"
            onclick="window.location.href='arnie.html?id=${hive.id}'"
            style="cursor: pointer; transition: transform 0.2s;">
 
-        <!-- contenitore con le informazioni delle arnie (nome, stato, metriche) --> 
         <div class="hive-info">
 
-          <!-- nome e pallino -->
           <div class="hive-header">
             <div class="hive-name text-truncate">${hive.name}</div>
-            <div class="status-dot status-${hive.status === 'offline' ? 'yellow' : hive.status}"></div>
+            <div class="d-flex align-items-center gap-2">
+              <span style="font-size: 11px; font-weight: 600; color: ${statusColor}; letter-spacing: 0.04em;">
+                ${statusText}
+              </span>
+              <div class="status-dot status-${hive.status === 'offline' ? 'yellow' : hive.status}"></div>
+            </div>
           </div>
 
           <div class="columns_arnie">
-          <!-- miele -->
             <div class="honey-tank-wrapper me-3">
-                <div class="honey-tank" title="Riempimento: ${hive.pct}%">
-                    <div class="honey-liquid" style="height: ${hive.pct}%"></div>
-                </div>
-                <span class="honey-pct">${hive.pct}%</span>
+              <div class="honey-tank" title="Riempimento: ${hive.pct}%">
+                <div class="honey-liquid" style="height: ${hive.pct}%"></div>
+              </div>
+              <span class="honey-pct">${hive.pct}%</span>
             </div>
 
-            <!-- informazioni  -->
             <div class="hive-metrics">
-            <div class="metric-box">
+              <div class="metric-box">
                 <div class="metric-label">PESO</div>
-                <div class="metric-val">${hive.w}kg</div>
+                <div class="metric-val" style="${weightStyle}">${hive.w}kg</div>
               </div>
               <div class="metric-box">
-                <div class="metric-label">STATO</div>
-                <div class="metric-val" style="font-size:12px; line-height:22px;">
-                  ${statusText}
-                </div>
+                <div class="metric-label">FREQ. PICCO</div>
+                <div class="metric-val" style="${freqStyle}">${freqDisplay}</div>
               </div>
               <div class="metric-box">
                 <div class="metric-label">TEMP</div>
-                <div class="metric-val">${hive.t}°C</div>
+                <div class="metric-val" style="${tempStyle}">${hive.t}°C</div>
               </div>
               <div class="metric-box">
                 <div class="metric-label">UMIDITÀ</div>
-                <div class="metric-val">${hive.h}%</div>
+                <div class="metric-val" style="${humStyle}">${hive.h}%</div>
               </div>
             </div>
           </div>
-        
+
         </div>
       </div>
     </div>
   `}).join('');
 
   lucide.createIcons();
+  renderStats();
 }
 
 function renderHistory() {
@@ -133,30 +225,27 @@ async function loadRealData() {
   }
 }
 
-// INIT PRINCIPALE CON LOGICA SWITCH
 document.addEventListener('DOMContentLoaded', () => {
   const mockSwitch = document.getElementById('mockDataSwitch');
-  const isMockMode = localStorage.getItem('mockMode') === 'true'; // Legge la scelta salvata
+  const isMockMode = localStorage.getItem('mockMode') === 'true';
 
   if (mockSwitch) {
     mockSwitch.checked = isMockMode;
     mockSwitch.addEventListener('change', (e) => {
       localStorage.setItem('mockMode', e.target.checked);
-      window.location.reload(); // Ricarica la pagina applicando la nuova modalità
+      window.location.reload();
     });
   }
 
   if (isMockMode) {
-    // MODALITA' DEMO: Usiamo i dati mock precaricati da dati.js
     alertsHistory = [...mockAlertsHistory];
     renderHives();
     renderHistory();
     initAllCharts();
     lucide.createIcons();
   } else {
-    // MODALITA' REALE: Azzeriamo i dati mock e peschiamo da ThingsBoard
-    hivesData.forEach(hive => { hive.t = 0; hive.h = 0; hive.w = 0; hive.pct = 0; hive.status = 'offline'; });
-    alertsHistory = []; // Nessun allarme finto
+    hivesData.forEach(hive => { hive.t = 0; hive.h = 0; hive.w = 0; hive.pct = 0; hive.tOut = 0; hive.peakFreq = 0; hive.status = 'offline'; });
+    alertsHistory = [];
     renderHives();
     renderHistory();
     initAllCharts();

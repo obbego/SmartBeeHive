@@ -1,76 +1,124 @@
 <?php
-// Impostiamo l'intestazione per dire al browser che restituiremo un JSON
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *'); // Evita blocchi CORS durante i test
+header('Access-Control-Allow-Origin: *');
 
-$TB_HOST = "https://eu.thingsboard.cloud";
-$TB_USERNAME = "francesco.bego@iisviolamarchesini.edu.it";
-$TB_PASSWORD = "ApiApi1234!";
+session_start();
 
-// DEVICE ID messi in sicurezza nel backend
-$TB_DEVICES = [
-    1 => "83ada8d0-171e-11f1-acb1-ebc343e93a59",
-    2 => "0c2d9880-1c67-11f1-a469-05ae34b6a511",
-    3 => "19898c50-1c67-11f1-a469-05ae34b6a511",
-    4 => "24507d60-1c67-11f1-b0fa-13069a1cfc9d",
-    5 => "387ab0d0-1c67-11f1-b0fa-13069a1cfc9d"
-];
+// Importiamo le configurazioni e le password in modo sicuro
+require 'config.php';
 
-// 1. LOGIN SU THINGSBOARD TRAMITE cURL
-$ch = curl_init("$TB_HOST/api/auth/login");
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['username' => $TB_USERNAME, 'password' => $TB_PASSWORD]));
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Accept: application/json']);
-
-// DISABILITA IL CONTROLLO SSL PER IL TESTING LOCALE
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-$loginResponse = curl_exec($ch);
-
-// Gestione errori cURL per farti capire se c'è un altro problema
-if(curl_errno($ch)){
-    echo json_encode(['error' => 'Errore cURL nel login: ' . curl_error($ch)]);
-    exit;
-}
-curl_close($ch);
-
-$tokenData = json_decode($loginResponse, true);
-$token = isset($tokenData['token']) ? $tokenData['token'] : null;
-
-if (!$token) {
-    echo json_encode(['error' => 'Login a ThingsBoard fallito nel backend PHP', 'response' => $loginResponse]);
-    exit;
-}
-
-// 2. CAPIRE COSA CHIEDE IL FRONTEND (Tutte le arnie o una sola?)
 $requestedId = isset($_GET['id']) ? (int)$_GET['id'] : null;
-$results = [];
 
-// 3. RECUPERO DEI DATI REALI
-foreach ($TB_DEVICES as $hiveId => $deviceId) {
-    // Se il frontend ha chiesto un'arnia specifica, salto le altre
-    if ($requestedId && $requestedId !== $hiveId) continue;
+// --- 1. SISTEMA DI CACHE DEI DATI ---
+// Se stiamo chiedendo tutte le arnie (homepage) e i dati sono stati scaricati meno di 5 secondi fa, usa la cache
+if (!$requestedId && isset($_SESSION['data_cache']) && isset($_SESSION['data_time'])) {
+    if (time() - $_SESSION['data_time'] < 5) {
+        // Restituisce i dati salvati istantaneamente senza contattare ThingsBoard
+        echo json_encode($_SESSION['data_cache']);
+        exit;
+    }
+}
 
-    $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries?keys=tempIn,humidity,weight,battery,honeyPct,tempOut";
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "X-Authorization: Bearer $token",
-        "Accept: application/json"
+// --- 2. GESTIONE TOKEN CON CACHE ---
+function getToken($host, $username, $password) {
+    if (isset($_SESSION['token']) && isset($_SESSION['token_time'])) {
+        if (time() - $_SESSION['token_time'] < 3600) { // Valido per 1 ora
+            return $_SESSION['token'];
+        }
+    }
+
+    $ch = curl_init("$host/api/auth/login");
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode(["username" => $username, "password" => $password]),
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false
     ]);
 
-    // DISABILITA IL CONTROLLO SSL ANCHE QUI
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-    $telemetryResponse = curl_exec($ch);
+    $response = curl_exec($ch);
+    if (curl_errno($ch)) { echo json_encode(['error' => 'Errore cURL login']); exit; }
     curl_close($ch);
 
-    $results[$hiveId] = json_decode($telemetryResponse, true);
+    $data = json_decode($response, true);
+    if (!isset($data['token'])) { echo json_encode(['error' => 'Login fallito']); exit; }
+
+    $_SESSION['token'] = $data['token'];
+    $_SESSION['token_time'] = time();
+
+    return $data['token'];
 }
 
-// 4. MANDO I DATI AL JS
+$token = getToken($TB_HOST, $TB_USERNAME, $TB_PASSWORD);
+
+// --- 3. RICHIESTE PARALLELE CON cURL MULTI ---
+$results = [];
+$mh = curl_multi_init(); // Inizializza il gestore per richieste multiple
+$curl_handles = [];
+
+// Prepariamo tutte le chiamate da fare
+foreach ($TB_DEVICES as $hiveId => $deviceId) {
+    if ($requestedId && $requestedId !== $hiveId) continue;
+
+    $interval = isset($_GET['interval']) ? $_GET['interval'] : '24h';
+    $endTs = round(microtime(true) * 1000);
+
+    //Calcolo startTs e limite punti in base all'intervallo richiesto
+    if ($interval === '7d') {
+        $startTs = $endTs - (7 * 24 * 60 * 60 * 1000);
+        $limit = 500;
+    } elseif ($interval === '30d') {
+        $startTs = $endTs - (30 * 24 * 60 * 60 * 1000);
+        $limit = 1000;
+    } else { // Default 24h
+        $startTs = $endTs - (10 * 24 * 60 * 60 * 1000);
+        $limit = 100;
+    }
+
+    // Aggiunto peakFreq alla lista delle chiavi telemetriche richieste
+    $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries"
+        . "?keys=tempIn,humidity,weight,battery,honeyPct,tempOut,peakFreq"
+        . "&startTs=$startTs&endTs=$endTs&limit=$limit";
+    $ch = curl_init($url);
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            "X-Authorization: Bearer $token",
+            "Accept: application/json"
+        ],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false
+    ]);
+
+    curl_multi_add_handle($mh, $ch);
+    $curl_handles[$hiveId] = $ch;
+}
+
+// Eseguiamo tutte le richieste contemporaneamente (super veloce!)
+$active = null;
+do {
+    $status = curl_multi_exec($mh, $active);
+    if ($active) {
+        curl_multi_select($mh);
+    }
+} while ($active && $status == CURLM_OK);
+
+// Raccogliamo i risultati e chiudiamo le connessioni
+foreach ($curl_handles as $hiveId => $ch) {
+    $response = curl_multi_getcontent($ch);
+    $results[$hiveId] = json_decode($response, true);
+    curl_multi_remove_handle($mh, $ch);
+}
+curl_multi_close($mh);
+
+// --- 4. SALVATAGGIO IN CACHE E RISPOSTA ---
+// Salviamo in cache solo se abbiamo scaricato tutto (non un'arnia singola)
+if (!$requestedId) {
+    $_SESSION['data_cache'] = $results;
+    $_SESSION['data_time'] = time();
+}
+
 echo json_encode($results);
 ?>
