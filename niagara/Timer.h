@@ -12,35 +12,35 @@
  */
 class Timer {
 public:
-    Timer() {
-        start();
-    }
+	Timer() {
+		start();
+	}
 
-    void start() {
+	void start() {
 #if defined(ARDUINO)
-        _startTime = millis();
+		_startTime = millis();
 #else
-        _startTime = std::chrono::steady_clock::now();
+		_startTime = std::chrono::steady_clock::now();
 #endif
-    }
+	}
 
-    // Returns elapsed time in milliseconds
-    unsigned long elapsed() const {
+	// Returns elapsed time in milliseconds
+	unsigned long elapsed() const {
 #if defined(ARDUINO)
-        return millis() - _startTime;
+		return millis() - _startTime;
 #else
-        auto now = std::chrono::steady_clock::now();
-        return static_cast<unsigned long>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(now - _startTime).count()
-        );
+		auto now = std::chrono::steady_clock::now();
+		return static_cast<unsigned long>(
+			std::chrono::duration_cast<std::chrono::milliseconds>(now - _startTime).count()
+		);
 #endif
-    }
+	}
 
 private:
 #if defined(ARDUINO)
-    unsigned long _startTime;
+	unsigned long _startTime;
 #else
-    std::chrono::steady_clock::time_point _startTime;
+	std::chrono::steady_clock::time_point _startTime;
 #endif
 };
 

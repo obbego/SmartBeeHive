@@ -54,66 +54,68 @@ typedef void (*NiagaraLogHandler)(const char*);
  * library indicating any error occurred during any operation.
  */
 enum Niagara_Ret {
-    /**
-     * No error encountered
-     */
-    NIAGARA_OK,    
-    /**
-     * Returned by a method when it's called when no identifier
-     * has yet been set for this device using set_identifier(str)
-     */
-    NIAGARA_NO_IDENTIFIER,
-    /**
-     * Returned by the transmit method when the
-     * destination device string or the control message are
-     * invalid, or when the destination string is valid but 
-     * the control message received isn't.
-    */
-    NIAGARA_INVALID_DATA,    
-    /**
-     * Returned by the underlaying send method when the binary data
-     * which is to be sent over the radio exceedes the maximum size
-     * which can be sent at a time.
-    */
-    NIAGARA_TOO_LARGE,
-    /**
-     * Returned by the underlying asynchronous receive retrieve data method when
-     * the reception hasn't started at the moment of the method's call.
-     */
-    NIAGARA_NOT_RECEIVING,
-    /**
-     * Returned by the raw receive method when the
-     * message received's destination isn't this device
-    */
-    NIAGARA_NOT_DESTINATION,
-    /**
-     * Returned when the process timed out
-     */
-    NIAGARA_TIMEOUT,
-    /**
-     * Error returned when the internal library
-     * gave an error during the process.
-     */
-    RADIOLIB_ERROR,
-    /**
-     * When an error occurred while receiving
-     */
-    NIAGARA_RECEIVE_ERROR,
-    /**
-     * Returned by the receive method when the maximum amount 
-     * of retransmissions was reached by the sending device.
-    */
-    NIAGARA_RETRANSMISSION_ERROR,
-    /**
-     * When an error occurred while sending
-     */
-    NIAGARA_SEND_ERROR,
-    /**
-     * Returned when a receive function which is defragmenting a message
-     * encounters a parsing problem which forces the fragment stream
-     * to be halted.
-    */
-    NIAGARA_INVALID_FRAGMENT
+		/**
+		 * No error encountered
+		 */
+		NIAGARA_OK,    
+		/**
+		 * Returned by a method when it's called when no identifier
+		 * has yet been set for this device using set_identifier(str)
+		 */
+		NIAGARA_NO_IDENTIFIER,
+		/**
+		 * Returned by the transmit method when the
+		 * destination device string or the control message are
+		 * invalid, or when the destination string is valid but 
+		 * the control message received isn't.
+		*/
+		NIAGARA_INVALID_DATA,    
+		/**
+		 * Returned by the underlaying send method when the binary data
+		 * which is to be sent over the radio exceedes the maximum size
+		 * which can be sent at a time.
+		*/
+		NIAGARA_TOO_LARGE,
+		/**
+		 * Returned by the underlying asynchronous receive retrieve data method when
+		 * the reception hasn't started at the moment of the method's call.
+		 */
+		NIAGARA_NOT_RECEIVING,
+		/**
+		 * Returned by the raw receive method when the
+		 * message received's destination isn't this device
+		*/
+		NIAGARA_NOT_DESTINATION,
+		/**
+		 * Returned when the process timed out
+		 */
+		NIAGARA_TIMEOUT,
+		/**
+		 * Error returned when the internal library
+		 * gave an error during the process.
+		 */
+		RADIOLIB_ERROR,
+		/**
+		 * When an error occurred while receiving
+		 */
+		NIAGARA_RECEIVE_ERROR,
+		/**
+		 * Returned by the receive method when the maximum amount 
+		 * of retransmissions was reached by the sending device.
+		*/
+		NIAGARA_RETRANSMISSION_ERROR,
+		/**
+		 * When an error occurred while sending
+		 */
+		NIAGARA_SEND_ERROR,
+		/**
+		 * Returned when a receive function which is defragmenting a message
+		 * encounters a parsing problem which forces the fragment stream
+		 * to be halted.
+		 * This error is also returned by a send function when the remote device encountered
+		 * a problem during fragmentation
+		*/
+		NIAGARA_INVALID_FRAGMENT
 };
 
 /**
@@ -125,10 +127,11 @@ enum Niagara_Ret {
  * in the protocol's raw (lowest) layer.
  */
 enum Niagara_Control {
-    SYN,
-    ACK,
-    RETRANSMISSION_TIMEOUT,
-    END //This must be the last element
+		SYN,
+		ACK,
+		RETRANSMISSION_TIMEOUT,
+		FRAGMENTATION_ERROR,
+		END //This must be the last element
 };
 
 /**
@@ -137,12 +140,12 @@ enum Niagara_Control {
  * 
  */
 enum Niagara_LogLevel {
-    /** Used when the log should be concise because it's being output to a display */
-    LOG_DISPLAY,
-    /** Used when the log can be extended because it's being output to a terminal */
-    LOG_TERMINAL, 
-    /** Used when no log should be used. */
-    NO_LOG
+		/** Used when the log should be concise because it's being output to a display */
+		LOG_DISPLAY,
+		/** Used when the log can be extended because it's being output to a terminal */
+		LOG_TERMINAL, 
+		/** Used when no log should be used. */
+		NO_LOG
 };
 
 /**
@@ -154,186 +157,186 @@ enum Niagara_LogLevel {
  * communication using RadioLib as a backend.
  */
 class Niagara {
-  public:    
-    /**
-     * @brief Initialization of the logged communication
-     * 
-     * Initialises this device with the log handler, which
-     * is a callback function which contains the method used
-     * to print the protocol's logs.
-     * 
-     * @param _log_handler Callback function for external logging
-     * @param _log_level The log level which should be used to communicate to the callback function
-     */
-    Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level);
-    /**
-     * @brief Default empty constructor without logs
-     * 
-     * This constructor doesn't implement any logging in the object
-     */
-    Niagara();
-    ~Niagara();
+	public:    
+		/**
+		 * @brief Initialization of the logged communication
+		 * 
+		 * Initialises this device with the log handler, which
+		 * is a callback function which contains the method used
+		 * to print the protocol's logs.
+		 * 
+		 * @param _log_handler Callback function for external logging
+		 * @param _log_level The log level which should be used to communicate to the callback function
+		 */
+		Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level);
+		/**
+		 * @brief Default empty constructor without logs
+		 * 
+		 * This constructor doesn't implement any logging in the object
+		 */
+		Niagara();
+		~Niagara();
 
-    /**
-     * @brief Receives the first available message.
-     * 
-     * Waits for an incoming message and accepts each fragment of it,
-     * if more than one. Then reconstructs the final message, outputting
-     * it and its source.
-     * 
-     * The `source` string contains the callsign of the remote device which
-     * has established a connection.
-     * 
-     * @param output Pointer to the string which will store the content of the message received
-     * @param source Pointer to the string which will store the source of the message received
-     *               This can be `nullptr`, it will just avoid storage of the message source.
-     * @returns A `Niagara_Ret` object representing any error which might've happened 
-     *          while receiving or defragmenting the packet.
-     */
-    Niagara_Ret receive(str* output, str* source = nullptr);
-    /**
-     * @brief Sends a message to the provided destination.
-     * 
-     * 
-     * Sends a message to a remote device, fragmenting it if
-     * needed.
-     * 
-     * @param destination Callsign to message's destination, can also be `BROADCAST`.
-     * @param message The message to send, which, if exceedes the chip's MTU, will be fragmented into multiple packets.
-     * @returns A `Niagara_Ret` object representing any error which might've happened 
-     *          while transmitting or fragmenting the packet.
-     */
-    Niagara_Ret send(str destination, str message);
+		/**
+		 * @brief Receives the first available message.
+		 * 
+		 * Waits for an incoming message and accepts each fragment of it,
+		 * if more than one. Then reconstructs the final message, outputting
+		 * it and its source.
+		 * 
+		 * The `source` string contains the callsign of the remote device which
+		 * has established a connection.
+		 * 
+		 * @param output Pointer to the string which will store the content of the message received
+		 * @param source Pointer to the string which will store the source of the message received
+		 *               This can be `nullptr`, it will just avoid storage of the message source.
+		 * @returns A `Niagara_Ret` object representing any error which might've happened 
+		 *          while receiving or defragmenting the packet.
+		 */
+		Niagara_Ret receive(str* output, str* source = nullptr);
+		/**
+		 * @brief Sends a message to the provided destination.
+		 * 
+		 * 
+		 * Sends a message to a remote device, fragmenting it if
+		 * needed.
+		 * 
+		 * @param destination Callsign to message's destination, can also be `BROADCAST`.
+		 * @param message The message to send, which, if exceedes the chip's MTU, will be fragmented into multiple packets.
+		 * @returns A `Niagara_Ret` object representing any error which might've happened 
+		 *          while transmitting or fragmenting the packet.
+		 */
+		Niagara_Ret send(str destination, str message);
 
-    /**
-     * @brief Sets the identifier for this device and must 
-     *        be called before calling any send or receive method.
-     * 
-     * The identifier, or *callsign* of the device should follow these formatting rules:
-     *     - Must be between `4` and `12` characters long
-     *     - Mustn't be `BROADCAST`
-     *     - Must be alphanumeric, no special characters allowed
-     * 
-     * Not setting an identifier before calling `receive(str*, str*)` or `send(str, str)`
-     * will result in `NIAGARA_NO_IDENTIFIER` to be returned by those methods.
-     * 
-     * @param identifier The identifier, or callsign, to set
-     * @returns `true` if the identifier was set correctly, otherwise `false`.
-     */
-    bool set_identifier(str identifier);
-    
-  private:
-    /* Contacts the radio chip and sets in it RX receive mode, so that from this method's call
-     * it can receive data asynchronously, which can then be received later.
-     */
-    int start_receive_raw();
-    /*
-     * If data is available for reception, then it returns it.
-     * This method must be called after the chip has started an asynchronous reception
-     * through start_receive_raw().
-    */
-    Niagara_Ret get_received_data(str* source, Niagara_Control* control_output, str* message_output);
-    /*
-     * Niagara object which is accessed by the ISR during receive
-     * operations to set the callback flag for received data
-     */
-    static Niagara* this_object;
-    /*
-     * Method which is called when data is non-blockingly received from the chip.
-     * This sets the flag which signals the rest of the code for available data. 
-     */
-    static void received_data_handler();
-    /*Sends a raw message to a specific destination */
-    Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
-    
-    /**
-     * Waits for an incoming packet from a device and
-     * accepts it. This method doesn't handle
-     * packet fragments so it's limited to the device's MTU.
-     * 
-     * A filter can be specified in case it's required to receive a packet
-     * from a specific source, which callsign can be set in there, otherwise, 
-     * if not set, this method will just receive the first packet available.
-     */
-    Niagara_Ret receive_fragment(str* output, str* source, str filter = "");
-    /**
-     * Sends a packet handshake to another specified
-     * device. This method doesn't handle
-     * packet fragments so it's limited to the device's MTU.
-     */
-    Niagara_Ret send_fragment(str destination, str message);
+		/**
+		 * @brief Sets the identifier for this device and must 
+		 *        be called before calling any send or receive method.
+		 * 
+		 * The identifier, or *callsign* of the device should follow these formatting rules:
+		 *     - Must be between `4` and `12` characters long
+		 *     - Mustn't be `BROADCAST`
+		 *     - Must be alphanumeric, no special characters allowed
+		 * 
+		 * Not setting an identifier before calling `receive(str*, str*)` or `send(str, str)`
+		 * will result in `NIAGARA_NO_IDENTIFIER` to be returned by those methods.
+		 * 
+		 * @param identifier The identifier, or callsign, to set
+		 * @returns `true` if the identifier was set correctly, otherwise `false`.
+		 */
+		bool set_identifier(str identifier);
+		
+	private:
+		/* Contacts the radio chip and sets in it RX receive mode, so that from this method's call
+		 * it can receive data asynchronously, which can then be received later.
+		 */
+		int start_receive_raw();
+		/*
+		 * If data is available for reception, then it returns it.
+		 * This method must be called after the chip has started an asynchronous reception
+		 * through start_receive_raw().
+		*/
+		Niagara_Ret get_received_data(str* source, Niagara_Control* control_output, str* message_output);
+		/*
+		 * Niagara object which is accessed by the ISR during receive
+		 * operations to set the callback flag for received data
+		 */
+		static Niagara* this_object;
+		/*
+		 * Method which is called when data is non-blockingly received from the chip.
+		 * This sets the flag which signals the rest of the code for available data. 
+		 */
+		static void received_data_handler();
+		/*Sends a raw message to a specific destination */
+		Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
+		
+		/**
+		 * Waits for an incoming packet from a device and
+		 * accepts it. This method doesn't handle
+		 * packet fragments so it's limited to the device's MTU.
+		 * 
+		 * A filter can be specified in case it's required to receive a packet
+		 * from a specific source, which callsign can be set in there, otherwise, 
+		 * if not set, this method will just receive the first packet available.
+		 */
+		Niagara_Ret receive_fragment(str* output, str* source, str filter = "");
+		/**
+		 * Sends a packet handshake to another specified
+		 * device. This method doesn't handle
+		 * packet fragments so it's limited to the device's MTU.
+		 */
+		Niagara_Ret send_fragment(str destination, str message);
 
-    /*Log print methods which use the handler if available. */
-    void log_printf(const char* format, ...);
-    void log_printf(Niagara_LogLevel level, const char* format, ...);
-    void log_print(str text);
-    void log_print(str extendedText, str conciseText);
-    void log_print(Niagara_LogLevel level, str text);
+		/*Log print methods which use the handler if available. */
+		void log_printf(const char* format, ...);
+		void log_printf(Niagara_LogLevel level, const char* format, ...);
+		void log_print(str text);
+		void log_print(str extendedText, str conciseText);
+		void log_print(Niagara_LogLevel level, str text);
 
-    // Helper function which doesn't uses ellipsis for variadicity
-    void vlog_printf(const char* format, va_list args);
+		// Helper function which doesn't uses ellipsis for variadicity
+		void vlog_printf(const char* format, va_list args);
 
-    /* RadioLib pointer to the LoRa chip */
-    SX1262* lora = nullptr;
-    /* Flag which keeps track of whether the asynchronous reception has been started.
-     * (It saves whether a call to start_receive_raw has been made, and it's reset when data
-     * is read through get_received_data).
-    */
-    bool rxActive = false;
-    /* Flag which is asynchronously set when data is received
-     * by the non-blocking chip receive
-    */
-    volatile bool received_data = false;
-    /* Niagara identifier for this device */
-    str identifier;
-    /* If this value is set to something other than nullptr,
-    then the log is enabled. */
-    NiagaraLogHandler log_handler = nullptr;
-    /* This value determines how much the log should be concise.
-    */
-    Niagara_LogLevel log_level = NO_LOG;
-    /* Chip's hardware MTU */
-    uint16_t chip_mtu;
-    
-    #if defined(ARDUINO)
-    #else
-    // instance of the HAL class
-    PiHal* hal;
-    #endif
+		/* RadioLib pointer to the LoRa chip */
+		SX1262* lora = nullptr;
+		/* Flag which keeps track of whether the asynchronous reception has been started.
+		 * (It saves whether a call to start_receive_raw has been made, and it's reset when data
+		 * is read through get_received_data).
+		*/
+		bool rxActive = false;
+		/* Flag which is asynchronously set when data is received
+		 * by the non-blocking chip receive
+		*/
+		volatile bool received_data = false;
+		/* Niagara identifier for this device */
+		str identifier;
+		/* If this value is set to something other than nullptr,
+		then the log is enabled. */
+		NiagaraLogHandler log_handler = nullptr;
+		/* This value determines how much the log should be concise.
+		*/
+		Niagara_LogLevel log_level = NO_LOG;
+		/* Chip's hardware MTU */
+		uint16_t chip_mtu;
+		
+		#if defined(ARDUINO)
+		#else
+		// instance of the HAL class
+		PiHal* hal;
+		#endif
 
-    /*
-    * This method handles all needed initializations to create the
-    * object used to manage the radio module.
-    */
-    SX1262* init_radio();
+		/*
+		* This method handles all needed initializations to create the
+		* object used to manage the radio module.
+		*/
+		SX1262* init_radio();
 
-    /*Used to process messages received using the protocol*/
-    int process_message(str* output, str message);
+		/*Used to process messages received using the protocol*/
+		int process_message(str* output, str message);
 
-    /*Used to format messages according to the protocol
-     * A blank str is returned in case invalid parameters are passed in destination message
-     * or control message.
-    */
-    str format_message(str destination, Niagara_Control control, str message);
+		/*Used to format messages according to the protocol
+		 * A blank str is returned in case invalid parameters are passed in destination message
+		 * or control message.
+		*/
+		str format_message(str destination, Niagara_Control control, str message);
 
-    /**
-     * Given the destination parameter of a message received,
-     * this method checks if the destination parameter matches
-     * this device.
-     */
-    bool valid_destination(str destination);
+		/**
+		 * Given the destination parameter of a message received,
+		 * this method checks if the destination parameter matches
+		 * this device.
+		 */
+		bool valid_destination(str destination);
 
-    /**
-     * Method used to check the validity of the identifier
-     * given to the constructor
-     */
-    bool check_identifier(str identifier);
+		/**
+		 * Method used to check the validity of the identifier
+		 * given to the constructor
+		 */
+		bool check_identifier(str identifier);
 
-    /**
-     * Function which cleans the received crc and checks
-     * if it's equal to the expected one, returning true if so.
-     */
-    bool check_crc(str received_crc, str expected_crc);
+		/**
+		 * Function which cleans the received crc and checks
+		 * if it's equal to the expected one, returning true if so.
+		 */
+		bool check_crc(str received_crc, str expected_crc);
 };
 
 #endif
