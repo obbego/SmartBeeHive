@@ -1,3 +1,4 @@
+<?php require_once '../auth.php'; ?>
 <!DOCTYPE html>
 <html lang="it" data-bs-theme="dark">
 
@@ -55,7 +56,9 @@
       </div>
 
       <div style="font-size: 13px; color: var(--text-muted);">
-        Benvenuto, <strong class="text-white">Luigi Zara</strong>
+		  Benvenuto, <strong class="text-white"><?= htmlspecialchars($utente_nome) ?></strong>
+		  &nbsp;·&nbsp;
+		  <a href="../logout.php" style="color: var(--text-muted); font-size: 13px; text-decoration: underline;">Esci</a>
       </div>
     </div>
   </div>
