@@ -230,7 +230,7 @@ Niagara_Ret Niagara::send(str destination, str message) {
 
 			// Stop until confirmation is received
 			str output_payload, source;
-			Niagara_Ret status = Niagara::receive_fragment(&output_payload, &source, destination);
+			status = Niagara::receive_fragment(&output_payload, &source, destination);
 			if(status != NIAGARA_OK) {
 				log_print("Error while receiving fragment confirmation", "FRAGMENT ERR!");
 				repeat_fragment++;
@@ -269,7 +269,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 	int frag_status;
 	do {
 		status = receive_fragment(&current_payload, &message_source); //Receive a fragment
-		if(status != NIAGARA_OK) return status; //If an error occurred then exit
+		if(status != NIAGARA_OK) continue; //If an error occurred then retry
 
 		//Add this first fragment to the fragmenter
 		str confirmation_str;
@@ -277,10 +277,14 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 		if(frag_status < 0) {
 			log_printf(LOG_TERMINAL, "Error while defragmenting! [%d]\n", frag_status);
 			log_printf(LOG_DISPLAY, "Frag Err [%d]\n", frag_status);
+			continue;
 		} else log_print(LOG_TERMINAL, "Succesful defragmentation.\n");
 
 		// Send the confirmation message to the other end
 		status = send_fragment(message_source, confirmation_str);
+		if(status != NIAGARA_OK) {
+			log_print("Error while sending fragment confirmation!", "Frag ack err!");
+		}
 	} while(status < 0); //Repeat in case the status is negative
 
 	// Save the source of this fragment to filter all newly received packets
@@ -294,13 +298,20 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 		status = receive_fragment(&current_payload, &message_source, remote_dev);
 		if(status != NIAGARA_OK) return status; //If an error occurred then return that error and exit
 
-		//Add the new fragment
-		frag_status = defragmenter.add_fragment(current_payload);
-		if(frag_status < 0) { //In case a problem occurred while defragmenting then exit
+		//Add this first fragment to the fragmenter
+		str confirmation_str;
+		frag_status = defragmenter.add_fragment(current_payload, &confirmation_str);
+		if(frag_status < 0) {
 			log_printf(LOG_TERMINAL, "Error while defragmenting! [%d]\n", frag_status);
 			log_printf(LOG_DISPLAY, "Frag Err [%d]\n", frag_status);
-			return NIAGARA_INVALID_FRAGMENT; 
+			continue;
 		} else log_print(LOG_TERMINAL, "Succesful defragmentation.\n");
+
+		// Send the confirmation message to the other end
+		status = send_fragment(message_source, confirmation_str);
+		if(status != NIAGARA_OK) {
+			log_print("Error while sending fragment confirmation!", "Frag ack err!");
+		}
 	} while(frag_status > 0); // Keep executing while there still are fragments left to read
 
 	log_print(LOG_TERMINAL, "Retrieving final message...");
