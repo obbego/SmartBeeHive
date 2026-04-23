@@ -42,6 +42,34 @@ int FragmentConstructor::next_fragment(str* output) {
 	return _total_fragments - _current_index;
 }
 
+bool FragmentConstructor::check_confirmation(str confirmation_received) {
+	// Check for problems during defragmentation, which require fragment retransmission
+	if(confirmation_received.c_str() == "!!!!") {
+		return false;
+	}
+
+	//Retrieve the separator indexes
+	int firstSep = confirmation_received.indexOf('#');
+	int secondSepRelative = confirmation_received.substring(firstSep + 1).indexOf('#');
+	int secondSep = firstSep + 1 + secondSepRelative;
+
+	// Check separator presence
+	if (firstSep <= 0 || secondSepRelative < 0 || secondSep <= firstSep + 1) {
+		return false; // Malformed header
+	}
+
+	//Retrieve the three parameters contained in the header
+	int index = confirmation_received.substring(0, firstSep).toInt();
+	int total = confirmation_received.substring(firstSep + 1, secondSep).toInt();
+
+	// Check fragment indexes
+	if(total != _total_fragments) return false;
+	if(index != _current_index - 1) return false;
+
+	// IF no problem is occurred, then return true
+	return true;
+}
+
 // === FragmentDestructor ===
 
 FragmentDestructor::FragmentDestructor() {
@@ -51,11 +79,14 @@ FragmentDestructor::FragmentDestructor() {
 	_buffer = "";
 }
 
-int FragmentDestructor::add_fragment(str data) {
+int FragmentDestructor::add_fragment(str data, str* confirmation_msg) {
 	//Retrieve the separator indexes
 	int firstSep = data.indexOf('#');
 	int secondSepRelative = data.substring(firstSep + 1).indexOf('#');
 	int secondSep = firstSep + 1 + secondSepRelative;
+
+	// Fill the confirmation string in case of error
+	*confirmation_msg = "!!!!";
 
 	// Check separator presence
 	if (firstSep <= 0 || secondSepRelative < 0 || secondSep <= firstSep + 1) {
@@ -101,6 +132,9 @@ int FragmentDestructor::add_fragment(str data) {
 	if (_next_expected_index == _expected_total) {
 		return 0; // Message ready
 	}
+
+	// Construct the confirmation message to send to the sending end
+	*confirmation_msg = str(index) + "#" + str(total) + "#";
 
 	// Return amount of fragments left
 	return _expected_total - _next_expected_index;

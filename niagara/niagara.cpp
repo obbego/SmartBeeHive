@@ -214,10 +214,12 @@ Niagara_Ret Niagara::send(str destination, str message) {
 
 	//Keep sending data to the specified destination using the fragments created
 	int more_fragments;
+	int repeat_fragment = 0;
+	// String space for fragment data
+	str chunk;
 	do {
 		//Get the next fragment
-		str chunk;
-		more_fragments = fragmenter.next_fragment(&chunk);
+		if(repeat_fragment > 0) more_fragments = fragmenter.next_fragment(&chunk);
 		
 		if(more_fragments >= 0) {
 			if(log_level == LOG_TERMINAL) log_printf("Fragments left: %d\n", more_fragments);
@@ -225,7 +227,24 @@ Niagara_Ret Niagara::send(str destination, str message) {
 			//Send this fragment
 			Niagara_Ret status = Niagara::send_fragment(destination, chunk);
 			if(status != NIAGARA_OK) return status; //In case the function produced an error then return it and stop
+
+			// Stop until confirmation is received
+			str output_payload, source;
+			Niagara_Ret status = Niagara::receive_fragment(&output_payload, &source, destination);
+			if(status != NIAGARA_OK) {
+				log_print("Error while receiving fragment confirmation", "FRAGMENT ERR!");
+				repeat_fragment++;
+				continue;
+			}
+			// Check if the payload of the received fragment is correct
+			if(!fragmenter.check_confirmation(output_payload)) {
+				log_print("Error while checking fragment confirmation", "FRAG CHECK FAIL!");
+				repeat_fragment++;
+				continue;
+			}
 		}
+
+		repeat_fragment = 0;
 	} while(more_fragments > 0); //Keep sending fragments while there are more available
 
 	log_print("[SEND DONE]\n");
@@ -253,12 +272,15 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 		if(status != NIAGARA_OK) return status; //If an error occurred then exit
 
 		//Add this first fragment to the fragmenter
-		frag_status = defragmenter.add_fragment(current_payload);
+		str confirmation_str;
+		frag_status = defragmenter.add_fragment(current_payload, &confirmation_str);
 		if(frag_status < 0) {
 			log_printf(LOG_TERMINAL, "Error while defragmenting! [%d]\n", frag_status);
 			log_printf(LOG_DISPLAY, "Frag Err [%d]\n", frag_status);
-			send_raw(message_source, FRAGMENTATION_ERROR, ""); // Send an error message on the second layer to interrupt the communication
 		} else log_print(LOG_TERMINAL, "Succesful defragmentation.\n");
+
+		// Send the confirmation message to the other end
+		status = send_fragment(message_source, confirmation_str);
 	} while(status < 0); //Repeat in case the status is negative
 
 	// Save the source of this fragment to filter all newly received packets

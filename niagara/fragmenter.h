@@ -18,6 +18,11 @@ class FragmentConstructor {
 		 * of fragments left to read.
 		 */
 		int next_fragment(str* output);
+
+		/*
+		 * Checks the confirmation message received on the sending end.
+		*/
+		bool check_confirmation(str confirmation_received);
 	
 	private:
 		int FRAG_SIZE;
@@ -42,7 +47,7 @@ class FragmentDestructor {
 		 * Returns 0 if no more fragments are there to compute in the message
 		 * Otherwise returns the amount of fragments still left to retrieve
 		*/
-		int add_fragment(str data);
+		int add_fragment(str data, str* confirmation_msg);
 
 		/*
 		 * Gets the whole message and clears all buffers.
