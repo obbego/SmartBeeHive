@@ -8,10 +8,6 @@ const mockAlertsHistory = [
 ];
 let alertsHistory = [];
 
-// ─────────────────────────────────────────────
-// LOGICA COLORI METRICHE (stessi range di arnie.js)
-// Restituisce una stringa CSS o '' per il default
-// ─────────────────────────────────────────────
 function getTempColor(t) {
   const v = parseFloat(t);
   if (isNaN(v) || v <= 0)      return '';
@@ -44,14 +40,10 @@ function getFreqColor(f) {
   return '';
 }
 
-// Converte un colore CSS in stile inline (stringa vuota = nessun override)
 function colorStyle(color) {
   return color ? `color: ${color}; font-weight: 700;` : '';
 }
 
-// ─────────────────────────────────────────────
-
-// CALCOLO STATISTICHE DINAMICHE
 function computeStats() {
   const activeHives = hivesData.filter(h => h.status !== 'offline');
 
@@ -98,20 +90,17 @@ function renderStats() {
   }
 }
 
-// RENDER ARNIE
 function renderHives() {
   const grid = document.getElementById('hivesGrid');
 
   grid.innerHTML = hivesData.map((hive) => {
 
-    // Testo e colore stato per l'header
     let statusText  = 'OFFLINE';
     let statusColor = 'var(--warning)';
     if (hive.status === 'green')  { statusText = 'ONLINE';     statusColor = 'var(--success)'; }
     if (hive.status === 'yellow') { statusText = 'ATTENZIONE'; statusColor = 'var(--warning)'; }
     if (hive.status === 'red')    { statusText = 'ALLARME';    statusColor = 'var(--danger)';  }
 
-    // Colori metriche — stessa logica di arnie.js
     const freqVal    = parseFloat(hive.peakFreq);
     const freqDisplay = (!isNaN(freqVal) && freqVal > 0) ? freqVal + ' Hz' : '--';
 
@@ -181,15 +170,24 @@ function renderHistory() {
     list.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
     return;
   }
-  list.innerHTML = alertsHistory.map(alert => `
+  list.innerHTML = alertsHistory.map(alert => {
+    const severityColor = alert.severity === 'CRITICAL' ? 'var(--danger)'
+        : alert.severity === 'MAJOR'    ? 'var(--danger)'
+            : alert.severity === 'MINOR'    ? 'var(--warning)'
+                : alert.severity === 'WARNING'  ? 'var(--warning)'
+                    : 'var(--text-muted)';
+
+    return `
     <div class="history-item">
       <div>
         <div style="font-weight:600; color:white;">${alert.hive} - ${alert.msg}</div>
         <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
       </div>
-      <span class="tag ${alert.status}">${alert.status === 'open' ? 'APERTO' : 'RISOLTO'}</span>
+      <span class="tag ${alert.status}" style="color:${severityColor};">
+        ${alert.status === 'open' ? 'APERTO' : 'RISOLTO'}
+      </span>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 window.switchTab = function (tabName, btn) {
@@ -222,6 +220,13 @@ async function loadRealData() {
   } catch (err) {
     console.error("Errore caricamento ThingsBoard", err);
     renderHives();
+  }
+
+  try {
+    alertsHistory = await tbLoadAlarms();
+    renderHistory();
+  } catch (err) {
+    console.error("Errore caricamento allarmi", err);
   }
 }
 
