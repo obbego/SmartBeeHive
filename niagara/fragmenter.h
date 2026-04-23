@@ -22,7 +22,7 @@ class FragmentConstructor {
 		/*
 		 * Checks the confirmation message received on the sending end.
 		*/
-		bool check_confirmation(str confirmation_received);
+		bool check_confirmation(str confirmation_received, int* err_msg);
 	
 	private:
 		int FRAG_SIZE;

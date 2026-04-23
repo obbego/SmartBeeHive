@@ -232,13 +232,16 @@ Niagara_Ret Niagara::send(str destination, str message) {
 			str output_payload, source;
 			status = Niagara::receive_fragment(&output_payload, &source, destination);
 			if(status != NIAGARA_OK) {
-				log_print("Error while receiving fragment confirmation", "FRAGMENT ERR!");
+				if(log_level == LOG_TERMINAL) log_printf("Error while receiving fragment confirmation! [%d]\n", static_cast<int>(status));
+				else log_printf("Frag Recv ERR! [%d]\n", static_cast<int>(status));
 				repeat_fragment++;
 				continue;
 			}
 			// Check if the payload of the received fragment is correct
-			if(!fragmenter.check_confirmation(output_payload)) {
-				log_print("Error while checking fragment confirmation", "FRAG CHECK FAIL!");
+			int err_msg;
+			if(!fragmenter.check_confirmation(output_payload, &err_msg)) {
+				if(log_level == LOG_TERMINAL) log_printf("Error while checking fragment confirmation! [%d]\n", err_msg);
+				else log_printf("Frag Check ERR! [%d]\n", err_msg);
 				repeat_fragment++;
 				continue;
 			}
@@ -283,7 +286,8 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 		// Send the confirmation message to the other end
 		status = send_fragment(message_source, confirmation_str);
 		if(status != NIAGARA_OK) {
-			log_print("Error while sending fragment confirmation!", "Frag ack err!");
+			if(log_level == LOG_TERMINAL) log_printf("Error while sending fragment confirmation! [%d]\n", static_cast<int>(status));
+			else log_printf("Frag Send ERR! [%d]\n", static_cast<int>(status));
 		}
 	} while(status < 0); //Repeat in case the status is negative
 
@@ -310,7 +314,8 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 		// Send the confirmation message to the other end
 		status = send_fragment(message_source, confirmation_str);
 		if(status != NIAGARA_OK) {
-			log_print("Error while sending fragment confirmation!", "Frag ack err!");
+			if(log_level == LOG_TERMINAL) log_printf("Error while sending fragment confirmation! [%d]\n", static_cast<int>(status));
+			else log_printf("Frag Send ERR! [%d]\n", static_cast<int>(status));
 		}
 	} while(frag_status > 0); // Keep executing while there still are fragments left to read
 

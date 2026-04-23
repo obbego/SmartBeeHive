@@ -42,9 +42,10 @@ int FragmentConstructor::next_fragment(str* output) {
 	return _total_fragments - _current_index;
 }
 
-bool FragmentConstructor::check_confirmation(str confirmation_received) {
+bool FragmentConstructor::check_confirmation(str confirmation_received, int* err_msg = nullptr) {
 	// Check for problems during defragmentation, which require fragment retransmission
 	if(confirmation_received.c_str() == "!!!!") {
+		if(err_msg != nullptr) *err_msg = 1;
 		return false;
 	}
 
@@ -55,6 +56,7 @@ bool FragmentConstructor::check_confirmation(str confirmation_received) {
 
 	// Check separator presence
 	if (firstSep <= 0 || secondSepRelative < 0 || secondSep <= firstSep + 1) {
+		if(err_msg != nullptr) *err_msg = 2;
 		return false; // Malformed header
 	}
 
@@ -63,9 +65,16 @@ bool FragmentConstructor::check_confirmation(str confirmation_received) {
 	int total = confirmation_received.substring(firstSep + 1, secondSep).toInt();
 
 	// Check fragment indexes
-	if(total != _total_fragments) return false;
-	if(index != _current_index - 1) return false;
+	if(total != _total_fragments) {
+		if(err_msg != nullptr) *err_msg = 3;
+		return false;
+	}
+	if(index != _current_index - 1) {
+		if(err_msg != nullptr) *err_msg = 4;
+		return false;
+	}
 
+	if(err_msg != nullptr) *err_msg = 0;
 	// IF no problem is occurred, then return true
 	return true;
 }
