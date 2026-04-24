@@ -1,4 +1,9 @@
-<?php require_once '../auth.php'; ?>
+<?php
+// ============================================================
+// ACCOUNT DISABILITATI — decommentare quando si lavora a scuola
+// ============================================================
+require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
+?>
 <!DOCTYPE html>
 <html lang="it" data-bs-theme="dark">
 

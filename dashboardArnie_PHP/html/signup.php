@@ -1,47 +1,54 @@
 <?php
+// ============================================================
+// SIGNUP DISABILITATO — server DB raggiungibile solo dalla scuola
+// ============================================================
 require_once '../auth.php';
-requireRole('admin');
-require_once '../db.php';
+// requireRole('admin');       // DISABILITATO — auth.php già bypassa tutto
+// require_once '../db.php';   // DISABILITATO — DB non raggiungibile da casa
 
 $errore = '';
 $successo = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	$nome  = trim($_POST['nome'] ?? '');
-	$pass  = $_POST['password'] ?? '';
-	$ruolo = $_POST['ruolo'] ?? 'viewer';
+    // --- CODICE ORIGINALE COMMENTATO (richiede DB) ---
+    //
+    // $nome  = trim($_POST['nome'] ?? '');
+    // $pass  = $_POST['password'] ?? '';
+    // $ruolo = $_POST['ruolo'] ?? 'viewer';
+    //
+    // if (empty($nome) || empty($pass)) {
+    //     $errore = 'Username e password sono obbligatori.';
+    // } elseif (strlen($pass) < 8) {
+    //     $errore = 'La password deve essere di almeno 8 caratteri.';
+    // } elseif (!in_array($ruolo, ['admin', 'operator', 'viewer'])) {
+    //     $errore = 'Ruolo non valido.';
+    // } else {
+    //     // Controlla se username esiste già
+    //     $check = mysqli_prepare($conn, "SELECT id FROM arnie_users WHERE nome = ? LIMIT 1");
+    //     mysqli_stmt_bind_param($check, 's', $nome);
+    //     mysqli_stmt_execute($check);
+    //     mysqli_stmt_store_result($check);
+    //
+    //     if (mysqli_stmt_num_rows($check) > 0) {
+    //         $errore = "Username '$nome' già in uso.";
+    //     } else {
+    //         $hash = password_hash($pass, PASSWORD_BCRYPT);
+    //         $stmt = mysqli_prepare($conn,
+    //                 "INSERT INTO arnie_users (nome, password_hash, ruolo) VALUES (?, ?, ?)"
+    //         );
+    //         mysqli_stmt_bind_param($stmt, 'sss', $nome, $hash, $ruolo);
+    //         if (mysqli_stmt_execute($stmt)) {
+    //             $successo = "Account '$nome' creato con ruolo '$ruolo'.";
+    //         } else {
+    //             $errore = 'Errore durante la creazione: ' . mysqli_stmt_error($stmt);
+    //         }
+    //         mysqli_stmt_close($stmt);
+    //     }
+    //     mysqli_stmt_close($check);
+    // }
+    // mysqli_close($conn);
 
-	if (empty($nome) || empty($pass)) {
-		$errore = 'Username e password sono obbligatori.';
-	} elseif (strlen($pass) < 8) {
-		$errore = 'La password deve essere di almeno 8 caratteri.';
-	} elseif (!in_array($ruolo, ['admin', 'operator', 'viewer'])) {
-		$errore = 'Ruolo non valido.';
-	} else {
-		// Controlla se username esiste già
-		$check = mysqli_prepare($conn, "SELECT id FROM arnie_users WHERE nome = ? LIMIT 1");
-		mysqli_stmt_bind_param($check, 's', $nome);
-		mysqli_stmt_execute($check);
-		mysqli_stmt_store_result($check);
-
-		if (mysqli_stmt_num_rows($check) > 0) {
-			$errore = "Username '$nome' già in uso.";
-		} else {
-			$hash = password_hash($pass, PASSWORD_BCRYPT);
-			$stmt = mysqli_prepare($conn,
-					"INSERT INTO arnie_users (nome, password_hash, ruolo) VALUES (?, ?, ?)"
-			);
-			mysqli_stmt_bind_param($stmt, 'sss', $nome, $hash, $ruolo);
-			if (mysqli_stmt_execute($stmt)) {
-				$successo = "Account '$nome' creato con ruolo '$ruolo'.";
-			} else {
-				$errore = 'Errore durante la creazione: ' . mysqli_stmt_error($stmt);
-			}
-			mysqli_stmt_close($stmt);
-		}
-		mysqli_stmt_close($check);
-	}
-	mysqli_close($conn);
+    $errore = 'Funzione non disponibile: database non raggiungibile in sviluppo locale.';
 }
 ?>
 <!DOCTYPE html>
