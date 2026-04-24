@@ -80,7 +80,7 @@ foreach ($TB_DEVICES as $hiveId => $deviceId) {
             $startTs = $endTs - (30 * 24 * 60 * 60 * 1000);
             break;
         default:
-            //$startTs = $endTs - (24 * 60 * 60 * 1000);
+            $startTs = $endTs - (24 * 60 * 60 * 1000);
     }
 
     // In api.php, aggiungi &useStrictDataTypes=true e limit=1 se vuoi solo l'ultimo
@@ -141,6 +141,12 @@ $alarmResponse = curl_exec($ch);
 curl_close($ch);
 $alarmData = json_decode($alarmResponse, true);
 $results['alarms'] = $alarmData['data'] ?? [];
+
+// --- 6. CACHE (dopo gli allarmi!) ---
+if (!$requestedId) {
+    $_SESSION['data_cache'] = $results;
+    $_SESSION['data_time'] = time();
+}
 
 echo json_encode($results);
 ?>

@@ -8,6 +8,10 @@ const mockAlertsHistory = [
 ];
 let alertsHistory = [];
 
+// ─────────────────────────────────────────────
+// LOGICA COLORI METRICHE (stessi range di arnie.js)
+// Restituisce una stringa CSS o '' per il default
+// ─────────────────────────────────────────────
 function getTempColor(t) {
   const v = parseFloat(t);
   if (isNaN(v) || v <= 0)      return '';
@@ -40,10 +44,14 @@ function getFreqColor(f) {
   return '';
 }
 
+// Converte un colore CSS in stile inline (stringa vuota = nessun override)
 function colorStyle(color) {
   return color ? `color: ${color}; font-weight: 700;` : '';
 }
 
+// ─────────────────────────────────────────────
+
+// CALCOLO STATISTICHE DINAMICHE
 function computeStats() {
   const activeHives = hivesData.filter(h => h.status !== 'offline');
 
@@ -90,17 +98,20 @@ function renderStats() {
   }
 }
 
+// RENDER ARNIE
 function renderHives() {
   const grid = document.getElementById('hivesGrid');
 
   grid.innerHTML = hivesData.map((hive) => {
 
+    // Testo e colore stato per l'header
     let statusText  = 'OFFLINE';
     let statusColor = 'var(--warning)';
     if (hive.status === 'green')  { statusText = 'ONLINE';     statusColor = 'var(--success)'; }
     if (hive.status === 'yellow') { statusText = 'ATTENZIONE'; statusColor = 'var(--warning)'; }
     if (hive.status === 'red')    { statusText = 'ALLARME';    statusColor = 'var(--danger)';  }
 
+    // Colori metriche — stessa logica di arnie.js
     const freqVal    = parseFloat(hive.peakFreq);
     const freqDisplay = (!isNaN(freqVal) && freqVal > 0) ? freqVal + ' Hz' : '--';
 
@@ -112,7 +123,7 @@ function renderHives() {
     return `
     <div class="col-12">
       <div class="glass-panel hive-card h-100"
-           onclick="window.location.href='arnie.php?id=${hive.id}'"
+           onclick="window.location.href='arnie.html?id=${hive.id}'"
            style="cursor: pointer; transition: transform 0.2s;">
 
         <div class="hive-info">
@@ -221,16 +232,9 @@ async function loadRealData() {
     console.error("Errore caricamento ThingsBoard", err);
     renderHives();
   }
-
-  try {
-    alertsHistory = await tbLoadAlarms();
-    renderHistory();
-  } catch (err) {
-    console.error("Errore caricamento allarmi", err);
-  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const mockSwitch = document.getElementById('mockDataSwitch');
   const isMockMode = localStorage.getItem('mockMode') === 'true';
 
@@ -258,5 +262,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadRealData();
     setInterval(loadRealData, 30000);
+
+    try {
+      alertsHistory = await tbLoadAlarms();
+      renderHistory();
+    } catch (err) {
+      console.error("Errore caricamento allarmi", err);
+    }
   }
 });

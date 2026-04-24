@@ -1,4 +1,3 @@
-<?php require_once '../auth.php'; ?>
 <!DOCTYPE html>
 <html lang="it" data-bs-theme="dark">
 
@@ -33,20 +32,15 @@
       <span id="hiveName">Caricamento...</span>
     </h1>
 
-	  <div class="d-flex align-items-center gap-4">
-		  <div class="form-check form-switch d-flex align-items-center mb-0">
-			  <input class="form-check-input me-2" type="checkbox" role="switch" id="mockDataSwitch"
-					 style="cursor: pointer; width: 2.5em; height: 1.25em; border-color: rgba(255,255,255,0.5);">
-			  <label class="form-check-label text-white" for="mockDataSwitch"
-					 style="font-size: 13px; cursor: pointer;">Modalità Demo</label>
-		  </div>
-		  <div id="lastUpdate" style="font-size: 13px; color: var(--text-muted);">Ultimo dato: --:--</div>
-		  <div style="font-size: 13px; color: var(--text-muted);">
-			  <?= htmlspecialchars($utente_nome) ?>
-			  &nbsp;·&nbsp;
-			  <a href="../logout.php" style="color: var(--text-muted); text-decoration: underline;">Esci</a>
-		  </div>
-	  </div>
+    <div class="d-flex align-items-center gap-4">
+      <div class="form-check form-switch d-flex align-items-center mb-0">
+        <input class="form-check-input me-2" type="checkbox" role="switch" id="mockDataSwitch"
+               style="cursor: pointer; width: 2.5em; height: 1.25em; border-color: rgba(255,255,255,0.5);">
+        <label class="form-check-label text-white" for="mockDataSwitch"
+               style="font-size: 13px; cursor: pointer;">Modalità Demo</label>
+      </div>
+      <div id="lastUpdate" style="font-size: 13px; color: var(--text-muted);">Ultimo dato: --:--</div>
+    </div>
   </div>
 </header>
 

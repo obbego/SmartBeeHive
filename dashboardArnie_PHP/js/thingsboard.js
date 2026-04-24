@@ -1,3 +1,4 @@
+// Percorso del tuo nuovo backend PHP
 const API_URL = "../api.php";
 
 async function tbGetTelemetry(hiveId, interval = '24') {
