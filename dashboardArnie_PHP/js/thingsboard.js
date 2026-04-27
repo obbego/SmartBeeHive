@@ -1,7 +1,19 @@
 // Percorso del tuo nuovo backend PHP
 const API_URL = "../api.php";
 
+/*
 async function tbGetTelemetry(hiveId, interval = '24h') {
+    try {
+        const res = await fetch(`${API_URL}?id=${hiveId}&interval=${interval}`);
+        const data = await res.json();
+        return data[hiveId] || {};
+    } catch (error) {
+        console.error("Errore chiamata API PHP:", error);
+        return {};
+    }
+}*/
+
+async function tbGetTelemetry(hiveId, interval = 'latest') {
     try {
         const res = await fetch(`${API_URL}?id=${hiveId}&interval=${interval}`);
         const data = await res.json();

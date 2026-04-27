@@ -200,6 +200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Colora tutti e 4 i riquadri
                 applyMetricColors(temInVal, humVal, weightVal, freqVal);
 
+                /*
                 if (telemetry.tempIn && telemetry.tempIn.length > 0) {
                     const date = new Date(telemetry.tempIn.slice(-1)[0].ts);
                     document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -215,6 +216,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                     semaforo.className = 'status-alert allarme';
                     semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Temperatura fuori soglia';
                 } else {
+                    semaforo.className = 'status-alert ottimale';
+                    semaforo.innerHTML = '<i data-lucide="check-circle"></i> Dati Ricevuti: Tutto regolare';
+                }
+
+                initDetailCharts(telemetry);
+                */
+
+                // --- AGGIORNAMENTO TESTO DATA ---
+                if (telemetry.tempIn && telemetry.tempIn.length > 0) {
+                    const date = new Date(telemetry.tempIn.slice(-1)[0].ts);
+                    // Mostriamo anche giorno e mese, utile se il dato è vecchio
+                    document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                } else {
+                    document.getElementById('lastUpdate').innerText = 'Ultimo dato: Non disponibile';
+                }
+
+                // --- GESTIONE SEMAFORO E WARNING ---
+                const semaforo = document.getElementById('statusSemaforo');
+
+                if (telemetry.is_stale) {
+                    // Controllo prioritario: dati vecchi di oltre 24 ore
+                    semaforo.className = 'status-alert instabile';
+                    semaforo.innerHTML = '<i data-lucide="help-circle"></i> Attenzione: Ultimo aggiornamento superiore a 24 ore';
+                }
+                else if (temInVal == 0 && weightVal == 0 && humVal == 0) {
+                    semaforo.className = 'status-alert instabile';
+                    semaforo.innerHTML = '<i data-lucide="help-circle"></i> Valori a zero - Verificare sensori';
+                }
+                else if (temInVal > 40 || temInVal < -5) {
+                    semaforo.className = 'status-alert allarme';
+                    semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Temperatura fuori soglia';
+                }
+                else {
                     semaforo.className = 'status-alert ottimale';
                     semaforo.innerHTML = '<i data-lucide="check-circle"></i> Dati Ricevuti: Tutto regolare';
                 }
