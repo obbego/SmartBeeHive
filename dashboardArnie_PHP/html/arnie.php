@@ -1,3 +1,4 @@
+<?php require_once '../auth.php'; ?>
 <!DOCTYPE html>
 <html lang="it" data-bs-theme="dark">
 
@@ -23,26 +24,7 @@
 </head>
 
 <body>
-<header class="mb-4 py-3 border-bottom border-secondary border-opacity-25" style="background: rgba(15, 23, 42, 0.3);">
-  <div class="container d-flex justify-content-between align-items-center">
-    <h1>
-      <a href="index.php" class="text-white me-3" style="opacity: 0.8; transition: 0.2s;">
-        <i data-lucide="arrow-left"></i>
-      </a>
-      <span id="hiveName">Caricamento...</span>
-    </h1>
-
-    <div class="d-flex align-items-center gap-4">
-      <div class="form-check form-switch d-flex align-items-center mb-0">
-        <input class="form-check-input me-2" type="checkbox" role="switch" id="mockDataSwitch"
-               style="cursor: pointer; width: 2.5em; height: 1.25em; border-color: rgba(255,255,255,0.5);">
-        <label class="form-check-label text-white" for="mockDataSwitch"
-               style="font-size: 13px; cursor: pointer;">Modalità Demo</label>
-      </div>
-      <div id="lastUpdate" style="font-size: 13px; color: var(--text-muted);">Ultimo dato: --:--</div>
-    </div>
-  </div>
-</header>
+<?php require_once '../includes/navbar.php'; ?>
 
 <div class="container">
   <div class="row g-4 mb-4 align-items-stretch">
@@ -167,9 +149,15 @@
   </div>
 </div>
 
+<div class="container d-flex justify-content-between align-items-center py-3">
+  <h2 id="hiveName" style="font-size:20px; font-weight:700;">Caricamento...</h2>
+  <span id="lastUpdate" style="font-size:13px; color:var(--text-muted);">Ultimo dato: --:--</span>
+</div>
+
 <script src="../js/dati.js"></script>
 <script src="../js/thingsboard.js"></script>
 <script src="../js/arnie.js"></script>
+<script src="../js/navbar.js"></script>
 </body>
 
 </html>
