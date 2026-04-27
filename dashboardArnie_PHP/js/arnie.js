@@ -262,13 +262,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 let charts = {};
 
 function initDetailCharts(telemetry) {
-    const commonOptions = {
+    // Opzioni base per il primo grafico (quello con la legenda VISIBILE)
+    const optionsWithLegend = {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: true } },
+        plugins: {
+            legend: { display: true }
+        }
     };
 
-    // Temperatura In/Out
+    // Opzioni per gli altri grafici (legenda NASCOSTA)
+    const optionsNoLegend = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        }
+    };
+
+    // 1. Temperatura In/Out (MANTIENE LA LEGENDA)
     const tempIn  = parseTelemetrySeries(telemetry.tempIn);
     const tempOut = parseTelemetrySeries(telemetry.tempOut);
     if (charts.temp) charts.temp.destroy();
@@ -281,10 +293,10 @@ function initDetailCharts(telemetry) {
                 { label: 'Temp Out', data: tempOut.data, borderColor: '#60a5fa', fill: false }
             ]
         },
-        options: commonOptions
+        options: optionsWithLegend
     });
 
-    // Umidità
+    // 2. Umidità (LEGENDA NASCOSTA)
     const hum = parseTelemetrySeries(telemetry.humidity);
     if (charts.hum) charts.hum.destroy();
     charts.hum = new Chart(document.getElementById('humidityChart'), {
@@ -293,10 +305,10 @@ function initDetailCharts(telemetry) {
             labels: hum.labels,
             datasets: [{ label: 'Umidità', data: hum.data, borderColor: '#3b82f6', fill: true }]
         },
-        options: commonOptions
+        options: optionsNoLegend
     });
 
-    // Peso
+    // 3. Peso (LEGENDA NASCOSTA)
     const weight = parseTelemetrySeries(telemetry.weight);
     if (charts.weight) charts.weight.destroy();
     charts.weight = new Chart(document.getElementById('weightFlowChart'), {
@@ -305,10 +317,10 @@ function initDetailCharts(telemetry) {
             labels: weight.labels,
             datasets: [{ label: 'Peso', data: weight.data, backgroundColor: '#10b981' }]
         },
-        options: commonOptions
+        options: optionsNoLegend
     });
 
-    // Frequenza Picco
+    // 4. Frequenza Picco (LEGENDA NASCOSTA)
     const freq = parseTelemetrySeries(telemetry.peakFreq);
     if (charts.freq) charts.freq.destroy();
     charts.freq = new Chart(document.getElementById('peakFreqChart'), {
@@ -325,7 +337,7 @@ function initDetailCharts(telemetry) {
             }]
         },
         options: {
-            ...commonOptions,
+            ...optionsNoLegend, // Applica l'assenza di legenda
             scales: {
                 y: {
                     suggestedMin: 150,
