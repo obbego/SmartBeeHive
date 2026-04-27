@@ -56,7 +56,7 @@ function computeStats() {
   const activeHives = hivesData.filter(h => h.status !== 'offline');
 
   const totalHoney = hivesData.reduce((sum, h) => {
-    const honey = (parseFloat(h.pct) / 100) * parseFloat(h.w);
+    const honey = parseFloat(h.w);
     return sum + (isNaN(honey) ? 0 : honey);
   }, 0);
 

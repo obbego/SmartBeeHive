@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { ts: ora - 2*unOra, value: hive.h - 1 },
                 { ts: ora,           value: hive.h }
             ],
-            weight:   [
+            honeyWeightKg:   [
                 { ts: ora - 4*unOra, value: hive.w - 0.3 },
                 { ts: ora - 3*unOra, value: hive.w - 0.2 },
                 { ts: ora - 2*unOra, value: hive.w - 0.1 },
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (telemetry && Object.keys(telemetry).length > 0) {
                 const temInVal  = telemetry.tempIn   ? telemetry.tempIn.slice(-1)[0].value   : 0;
                 const humVal    = telemetry.humidity  ? telemetry.humidity.slice(-1)[0].value  : 0;
-                const weightVal = telemetry.weight    ? telemetry.weight.slice(-1)[0].value    : 0;
+                const weightVal = telemetry.honeyWeightKg ? telemetry.honeyWeightKg.slice(-1)[0].value : 0;
                 const pctVal    = telemetry.honeyPct  ? telemetry.honeyPct.slice(-1)[0].value  : 0;
                 const freqVal   = telemetry.peakFreq  ? telemetry.peakFreq.slice(-1)[0].value  : 0;
 
@@ -343,7 +343,7 @@ function initDetailCharts(telemetry) {
     });
 
     // 3. Peso (LEGENDA NASCOSTA)
-    const weight = parseTelemetrySeries(telemetry.weight);
+    const weight = parseTelemetrySeries(telemetry.honeyWeightKg);
     if (charts.weight) charts.weight.destroy();
     charts.weight = new Chart(document.getElementById('weightFlowChart'), {
         type: 'bar',

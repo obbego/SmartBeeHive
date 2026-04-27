@@ -58,7 +58,7 @@ foreach ($TB_DEVICES as $hiveId => $deviceId) {
     if ($interval === 'latest') {
         // ENDPOINT CORRETTO PER LE LATEST TELEMETRY (Senza startTs, endTs o limit)
         $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries"
-            . "?keys=tempIn,humidity,weight,battery,honeyPct,tempOut,peakFreq";
+            . "?keys=tempIn,humidity,honeyWeightKg,battery,honeyPct,tempOut,peakFreq";
     } else {
         // ENDPOINT PER LO STORICO
         $endTs = round(microtime(true) * 1000);

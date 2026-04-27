@@ -37,7 +37,7 @@ async function tbLoadAllHives() {
 
             const temp = telemetry.tempIn ? telemetry.tempIn.slice(-1)[0].value : 0;
             const hum = telemetry.humidity ? telemetry.humidity.slice(-1)[0].value : 0;
-            const weight = telemetry.weight ? telemetry.weight.slice(-1)[0].value : 0;
+            const weight = telemetry.honeyWeightKg ? telemetry.honeyWeightKg.slice(-1)[0].value : 0;
             const pct = telemetry.honeyPct ? telemetry.honeyPct.slice(-1)[0].value : 0;
             const tOut = telemetry.tempOut ? telemetry.tempOut.slice(-1)[0].value : 0;
             const peakFreq = telemetry.peakFreq ? telemetry.peakFreq.slice(-1)[0].value : 0;
