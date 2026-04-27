@@ -123,7 +123,7 @@ function renderHives() {
     return `
     <div class="col-12">
       <div class="glass-panel hive-card h-100"
-           onclick="window.location.href='arnie.html?id=${hive.id}'"
+           onclick="window.location.href='arnie.php?id=${hive.id}'"
            style="cursor: pointer; transition: transform 0.2s;">
 
         <div class="hive-info">

@@ -1,8 +1,7 @@
 // Percorso del tuo nuovo backend PHP
 const API_URL = "../api.php";
 
-
-async function tbGetTelemetry(hiveId, interval = '24') {
+async function tbGetTelemetry(hiveId, interval = '24h') {
     try {
         const res = await fetch(`${API_URL}?id=${hiveId}&interval=${interval}`);
         const data = await res.json();
@@ -13,20 +12,16 @@ async function tbGetTelemetry(hiveId, interval = '24') {
     }
 }
 
-
 async function tbLoadAllHives() {
     try {
         const res = await fetch(API_URL);
         const allData = await res.json();
 
-
         for (let i = 0; i < hivesData.length; i++) {
             const hive = hivesData[i];
             const telemetry = allData[hive.id];
 
-
             if (!telemetry) continue;
-
 
             const temp = telemetry.tempIn ? telemetry.tempIn.slice(-1)[0].value : 0;
             const hum = telemetry.humidity ? telemetry.humidity.slice(-1)[0].value : 0;
@@ -35,7 +30,6 @@ async function tbLoadAllHives() {
             const tOut = telemetry.tempOut ? telemetry.tempOut.slice(-1)[0].value : 0;
             const peakFreq = telemetry.peakFreq ? telemetry.peakFreq.slice(-1)[0].value : 0;
 
-
             hive.t = parseFloat(temp).toFixed(1);
             hive.h = parseFloat(hum).toFixed(1);
             hive.w = parseFloat(weight).toFixed(1);
@@ -43,11 +37,9 @@ async function tbLoadAllHives() {
             hive.tOut = parseFloat(tOut).toFixed(1);
             hive.peakFreq = parseFloat(peakFreq).toFixed(0);
 
-
             // 1. Controllo prioritario: i dati sono più vecchi di 24 ore?
             if (telemetry.is_stale) {
                 hive.status = 'yellow';
-                // Questo messaggio apparirà SOLO se i dati superano le 24 ore
                 hive.lastUpdate = "Dati non aggiornati da oltre 24 ore";
             }
             // 2. Altrimenti, se i dati sono recenti, controlliamo se sono validi
