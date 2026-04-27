@@ -2,6 +2,7 @@
 
 ### remove log files
 *.log
+**/.idea/
 
 ### remove executable files
 **/out/
