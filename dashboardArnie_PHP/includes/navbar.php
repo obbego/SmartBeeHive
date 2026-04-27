@@ -20,7 +20,7 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
             <i data-lucide="menu" style="width:20px;height:20px;"></i>
         </button>
         <a href="index.php" class="topbar-brand">
-            <i data-lucide="hexagon" style="width:22px;height:22px;"></i>
+            <img src="../img/logo.png" alt="Smart Hive" style="height:28px; width:auto;">
             Smart Hive
         </a>
     </div>
@@ -41,7 +41,7 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
     <!-- Header -->
     <div class="sidebar-header">
         <a href="index.php" class="sidebar-brand">
-            <i data-lucide="hexagon" style="width:22px;height:22px;"></i>
+            <img src="../img/logo.png" alt="Smart Hive" style="height:28px; width:auto;">
             Smart Hive
         </a>
         <button class="sidebar-close" id="sidebarClose" aria-label="Chiudi menu">
