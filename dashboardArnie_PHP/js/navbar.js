@@ -25,11 +25,25 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSidebar();
 });
 
-// ─── EVIDENZIA VOCE ATTIVA ──────────────────────────────────
+// Evidenzia voce attiva
+const currentFile = window.location.pathname.split('/').pop().split('?')[0];
+const currentParams = new URLSearchParams(window.location.search);
+const currentId = currentParams.get('id');
+
 document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
-    const currentFile = window.location.pathname.split('/').pop().split('?')[0];
-    if (link.getAttribute('data-page') === currentFile) {
-        link.classList.add('active');
+    const linkPage = link.getAttribute('data-page');
+    const linkHref = link.getAttribute('href');
+    const linkParams = new URLSearchParams(linkHref.includes('?') ? linkHref.split('?')[1] : '');
+    const linkId = linkParams.get('id');
+
+    if (linkPage === currentFile) {
+        // Se il link ha un id (es. arnie), controlla che combaci
+        if (linkId !== null) {
+            if (linkId === currentId) link.classList.add('active');
+        } else {
+            // Link senza id (es. Dashboard, Allarmi) — basta il nome file
+            link.classList.add('active');
+        }
     }
 });
 
