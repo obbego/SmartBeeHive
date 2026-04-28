@@ -52,3 +52,54 @@ async function tbLoadAllHives() {
         });
     }
 }
+
+async function tbLoadAlarms() {
+    try {
+        const res = await fetch(API_URL);
+        const allData = await res.json();
+        const alarms = allData.alarms || [];
+
+        const alarmTypeLabels = {
+            'HoneyReady':                   'Miele pronto da raccogliere',
+            'ErrorDeviceTimeseries':         'Errore lettura telemetria',
+            'TelemetryInvalidKey':           'Chiave telemetria non valida',
+            'FailedAssetAttributes':         'Errore attributi asset',
+            'DeviceOldTemperature':          'Temperatura non aggiornata',
+            'DeviceOldHumidity':             'Umidità non aggiornata',
+            'DeviceOldWeight':               'Peso non aggiornato',
+            'DeviceOldNoiseFrequency':       'Freq. rumore non aggiornata',
+            'DeviceOldNoiseIntensity':       'Intensità rumore non aggiornata',
+            'DeviceDifferentTemperature':    'Temperatura anomala rispetto alle altre arnie',
+            'DeviceDifferentHumidity':       'Umidità anomala rispetto alle altre arnie',
+            'DeviceDifferentWeight':         'Peso anomalo rispetto alle altre arnie',
+            'DeviceDifferentNoiseFrequency': 'Frequenza rumore anomala',
+            'DeviceDifferentNoiseIntensity': 'Intensità rumore anomala',
+            'ErrorTimeSeriesWeightDevice':   'Errore lettura peso'
+        };
+
+        return alarms.map(alarm => {
+            const deviceName = alarm.originator?.entityType === 'DEVICE'
+                ? (alarm.originatorName || 'Dispositivo sconosciuto')
+                : 'Sistema';
+
+            const ts = alarm.createdTime
+                ? new Date(alarm.createdTime).toLocaleString('it-IT', {
+                    day: '2-digit', month: '2-digit', year: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                })
+                : '--';
+
+            return {
+                hive: deviceName,
+                msg: alarmTypeLabels[alarm.type] || alarm.type,
+                time: ts,
+                status: alarm.status === 'CLEARED_ACK' || alarm.status === 'CLEARED_UNACK'
+                    ? 'closed' : 'open',
+                severity: alarm.severity || 'WARNING'
+            };
+        });
+    } catch (err) {
+        console.error("Errore caricamento allarmi", err);
+        return [];
+    }
+}

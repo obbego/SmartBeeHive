@@ -125,5 +125,28 @@ if (!$requestedId) {
     $_SESSION['data_time'] = time();
 }
 
+// --- 5. ALLARMI ---
+$alarmUrl = "$TB_HOST/api/alarms?searchStatus=ANY&fetchOriginator=true&pageSize=50&page=0";
+$ch = curl_init($alarmUrl);
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => [
+        "X-Authorization: Bearer $token",
+        "Accept: application/json"
+    ],
+    CURLOPT_SSL_VERIFYPEER => false,
+    CURLOPT_SSL_VERIFYHOST => false
+]);
+$alarmResponse = curl_exec($ch);
+curl_close($ch);
+$alarmData = json_decode($alarmResponse, true);
+$results['alarms'] = $alarmData['data'] ?? [];
+
+// --- 6. CACHE (dopo gli allarmi!) ---
+if (!$requestedId) {
+    $_SESSION['data_cache'] = $results;
+    $_SESSION['data_time'] = time();
+}
+
 echo json_encode($results);
 ?>

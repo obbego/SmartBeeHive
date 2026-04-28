@@ -162,7 +162,7 @@ Niagara_Ret Niagara::send(str destination, str message) {
 	str chunk;
 	do {
 		//Get the next fragment
-		if(repeat_fragment == 0) more_fragments = fragmenter.next_fragment(&chunk);
+		if(repeat_fragment > 0) more_fragments = fragmenter.next_fragment(&chunk);
 		
 		if(more_fragments >= 0) {
 			if(log_level == LOG_TERMINAL) log_printf("Fragments left: %d\n", more_fragments);
@@ -261,7 +261,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 			else log_printf("Frag Send ERR! [%d]\n", static_cast<int>(status));
 			return status;
 		}
-	}
+	} while(frag_status > 0); // Keep executing while there still are fragments left to read
 
 	log_print(LOG_TERMINAL, "Retrieving final message...");
 

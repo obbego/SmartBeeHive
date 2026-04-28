@@ -123,7 +123,7 @@ function renderHives() {
     return `
     <div class="col-12">
       <div class="glass-panel hive-card h-100"
-           onclick="window.location.href='arnie.html?id=${hive.id}'"
+           onclick="window.location.href='arnie.php?id=${hive.id}'"
            style="cursor: pointer; transition: transform 0.2s;">
 
         <div class="hive-info">
@@ -181,15 +181,24 @@ function renderHistory() {
     list.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
     return;
   }
-  list.innerHTML = alertsHistory.map(alert => `
+  list.innerHTML = alertsHistory.map(alert => {
+    const severityColor = alert.severity === 'CRITICAL' ? 'var(--danger)'
+        : alert.severity === 'MAJOR'    ? 'var(--danger)'
+            : alert.severity === 'MINOR'    ? 'var(--warning)'
+                : alert.severity === 'WARNING'  ? 'var(--warning)'
+                    : 'var(--text-muted)';
+
+    return `
     <div class="history-item">
       <div>
         <div style="font-weight:600; color:white;">${alert.hive} - ${alert.msg}</div>
         <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
       </div>
-      <span class="tag ${alert.status}">${alert.status === 'open' ? 'APERTO' : 'RISOLTO'}</span>
+      <span class="tag ${alert.status}" style="color:${severityColor};">
+        ${alert.status === 'open' ? 'APERTO' : 'RISOLTO'}
+      </span>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 window.switchTab = function (tabName, btn) {
@@ -225,7 +234,7 @@ async function loadRealData() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const mockSwitch = document.getElementById('mockDataSwitch');
   const isMockMode = localStorage.getItem('mockMode') === 'true';
 
@@ -253,5 +262,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadRealData();
     setInterval(loadRealData, 30000);
+
+    try {
+      alertsHistory = await tbLoadAlarms();
+      renderHistory();
+    } catch (err) {
+      console.error("Errore caricamento allarmi", err);
+    }
   }
 });
