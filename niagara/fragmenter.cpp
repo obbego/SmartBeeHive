@@ -137,13 +137,13 @@ int FragmentDestructor::add_fragment(str data, str* confirmation_msg) {
 	_buffer += payload;
 	_next_expected_index++;
 
+	// Construct the confirmation message to send to the sending end
+	*confirmation_msg = str(index) + "#" + str(total) + "#";
+
 	// Check if the fragments have been completed
 	if (_next_expected_index == _expected_total) {
 		return 0; // Message ready
 	}
-
-	// Construct the confirmation message to send to the sending end
-	*confirmation_msg = str(index) + "#" + str(total) + "#";
 
 	// Return amount of fragments left
 	return _expected_total - _next_expected_index;

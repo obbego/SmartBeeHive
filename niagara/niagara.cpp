@@ -219,7 +219,7 @@ Niagara_Ret Niagara::send(str destination, str message) {
 	str chunk;
 	do {
 		//Get the next fragment
-		if(repeat_fragment > 0) more_fragments = fragmenter.next_fragment(&chunk);
+		if(repeat_fragment == 0) more_fragments = fragmenter.next_fragment(&chunk);
 		
 		if(more_fragments >= 0) {
 			if(log_level == LOG_TERMINAL) log_printf("Fragments left: %d\n", more_fragments);
@@ -289,7 +289,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 			if(log_level == LOG_TERMINAL) log_printf("Error while sending fragment confirmation! [%d]\n", static_cast<int>(status));
 			else log_printf("Frag Send ERR! [%d]\n", static_cast<int>(status));
 		}
-	} while(status < 0); //Repeat in case the status is negative
+	} while(status != NIAGARA_OK || frag_status < 0); //Repeat in case the status is negative
 
 	// Save the source of this fragment to filter all newly received packets
 	str remote_dev = message_source;
@@ -297,7 +297,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 	log_printf(LOG_TERMINAL, "Established connection with remote device: '%s' - Looking for additional fragments..\n", remote_dev.c_str());
 	log_printf(LOG_DISPLAY, "Remote: '%s'\n", remote_dev.c_str());
 
-	do {
+	while(frag_status > 0) { // Keep executing while there still are fragments left to read
 		//Don't allow incoming packets from external sources other than the remote device we're communicating with
 		status = receive_fragment(&current_payload, &message_source, remote_dev);
 		if(status != NIAGARA_OK) return status; //If an error occurred then return that error and exit
@@ -317,7 +317,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 			if(log_level == LOG_TERMINAL) log_printf("Error while sending fragment confirmation! [%d]\n", static_cast<int>(status));
 			else log_printf("Frag Send ERR! [%d]\n", static_cast<int>(status));
 		}
-	} while(frag_status > 0); // Keep executing while there still are fragments left to read
+	}
 
 	log_print(LOG_TERMINAL, "Retrieving final message...");
 
