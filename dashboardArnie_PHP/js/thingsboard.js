@@ -128,3 +128,27 @@ async function tbLoadAlarms() {
         return [];
     }
 }
+// ─── AZIONI ALLARMI SU THINGSBOARD ────────────────────────────────
+const ALARM_ACTION_URL = "../alarm_action.php";
+
+async function tbAckAlarm(alarmId) {
+    const res  = await fetch(ALARM_ACTION_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ action: 'ack', alarmId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+}
+
+async function tbClearAlarm(alarmId) {
+    const res  = await fetch(ALARM_ACTION_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ action: 'clear', alarmId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+}

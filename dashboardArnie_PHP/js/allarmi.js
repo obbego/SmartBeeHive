@@ -214,18 +214,72 @@ window.closeModalDirect = function() {
     modalSelectedStatus = null;
 };
 
-window.saveAlarmStatus = function() {
+// Toast di feedback (successo / errore)
+function showToast(message, type = 'success') {
+    const existing = document.getElementById('alarmToast');
+    if (existing) existing.remove();
+    const colors = {
+        success: { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', color: 'var(--success)' },
+        error:   { bg: 'rgba(239,68,68,0.15)',  border: 'rgba(239,68,68,0.4)',  color: 'var(--danger)'  },
+    };
+    const c = colors[type] || colors.success;
+    const toast = document.createElement('div');
+    toast.id = 'alarmToast';
+    toast.style.cssText = `
+        position:fixed;bottom:28px;right:28px;z-index:99999;
+        background:${c.bg};border:1px solid ${c.border};color:${c.color};
+        padding:14px 20px;border-radius:12px;font-size:14px;font-weight:600;
+        font-family:'Inter',sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.4);
+        backdrop-filter:blur(12px);max-width:360px;
+    `;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.4s';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, 3500);
+}
+
+window.saveAlarmStatus = async function() {
     if (!modalAlarmId || !modalSelectedStatus) return;
 
-    alarmStates[modalAlarmId] = modalSelectedStatus;
-    const note = document.getElementById('modalNote').value.trim();
-    if (note) alarmStates['note_' + modalAlarmId] = note;
-    else      delete alarmStates['note_' + modalAlarmId];
+    const isMock  = localStorage.getItem('mockMode') === 'true';
+    const saveBtn = document.querySelector('.btn-modal-save');
+    if (saveBtn) { saveBtn.innerText = 'Salvataggio…'; saveBtn.disabled = true; }
 
-    saveLocalStates(alarmStates);
-    closeModalDirect();
-    applyFilterRender();
-    updateStats(allAlarms);
+    try {
+        if (!isMock) {
+            // Mapping:
+            //   "closed" → clear  (TB: CLEARED_ACK)
+            //   "open"   → ack    (TB: ACTIVE_ACK)
+            //   "system" → nessuna chiamata TB (ACTIVE_UNACK è lo stato di default)
+            if (modalSelectedStatus === 'closed') {
+                await tbClearAlarm(modalAlarmId);
+            } else if (modalSelectedStatus === 'open') {
+                await tbAckAlarm(modalAlarmId);
+            }
+        }
+
+        alarmStates[modalAlarmId] = modalSelectedStatus;
+        const note = document.getElementById('modalNote').value.trim();
+        if (note) alarmStates['note_' + modalAlarmId] = note;
+        else      delete alarmStates['note_' + modalAlarmId];
+
+        saveLocalStates(alarmStates);
+        closeModalDirect();
+        applyFilterRender();
+        updateStats(allAlarms);
+
+        const labels = { closed: 'Allarme risolto', open: 'Allarme preso in carico', system: 'Stato aggiornato' };
+        showToast((labels[modalSelectedStatus] || 'Salvato') + (isMock ? ' (demo)' : ' su ThingsBoard'), 'success');
+
+    } catch (err) {
+        console.error('Errore aggiornamento allarme:', err);
+        showToast('Errore: ' + err.message, 'error');
+    } finally {
+        if (saveBtn) { saveBtn.innerText = 'Salva'; saveBtn.disabled = false; }
+    }
 };
 
 // ─────────────────────────────────────────────
@@ -259,7 +313,7 @@ window.refreshAlarms = async function() {
                 })
                 : '--';
             return {
-                id:       alarm.id?.id || alarm.id || (deviceName + '_' + alarm.createdTime),
+                id:       alarm.id?.id || String(alarm.createdTime),
                 hive:     deviceName,
                 msg:      alarmTypeLabels[alarm.type] || alarm.type || 'Allarme sconosciuto',
                 time:     ts,
