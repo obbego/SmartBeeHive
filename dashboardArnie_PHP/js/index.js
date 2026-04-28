@@ -174,6 +174,24 @@ function renderHives() {
   lucide.createIcons();
   renderStats();
 }
+function loadLocalAlarmStates() {
+  try { return JSON.parse(localStorage.getItem('alarmStates') || '{}'); } catch(e) { return {}; }
+}
+function saveLocalAlarmStates(states) {
+  localStorage.setItem('alarmStates', JSON.stringify(states));
+}
+function getEffectiveAlarmStatus(alarmId, fallback) {
+  const states = loadLocalAlarmStates();
+  return states[alarmId] !== undefined ? states[alarmId] : fallback;
+}
+function cycleAlarmStatus(alarmId, fallback) {
+  const states = loadLocalAlarmStates();
+  const current = states[alarmId] !== undefined ? states[alarmId] : fallback;
+  const cycle = { system: 'open', open: 'closed', closed: 'system' };
+  states[alarmId] = cycle[current] || 'system';
+  saveLocalAlarmStates(states);
+  renderHistory();
+}
 
 function renderHistory() {
   const list = document.getElementById('historyList');
@@ -182,21 +200,26 @@ function renderHistory() {
     return;
   }
   list.innerHTML = alertsHistory.map(alert => {
-    const severityColor = alert.severity === 'CRITICAL' ? 'var(--danger)'
-        : alert.severity === 'MAJOR'    ? 'var(--danger)'
-            : alert.severity === 'MINOR'    ? 'var(--warning)'
-                : alert.severity === 'WARNING'  ? 'var(--warning)'
-                    : 'var(--text-muted)';
-
+    const alarmId = alert.id || (alert.hive + '_' + alert.time);
+    const effectiveStatus = getEffectiveAlarmStatus(alarmId, alert.status);
+    const statusMap = {
+      system: { cls: 'tag-system', label: '⚙ DA GESTIRE' },
+      open:   { cls: 'tag open',   label: '● APERTO'     },
+      closed: { cls: 'tag closed', label: '✓ RISOLTO'    },
+    };
+    const s = statusMap[effectiveStatus] || statusMap.system;
     return `
     <div class="history-item">
       <div>
         <div style="font-weight:600; color:white;">${alert.hive} - ${alert.msg}</div>
         <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
       </div>
-      <span class="tag ${alert.status}" style="color:${severityColor};">
-        ${alert.status === 'open' ? 'APERTO' : 'RISOLTO'}
-      </span>
+      <button class="${s.cls}"
+        onclick="cycleAlarmStatus('${alarmId}', '${alert.status}')"
+        style="background:none;border:none;cursor:pointer;font-family:inherit;padding:0;"
+        title="Clicca per cambiare stato">
+        ${s.label}
+      </button>
     </div>
   `}).join('');
 }

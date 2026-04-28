@@ -155,9 +155,13 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
         <div class="row g-4 d-flex justify-content-center">
           <div class="col-12 col-lg-11">
             <div class="glass-panel chart-box" style="height: auto; min-height: 400px;">
-              <div class="p-3 border-bottom border-white border-opacity-10 ">
-                <div class="chart-title mb-0 ">Log Eventi e Allarmi</div>
-              </div>
+                <div class="p-3 border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center">
+                    <div class="chart-title mb-0">Log Eventi e Allarmi</div>
+                    <a href="allarmi.php" class="btn-manage-alarms">
+                        <i data-lucide="bell-ring" style="width:14px;height:14px;"></i>
+                        Gestisci Allarmi
+                    </a>
+                </div>
               <div id="historyList" class="history-list p-3">
               </div>
             </div>
