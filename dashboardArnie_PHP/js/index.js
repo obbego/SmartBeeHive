@@ -130,11 +130,17 @@ function renderHives() {
 
           <div class="hive-header">
             <div class="hive-name text-truncate">${hive.name}</div>
-            <div class="d-flex align-items-center gap-2">
-              <span style="font-size: 11px; font-weight: 600; color: ${statusColor}; letter-spacing: 0.04em;">
-                ${statusText}
-              </span>
-              <div class="status-dot status-${hive.status === 'offline' ? 'yellow' : hive.status}"></div>
+            <div class="d-flex flex-column align-items-end gap-1">
+              <div class="d-flex align-items-center gap-2">
+                <span style="font-size: 11px; font-weight: 600; color: ${statusColor}; letter-spacing: 0.04em;">
+                  ${statusText}
+                </span>
+                <div class="status-dot status-${hive.status === 'offline' ? 'yellow' : hive.status}"></div>
+              </div>
+              ${hive.lastUpdate === 'Dati non aggiornati da oltre 24 ore' ? `
+              <span style="font-size: 12px; color: var(--warning); font-style: italic; letter-spacing: 0.02em;">
+                I dati risalgono a più di 24h fa
+              </span>` : ''}
             </div>
           </div>
 
