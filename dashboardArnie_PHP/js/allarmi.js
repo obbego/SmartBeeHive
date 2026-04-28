@@ -135,14 +135,14 @@ function renderAlarmRow(alarm) {
     const sevClass   = alarm.severity ? `sev-${alarm.severity}`   : 'sev-INFO';
     const badgeClass = alarm.severity ? `badge-${alarm.severity}` : 'badge-INFO';
 
+    const dotClass = { system: 'dot-system', open: 'dot-open', closed: 'dot-closed' }[status] || 'dot-system';
     return `
     <div class="alarm-row" data-alarm-id="${escHtml(alarm.id)}">
-      <div class="alarm-severity-dot ${sevClass}"></div>
+      <div class="alarm-severity-dot ${dotClass}"></div>
       <div class="alarm-info">
         <div class="alarm-msg">${escHtml(alarm.msg)}</div>
         <div class="alarm-meta">${escHtml(alarm.hive)} · ${escHtml(alarm.time)}</div>
       </div>
-      <span class="alarm-severity-badge ${badgeClass}">${escHtml(alarm.severity || 'INFO')}</span>
       <button class="status-btn ${s.cls}" onclick="openModal('${escHtml(alarm.id)}')">${s.label}</button>
     </div>`;
 }
@@ -178,8 +178,11 @@ window.openModal = function(alarmId) {
     const alarm = allAlarms.find(a => a.id === alarmId);
     if (!alarm) return;
 
-    modalAlarmId       = alarmId;
-    modalSelectedStatus = getEffectiveStatus(alarmId, alarm.tbStatus);
+    modalAlarmId = alarmId;
+
+    // Diventa automaticamente "open" quando si apre il popup
+    const current = getEffectiveStatus(alarmId, alarm.tbStatus);
+    modalSelectedStatus = current === 'system' ? 'open' : current;
 
     document.getElementById('modalAlarmTitle').innerText = alarm.msg;
     document.getElementById('modalAlarmMeta').innerText  = alarm.hive + ' · ' + alarm.time;
@@ -209,6 +212,17 @@ window.closeModal = function(event) {
 };
 
 window.closeModalDirect = function() {
+    // Se l'allarme era "da gestire" e l'utente chiude con X, lo marca come "aperto"
+    if (modalAlarmId) {
+        const alarm = allAlarms.find(a => a.id === modalAlarmId);
+        const current = alarm ? getEffectiveStatus(modalAlarmId, alarm.tbStatus) : null;
+        if (current === 'system') {
+            alarmStates[modalAlarmId] = 'open';
+            saveLocalStates(alarmStates);
+            applyFilterRender();
+            updateStats(allAlarms);
+        }
+    }
     document.getElementById('alarmModal').classList.remove('show');
     modalAlarmId        = null;
     modalSelectedStatus = null;

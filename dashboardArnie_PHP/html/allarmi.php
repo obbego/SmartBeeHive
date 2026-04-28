@@ -53,15 +53,15 @@ require_once '../auth.php';
         <div class="d-flex gap-3 flex-wrap">
             <div class="alarms-stat" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);">
                 <span class="num" id="countSystem" style="color: var(--warning);">0</span>
-                <span class="lbl">DA GESTIRE</span>
+                <span class="lbl">Da Gestire</span>
             </div>
             <div class="alarms-stat" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);">
                 <span class="num" id="countOpen" style="color: var(--danger);">0</span>
-                <span class="lbl">APERTI</span>
+                <span class="lbl">Aperti</span>
             </div>
             <div class="alarms-stat" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
                 <span class="num" id="countClosed" style="color: var(--success);">0</span>
-                <span class="lbl">RISOLTI</span>
+                <span class="lbl">Risolti</span>
             </div>
         </div>
     </div>
@@ -109,9 +109,7 @@ require_once '../auth.php';
 
 </div>
 
-<!-- ═══════════════════════════════════════════
-     POPUP MODAL GESTIONE STATO
-═══════════════════════════════════════════ -->
+<!-- POPUP MODAL GESTIONE STATO-->
 <div class="alarm-modal-overlay" id="alarmModal" onclick="closeModal(event)">
     <div class="alarm-modal">
 
@@ -131,16 +129,10 @@ require_once '../auth.php';
         <div class="modal-label">Imposta stato allarme:</div>
         <div class="modal-status-options">
             <div class="modal-status-opt" data-status="system" onclick="selectModalStatus('system')">
-                <div class="modal-opt-icon">⚙️</div>
-                <div class="modal-opt-label" style="color: var(--warning);">DA GESTIRE</div>
-            </div>
-            <div class="modal-status-opt" data-status="open" onclick="selectModalStatus('open')">
-                <div class="modal-opt-icon">🔴</div>
-                <div class="modal-opt-label" style="color: var(--danger);">APERTO</div>
+                <div class="modal-opt-label" style="color: var(--danger);">Da Gestire</div>
             </div>
             <div class="modal-status-opt" data-status="closed" onclick="selectModalStatus('closed')">
-                <div class="modal-opt-icon">✅</div>
-                <div class="modal-opt-label" style="color: var(--success);">RISOLTO</div>
+                <div class="modal-opt-label" style="color: var(--success);">Risolto</div>
             </div>
         </div>
 
