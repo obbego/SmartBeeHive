@@ -12,6 +12,7 @@ AsyncDevice* AsyncDevice::_instance = nullptr;
 // ════════════════════════════════════════════════════════════
 AsyncDevice::AsyncDevice(int* error)
 	: _rxArmed(false)
+	, _txActive(false)
 	, _head(0)
 	, _tail(0)
 	, _count(0)
@@ -118,6 +119,7 @@ size_t AsyncDevice::getMTU() {
 // ════════════════════════════════════════════════════════════
 int AsyncDevice::send(const str& payload)
 {
+    _txActive = true;   // segnala all'ISR che siamo in TX
 	// 1. Disarm RX so we don't race with an incoming packet during TX
 	if (_rxArmed) {
 		_radio->standby();
@@ -130,6 +132,7 @@ int AsyncDevice::send(const str& payload)
 
 	int status = _radio->transmit(buf, len);
 
+    _txActive = false;  // TX terminato, ora è sicuro ricevere
 	// 3. Always re-arm RX regardless of TX outcome
 	startRx();
 
@@ -182,9 +185,12 @@ void AsyncDevice::startRx()
 // ════════════════════════════════════════════════════════════
 void AsyncDevice::onReceive()
 {
+    // Guard: ignore spurious DIO1 events fired during or just after TX
+    if (!_rxArmed || _txActive) return;
+
 	// Read raw bytes from the radio FIFO
 	uint8_t  buf[ASYNC_MTU];
-	size_t   len = ASYNC_MTU;
+	size_t   len = _radio->getPacketLength();
 
 	int status = _radio->readData(buf, len);
 	if (status != RADIOLIB_ERR_NONE) {

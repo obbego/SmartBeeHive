@@ -102,6 +102,7 @@ private:
 
 		// ── State flag ───────────────────────────────────────────
 		ASYNC_VOLATILE bool _rxArmed;   // true when radio is in RX mode
+		ASYNC_VOLATILE bool _txActive;  // true when radio is in TX mode
 
 		// ── FIFO ring-buffer ─────────────────────────────────────
 		AsyncPacket _queue[ASYNC_QUEUE_DEPTH];
