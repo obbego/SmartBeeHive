@@ -9,7 +9,6 @@
 #if defined(ARDUINO)
 	#include <Arduino.h>
 	#include <RadioLib.h>
-	using str = String;
 #else
 	// Raspberry Pi (Linux) – assume RadioLib installed system-wide
 	#include <RadioLib/RadioLib.h>
@@ -17,10 +16,10 @@
 	#include "hal/RPi/PiHal.h"
 	#include <string>
 	#include <cstring>
-	using str = std::string;
 #endif
 
 #include <stdint.h>
+#include "str.h"
 
 // ── Buffer configuration ────────────────────────────────────
 static constexpr uint8_t  ASYNC_MTU          = 255;  // max bytes per LoRa packet
@@ -99,7 +98,7 @@ private:
 		PiHal* hal;
 		#endif
 
-		static SX1262* init_radio();
+		SX1262* init_radio();
 
 		// ── State flag ───────────────────────────────────────────
 		ASYNC_VOLATILE bool _rxArmed;   // true when radio is in RX mode

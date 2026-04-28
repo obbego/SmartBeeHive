@@ -11,8 +11,7 @@ AsyncDevice* AsyncDevice::_instance = nullptr;
 //  Constructor
 // ════════════════════════════════════════════════════════════
 AsyncDevice::AsyncDevice(int* error)
-	: _radio(radio)
-	, _rxArmed(false)
+	: _rxArmed(false)
 	, _head(0)
 	, _tail(0)
 	, _count(0)
@@ -84,8 +83,6 @@ SX1262* AsyncDevice::init_radio() {
 		// else log_printf("!\nCRC Error: %d\n", state);
 		return nullptr;
 	}
-	// Set up the interrupt service routine for received data
-	radio->setDio1Action(received_data_handler);
 	// log_print(" Initialization successful!\n", "OK.\n");
 	return radio;
 }
@@ -107,8 +104,6 @@ SX1262* AsyncDevice::init_radio() {
 		//else log_printf("!\nError code: %d\n", state);
 		return nullptr;
 	}
-	// Set up the interrupt service routine for received data
-	radio->setDio1Action(received_data_handler);
 	//log_print(" Initialization successful!\n", "OK.\n");
 	return radio;
 }
@@ -130,13 +125,8 @@ int AsyncDevice::send(const str& payload)
 	}
 
 	// 2. Transmit (RadioLib blocking call)
-#if defined(ARDUINO)
 	const uint8_t* buf = reinterpret_cast<const uint8_t*>(payload.c_str());
 	size_t         len = static_cast<size_t>(payload.length());
-#else
-	const uint8_t* buf = reinterpret_cast<const uint8_t*>(payload.c_str());
-	size_t         len = payload.size();
-#endif
 
 	int status = _radio->transmit(buf, len);
 
@@ -157,14 +147,9 @@ bool AsyncDevice::recv(str& out)
 		return false;   // nothing in buffer
 	}
 
-#if defined(ARDUINO)
-	out = String(reinterpret_cast<const char*>(pkt.data));
+	out = str(reinterpret_cast<const char*>(pkt.data));
 	// Trim to actual length in case data contains embedded nulls
-	out = String(reinterpret_cast<const char*>(pkt.data)).substring(0, pkt.len);
-#else
-	out.assign(reinterpret_cast<const char*>(pkt.data),
-			   static_cast<size_t>(pkt.len));
-#endif
+	out = str(reinterpret_cast<const char*>(pkt.data)).substring(0, pkt.len);
 
 	return true;
 }

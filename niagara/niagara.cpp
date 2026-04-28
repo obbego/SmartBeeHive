@@ -2,11 +2,7 @@
 #include "Timer.h"
 #include "Hash.h"
 #include "fragmenter.h"
-
-// Initialization of the static variable referencing the object
-// Practice done to avoid "undefined reference" errors in the linker
-Niagara* Niagara::this_object = nullptr;
-															
+														
 void Niagara::vlog_printf(const char* format, va_list args) {
 	// Ignore logging if log handler isn't set
 	if(Niagara::log_handler == nullptr || Niagara::log_level == NO_LOG) return;
@@ -99,16 +95,6 @@ Niagara::Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level) {
 	//Save the log level enum
 	Niagara::log_level = _log_level;
 
-	/*
-	 * Save this object's pointer to the static class'
-	 * pointer so ISR callbacks for the receive function
-	 * will edit this object's flag containing whether data is received.
-	 * This static parameter set is the reason why creating multiple istances
-	 * of this class on the same code is not supported, any additional
-	 * istance of this class will override this static object and
-	 * make receiving data not work because the flag would never be set.
-	 */
-	this_object = this;
 	// Initialise the radio device
 	int error;
 	Niagara::lora = new AsyncDevice(&error);
@@ -128,14 +114,7 @@ Niagara::~Niagara() {
 	if(Niagara::lora) {
 		delete Niagara::lora;
 		Niagara::lora = nullptr;
-	}
-	
-	#ifndef ARDUINO
-	if(Niagara::hal) {
-		delete Niagara::hal;
-		Niagara::hal = nullptr;
-	}
-	#endif
+	}	
 }
 
 bool Niagara::set_identifier(str _identifier) {
@@ -332,11 +311,11 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
 				//Receive raw data from the radio module and process it at the lower layer
 				status = Niagara::receive_raw(source, &control, &payload);
 			}
-		} while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION || status == NIAGARA_NOT_RECEIVING); //Keep running while no data is received until external timeout is reached
+		} while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); //Keep running while no data is received until external timeout is reached
 
 		// Return no data in case no data is available
 		if(status == NIAGARA_NO_DATA) {
-			log_print(LOG_TERMINAL, "No data available to read!");
+			log_print(LOG_TERMINAL, "No data available to read!\n");
 			return NIAGARA_NO_DATA;
 		}
 		//If the receive returned an error then propagate it to the whole method
@@ -529,7 +508,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 					}
 
 					//Only check for received data each set amount of time
-					if(receive_timer.elapsed() >= RECEIVE_CHECK_MS && received_data) {
+					if(receive_timer.elapsed() >= RECEIVE_CHECK_MS) {
 						//Reset the timer for receive
 						receive_timer.start();
 						//Wait for it to be actually received
@@ -540,7 +519,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 				if(state == TxState::SEND_SYN) break;
 				
 				if(status == NIAGARA_NO_DATA) {
-					log_printf(LOG_TERMINAL, " ['%s']", receive_output);
+					log_print(LOG_TERMINAL, "No Data Available!\n");
 					return NIAGARA_NO_DATA;
 				}
 				//If the receive method returned an error then propagate it to the whole method
@@ -592,11 +571,11 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
 	if(Niagara::identifier.length() == 0)
 		return NIAGARA_NO_IDENTIFIER;
 
-	log_print(LOG_TERMINAL, "\t[RECV_RAW] Reading packet ");ƒ
+	log_print(LOG_TERMINAL, "\t[RECV_RAW] Reading packet ");
 	// Create the string object to fit the data into
 	str receive_output;
 	//Read the data into the buffer
-	bool state = lora->recv(&receive_output);
+	bool state = lora->recv(receive_output);
 	// IF no data is available to receive
 	if(!state) {
 		log_print("No Data!\n");
@@ -694,9 +673,6 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 	//Check if the formatted message to send is bigger than the maximum transmission unit to send over the radio
 	if(formattedMessage.length() >= Niagara::chip_mtu) return NIAGARA_TOO_LARGE;
 	int status = Niagara::lora->send(formattedMessage);
-	// After a transmit, make sure to reset the received_data handler, because it has now been set to true due to the ISR, but no data has actually been received
-	Niagara::this_object->received_data = false;
-	rxActive = false;
 	if(status == RADIOLIB_ERR_TX_TIMEOUT) {
 		log_print(LOG_TERMINAL, "Timeout!\n");
 		return NIAGARA_TIMEOUT;
