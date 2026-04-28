@@ -93,70 +93,11 @@ void Niagara::log_print(Niagara_LogLevel level, str text) {
 	log_print(text);
 }
 
-#if defined(ARDUINO)
-SX1262* Niagara::init_radio() {
-	// SX1262 has the following connections on this board:
-	// NSS pin:   8
-	// DIO1 pin:  14
-	// NRST pin:  12
-	// BUSY pin:  13
-	SX1262* radio = new SX1262(new Module(8, 14, 12, 13));
-
-	log_print("[SX1262] Initializing...", "Init Radio...");
-	int state = radio->begin(868.0);
-	if(state != RADIOLIB_ERR_NONE) {
-		if(log_level == LOG_TERMINAL) log_printf(" Initialization Failed!\nError code: %d\n", state);
-		else log_printf("!\nError code: %d\n", state);
-		return nullptr;
-	}
-	state = radio->setCRC(2);
-	if(state != RADIOLIB_ERR_NONE) {
-		if(log_level == LOG_TERMINAL) log_printf(" CRC Initialization Failed!\nError code: %d\n", state);
-		else log_printf("!\nCRC Error: %d\n", state);
-		return nullptr;
-	}
-	// Set up the interrupt service routine for received data
-	radio->setDio1Action(received_data_handler);
-	log_print(" Initialization successful!\n", "OK.\n");
-	return radio;
-}
-#else
-SX1262* Niagara::init_radio() {
-	// now we can create the radio module
-	SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20 /*The BUSY pin of the module MUST be specified, otherwise error -2 is thrown*/));
-	
-	log_print("[SX1262] Initializing...", "Init Radio...");
-	/* The module is being initialized with all the default begin() settings
-	 * The only settings changed are the following:
-	 * - The frequency, according to the EU868 standard must be 868MHz, the default frequency is 434MHz
-	 * - The TCXO voltage, which is the crystal which is powering the clock, since this module is not using TCXO, 
-	 *   not specifying that will cause error -707 to be thrown, so we need to specify its voltage to be 0
-	 */
-	int state = radio->begin(868.0 /*EU868 frequency*/, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0 /*This is not the default value*/, false);
-	if(state != RADIOLIB_ERR_NONE) {
-		if(log_level == LOG_TERMINAL) log_printf(" Initialization Failed!\nError code: %d\n", state);
-		else log_printf("!\nError code: %d\n", state);
-		return nullptr;
-	}
-	// Set up the interrupt service routine for received data
-	radio->setDio1Action(received_data_handler);
-	log_print(" Initialization successful!\n", "OK.\n");
-	return radio;
-}
-#endif
-
 Niagara::Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level) {
 	//Save the log handler callback pointer
 	Niagara::log_handler = _log_handler;
 	//Save the log level enum
 	Niagara::log_level = _log_level;
-	
-	#if defined(ARDUINO)
-	#else
-	// use SPI channel 1, because on Waveshare LoRaWAN Hat,
-	// the SX1261 CS is connected to CE1
-	Niagara::hal = new PiHal(1);
-	#endif
 
 	/*
 	 * Save this object's pointer to the static class'
@@ -168,11 +109,13 @@ Niagara::Niagara(NiagaraLogHandler _log_handler, Niagara_LogLevel _log_level) {
 	 * make receiving data not work because the flag would never be set.
 	 */
 	this_object = this;
-	//Initialize the radio module
-	SX1262* radio_return = init_radio();
-	if(radio_return == nullptr) return;
-	Niagara::lora = radio_return;
-	Niagara::chip_mtu = radio_return->maxPacketLength;
+	// Initialise the radio device
+	int error;
+	Niagara::lora = new AsyncDevice(&error);
+	if(error) {
+		return;
+	}
+	Niagara::chip_mtu = lora->getMTU();
 
 	//Initialise the identifier as empty
 	Niagara::identifier = "";
@@ -209,7 +152,7 @@ Niagara_Ret Niagara::send(str destination, str message) {
 	log_print("[SEND START]\n");
 
 	//Istance a new fragmenter with the message passed
-	FragmentConstructor fragmenter(message, chip_mtu);
+	FragmentConstructor fragmenter(message, chip_mtu - 50);
 	if(log_level == LOG_TERMINAL) log_printf("Initialised fragmenter for send - MTU: %d\n", chip_mtu);
 
 	//Keep sending data to the specified destination using the fragments created
@@ -219,7 +162,7 @@ Niagara_Ret Niagara::send(str destination, str message) {
 	str chunk;
 	do {
 		//Get the next fragment
-		if(repeat_fragment > 0) more_fragments = fragmenter.next_fragment(&chunk);
+		if(repeat_fragment == 0) more_fragments = fragmenter.next_fragment(&chunk);
 		
 		if(more_fragments >= 0) {
 			if(log_level == LOG_TERMINAL) log_printf("Fragments left: %d\n", more_fragments);
@@ -289,7 +232,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 			if(log_level == LOG_TERMINAL) log_printf("Error while sending fragment confirmation! [%d]\n", static_cast<int>(status));
 			else log_printf("Frag Send ERR! [%d]\n", static_cast<int>(status));
 		}
-	} while(status < 0); //Repeat in case the status is negative
+	} while(status != NIAGARA_OK || frag_status < 0); //Repeat in case the status of any function is negative
 
 	// Save the source of this fragment to filter all newly received packets
 	str remote_dev = message_source;
@@ -297,7 +240,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 	log_printf(LOG_TERMINAL, "Established connection with remote device: '%s' - Looking for additional fragments..\n", remote_dev.c_str());
 	log_printf(LOG_DISPLAY, "Remote: '%s'\n", remote_dev.c_str());
 
-	do {
+	while(frag_status > 0) { // Keep executing while there still are fragments left to read
 		//Don't allow incoming packets from external sources other than the remote device we're communicating with
 		status = receive_fragment(&current_payload, &message_source, remote_dev);
 		if(status != NIAGARA_OK) return status; //If an error occurred then return that error and exit
@@ -316,8 +259,9 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 		if(status != NIAGARA_OK) {
 			if(log_level == LOG_TERMINAL) log_printf("Error while sending fragment confirmation! [%d]\n", static_cast<int>(status));
 			else log_printf("Frag Send ERR! [%d]\n", static_cast<int>(status));
+			return status;
 		}
-	} while(frag_status > 0); // Keep executing while there still are fragments left to read
+	}
 
 	log_print(LOG_TERMINAL, "Retrieving final message...");
 
@@ -366,14 +310,6 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
 	session_timer.start();
 	//Start the timer used for receive intervals
 	receive_timer.start();
-	//Start receiving
-	int result = start_receive_raw();
-	//Check if the method terminated correctly
-	if(result != RADIOLIB_ERR_NONE && result != -1) { // If the result is -1 then the receive has already started so we can ignore it
-		if(log_level == LOG_TERMINAL) log_printf("Error while starting message receive: %d\n", result);
-		else log_printf("[RECV] Start err: %d\n", result);
-		return NIAGARA_RECEIVE_ERROR;
-	}
 
 	log_print("Starting message receive..\n", "[RECV] Start.\n");
 
@@ -394,23 +330,20 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
 				//Reset the timer
 				receive_timer.start();
 				//Receive raw data from the radio module and process it at the lower layer
-				status = Niagara::get_received_data(source, &control, &payload);
-			}
-
-			// If the status matches no destination, set the chip back into RX mode
-			if(status == NIAGARA_NOT_RECEIVING && !rxActive) {
-				int rx_set_status = start_receive_raw();
-				log_printf(LOG_TERMINAL, "Setting chip back into RX mode [%d]\n", rx_set_status);
+				status = Niagara::receive_raw(source, &control, &payload);
 			}
 		} while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION || status == NIAGARA_NOT_RECEIVING); //Keep running while no data is received until external timeout is reached
 
+		// Return no data in case no data is available
+		if(status == NIAGARA_NO_DATA) {
+			log_print(LOG_TERMINAL, "No data available to read!");
+			return NIAGARA_NO_DATA;
+		}
 		//If the receive returned an error then propagate it to the whole method
 		if(status != NIAGARA_OK) {
 			log_printf(LOG_TERMINAL, "[RECV] Error while receiving: %d!\n", (int)status);
 			return NIAGARA_RECEIVE_ERROR;
 		}
-		//As soon as the received data method returns some data, put the chip right back into receiving state
-		Niagara::start_receive_raw();
 
 		log_printf(LOG_TERMINAL, "[RECV] Received Data - [Current Remote Device] : '%s' - [Receive source] : '%s' - [Handshake Status] : %d - [Control Message] : %d - [Payload] : '%s'\n", device.c_str(), source->c_str(), static_cast<int>(state), static_cast<int>(control), payload.c_str());
 
@@ -459,8 +392,6 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
 						return NIAGARA_SEND_ERROR; //In case of any send error then propagate it to the whole method
 				}
 
-				// Immediately set the chip back to receive state
-				Niagara::start_receive_raw();
 				//Set the state to wait for the final acknowledgement
 				state = RxState::WAIT_FINAL_ACK;
 				// Save current payload buffer
@@ -569,13 +500,6 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 				if(Niagara::send_raw(destination, SYN, message) != NIAGARA_OK)
 					return NIAGARA_SEND_ERROR; //In case of any error propagate it to the whole method
 
-				//Put the chip in RX_WAIT state
-				int result = Niagara::start_receive_raw();
-				if(result != RADIOLIB_ERR_NONE && result != -1) {
-					if(log_level == LOG_TERMINAL) log_printf("Error while starting ACK receive: %d\n", result);
-					else log_printf("[SEND] RX Err: %d\n", result);
-					return NIAGARA_RECEIVE_ERROR;
-				}
 				//Start the timer counting for retransmission timeouts
 				timer.start();
 				//Wait for the acknowledgement
@@ -609,24 +533,16 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 						//Reset the timer for receive
 						receive_timer.start();
 						//Wait for it to be actually received
-						status = Niagara::get_received_data(&remote, &control, &received_crc);
-					}
-
-					// Check if the remote device encountered a fragmentation error, in which case close the communication
-					if(control == FRAGMENTATION_ERROR) {
-						log_print("[SEND] Remote device encountered fragmentation error!\n", "[SEND] Frag err.\n");
-						return NIAGARA_INVALID_FRAGMENT;
-					}
-
-					// If the status matches no destination, set the chip back into RX mode
-					if(status == NIAGARA_NOT_DESTINATION && !rxActive) {
-						int rx_set_status = start_receive_raw();
-						log_printf(LOG_TERMINAL, "Setting chip back into RX mode [%d]\n", rx_set_status);
+						status = Niagara::receive_raw(&remote, &control, &received_crc);
 					}
 				} while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); // Keep receiving until valid data is received or external timeout is reached
 				//If the state has changed, exit from the switch's condition and restart
 				if(state == TxState::SEND_SYN) break;
-
+				
+				if(status == NIAGARA_NO_DATA) {
+					log_printf(LOG_TERMINAL, " ['%s']", receive_output);
+					return NIAGARA_NO_DATA;
+				}
 				//If the receive method returned an error then propagate it to the whole method
 				if(status != NIAGARA_OK){
 					log_printf("[SEND] Closing send with status code [%d]\n", static_cast<int>(status));
@@ -671,79 +587,26 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 	return NIAGARA_TIMEOUT;
 }
 
-int Niagara::start_receive_raw() {
-	/* Cannot call this method twice without reading the data */
-	if(rxActive) return -1;
-
-	log_print(LOG_TERMINAL, "\t[RECV_RAW] Starting receive... ");
-	// Start the asynchronous reception
-	int state = lora->startReceive();
-	if(state != RADIOLIB_ERR_NONE) {
-		if(log_level == LOG_TERMINAL) log_printf("Error [%d]!\n", state);
-		else log_printf("[RAW_RX] Error %d\n", state);
-		return state; //Return any error which might get encountered
-	}
-	log_print(LOG_TERMINAL, "OK.\n");
-
-	// Set the flag
-	rxActive = true;
-	//Return no error
-	return RADIOLIB_ERR_NONE;
-}
-
-void Niagara::received_data_handler() {
-	Niagara::this_object->received_data = true;
-}
-
-Niagara_Ret Niagara::get_received_data(str* source, Niagara_Control* control_output, str* message_output) {
-	/* Cannot call this method before starting a reception */
-	if(!rxActive) {
-		log_print("\t[RECV_RAW] Error! Not in RX state! Cannot get received data.\n", "[RECV_RAW] NO RX!\n");
-		return NIAGARA_NOT_RECEIVING;
-	}
-	if(!received_data) {
-		log_print("\t[RECV_RAW] Error! No data available for receive.\n", "[RECV_RAW] NO DATA!\n");
-		return NIAGARA_TIMEOUT;
-	}
+Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, str* message_output) {
 	//If the identifier is empty and not yet initialized then return an error
 	if(Niagara::identifier.length() == 0)
 		return NIAGARA_NO_IDENTIFIER;
 
-	log_print(LOG_TERMINAL, "\t[RECV_RAW] Reading packet ");
-	// Retrieve the amount of data received
-	size_t received_len = lora->getPacketLength();
-	log_printf(LOG_TERMINAL, "[%d bytes]...", received_len);
-	//If no data has been received then exit with timeout error
-	if(received_len < 1) {
-		log_print(LOG_TERMINAL, "No data received\n");
-		return NIAGARA_TIMEOUT;
-	}
-	// Buffer used to receive output data
-	char receive_output[received_len + 1];
+	log_print(LOG_TERMINAL, "\t[RECV_RAW] Reading packet ");ƒ
+	// Create the string object to fit the data into
+	str receive_output;
 	//Read the data into the buffer
-	int state = lora->readData((uint8_t*)receive_output, received_len);
+	bool state = lora->recv(&receive_output);
+	// IF no data is available to receive
+	if(!state) {
+		log_print("No Data!\n");
+		return NIAGARA_NO_DATA;
+	}
 	log_printf(LOG_TERMINAL, " ['%s']", receive_output);
-	// Reset the flag indicating data received
-	received_data = false;
-	if(state == RADIOLIB_ERR_RX_TIMEOUT) {
-		log_print(LOG_TERMINAL, "Timeout!\n");
-		return NIAGARA_TIMEOUT;
-	}
-	// Null-terminate the output
-	receive_output[received_len] = '\0';
-	// Reset the flag indicating active read
-	rxActive = false;
-	if(state != RADIOLIB_ERR_NONE) {
-		if(log_level == LOG_TERMINAL) log_printf("Error [%d]!\n", state);
-		else log_printf("[RAW_RX] Error %d\n", state);
-		return RADIOLIB_ERROR;
-	}
-	log_print(LOG_TERMINAL, " OK.\n");
-	str receive_output_str(receive_output);
 	str processed_output[3];
 	log_print(LOG_TERMINAL, "\t [RECV_RAW] Processing packet... ");
 	//Check for errors on the process message method
-	state = Niagara::process_message(processed_output, receive_output_str);
+	state = Niagara::process_message(processed_output, receive_output);
 	if(state == 5) {
 		log_print(LOG_TERMINAL, "This is not the destination!\n");
 		return NIAGARA_NOT_DESTINATION;
@@ -830,7 +693,7 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 	log_printf(LOG_TERMINAL, "%s]... ", formattedMessage.c_str());
 	//Check if the formatted message to send is bigger than the maximum transmission unit to send over the radio
 	if(formattedMessage.length() >= Niagara::chip_mtu) return NIAGARA_TOO_LARGE;
-	int status = Niagara::lora->transmit(formattedMessage.c_str());
+	int status = Niagara::lora->send(formattedMessage);
 	// After a transmit, make sure to reset the received_data handler, because it has now been set to true due to the ISR, but no data has actually been received
 	Niagara::this_object->received_data = false;
 	rxActive = false;

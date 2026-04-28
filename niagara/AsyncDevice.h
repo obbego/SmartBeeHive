@@ -53,8 +53,9 @@ struct AsyncPacket {
 // ──────────────────────────────────────────────────────────────
 class AsyncDevice {
 public:
-		// ── Constructor ───────────────────────────────────────────
-		explicit AsyncDevice(SX126x* radio);
+		// ── Constructor / Destructor ──────────────────────────────
+		explicit AsyncDevice(int* error);
+		~AsyncDevice();
 
 		// ── Public API ────────────────────────────────────────────
 
@@ -84,12 +85,21 @@ public:
 		 */
 		void startRx();
 
+		size_t getMTU();
+
 		// ── ISR / callback (must be public so the static trampoline can call it) ─
 		void onReceive();   // called from DIO1 interrupt
 
 private:
 		// ── Radio handle ─────────────────────────────────────────
-		SX126x* _radio;
+		SX1262* _radio;
+
+		#ifndef ARDUINO
+		// instance of the HAL class
+		PiHal* hal;
+		#endif
+
+		static SX1262* init_radio();
 
 		// ── State flag ───────────────────────────────────────────
 		ASYNC_VOLATILE bool _rxArmed;   // true when radio is in RX mode

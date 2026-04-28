@@ -7,19 +7,14 @@
 #define NIAGARA_H
 
 #if defined(ARDUINO)
-// include the library
-#include <RadioLib.h>
 //Used for printf
 #include <stdarg.h>
 #else
-// include the library
-#include <RadioLib/RadioLib.h>
 #include <string>
 #include <cctype>
-// include the hardware abstraction layer
-#include "hal/RPi/PiHal.h"
 #endif
 
+#include "AsyncDevice.h"
 #include <stdarg.h>
 #include "str.h"
 
@@ -71,16 +66,15 @@ enum Niagara_Ret {
 		*/
 		NIAGARA_INVALID_DATA,    
 		/**
+		 * Returned by receive methods in case no data is available to receive.
+		 */
+		NIAGARA_NO_DATA,
+		/**
 		 * Returned by the underlaying send method when the binary data
 		 * which is to be sent over the radio exceedes the maximum size
 		 * which can be sent at a time.
 		*/
 		NIAGARA_TOO_LARGE,
-		/**
-		 * Returned by the underlying asynchronous receive retrieve data method when
-		 * the reception hasn't started at the moment of the method's call.
-		 */
-		NIAGARA_NOT_RECEIVING,
 		/**
 		 * Returned by the raw receive method when the
 		 * message received's destination isn't this device
@@ -107,15 +101,7 @@ enum Niagara_Ret {
 		/**
 		 * When an error occurred while sending
 		 */
-		NIAGARA_SEND_ERROR,
-		/**
-		 * Returned when a receive function which is defragmenting a message
-		 * encounters a parsing problem which forces the fragment stream
-		 * to be halted.
-		 * This error is also returned by a send function when the remote device encountered
-		 * a problem during fragmentation
-		*/
-		NIAGARA_INVALID_FRAGMENT
+		NIAGARA_SEND_ERROR
 };
 
 /**
@@ -130,7 +116,6 @@ enum Niagara_Control {
 		SYN,
 		ACK,
 		RETRANSMISSION_TIMEOUT,
-		FRAGMENTATION_ERROR,
 		END //This must be the last element
 };
 
@@ -235,17 +220,7 @@ class Niagara {
 		 * This method must be called after the chip has started an asynchronous reception
 		 * through start_receive_raw().
 		*/
-		Niagara_Ret get_received_data(str* source, Niagara_Control* control_output, str* message_output);
-		/*
-		 * Niagara object which is accessed by the ISR during receive
-		 * operations to set the callback flag for received data
-		 */
-		static Niagara* this_object;
-		/*
-		 * Method which is called when data is non-blockingly received from the chip.
-		 * This sets the flag which signals the rest of the code for available data. 
-		 */
-		static void received_data_handler();
+		Niagara_Ret receive_raw(str* source, Niagara_Control* control_output, str* message_output);
 		/*Sends a raw message to a specific destination */
 		Niagara_Ret send_raw(str destination, Niagara_Control control, str message);
 		
@@ -277,16 +252,7 @@ class Niagara {
 		void vlog_printf(const char* format, va_list args);
 
 		/* RadioLib pointer to the LoRa chip */
-		SX1262* lora = nullptr;
-		/* Flag which keeps track of whether the asynchronous reception has been started.
-		 * (It saves whether a call to start_receive_raw has been made, and it's reset when data
-		 * is read through get_received_data).
-		*/
-		bool rxActive = false;
-		/* Flag which is asynchronously set when data is received
-		 * by the non-blocking chip receive
-		*/
-		volatile bool received_data = false;
+		AsyncDevice* lora = nullptr;
 		/* Niagara identifier for this device */
 		str identifier;
 		/* If this value is set to something other than nullptr,
@@ -297,18 +263,6 @@ class Niagara {
 		Niagara_LogLevel log_level = NO_LOG;
 		/* Chip's hardware MTU */
 		uint16_t chip_mtu;
-		
-		#if defined(ARDUINO)
-		#else
-		// instance of the HAL class
-		PiHal* hal;
-		#endif
-
-		/*
-		* This method handles all needed initializations to create the
-		* object used to manage the radio module.
-		*/
-		SX1262* init_radio();
 
 		/*Used to process messages received using the protocol*/
 		int process_message(str* output, str message);

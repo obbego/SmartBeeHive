@@ -10,13 +10,28 @@ AsyncDevice* AsyncDevice::_instance = nullptr;
 // ════════════════════════════════════════════════════════════
 //  Constructor
 // ════════════════════════════════════════════════════════════
-AsyncDevice::AsyncDevice(SX126x* radio)
+AsyncDevice::AsyncDevice(int* error)
 	: _radio(radio)
 	, _rxArmed(false)
 	, _head(0)
 	, _tail(0)
 	, _count(0)
 {
+	#if defined(ARDUINO)
+	#else
+	// use SPI channel 1, because on Waveshare LoRaWAN Hat,
+	// the SX1261 CS is connected to CE1
+	AsyncDevice::hal = new PiHal(1);
+	#endif
+
+	//Initialize the radio module
+	SX1262* radio_return = init_radio();
+	if(radio_return == nullptr) {
+		if(error != nullptr) *error = -1;
+		return;
+	}
+	AsyncDevice::_radio = radio_return;
+
 	// Register this instance as the singleton target for the ISR
 	_instance = this;
 
@@ -25,8 +40,83 @@ AsyncDevice::AsyncDevice(SX126x* radio)
 
 	// Immediately arm RX
 	startRx();
+
+	// Set the error variable to zero in case everything went well
+	if(error != nullptr) *error = 0;
 }
 
+// ════════════════════════════════════════════════════════════
+//  Destructor
+// ════════════════════════════════════════════════════════════
+AsyncDevice::~AsyncDevice() {
+	if(AsyncDevice::_radio) {
+		delete AsyncDevice::_radio;
+		AsyncDevice::_radio = nullptr;
+	}
+	
+	#ifndef ARDUINO
+	if(AsyncDevice::hal) {
+		delete AsyncDevice::hal;
+		AsyncDevice::hal = nullptr;
+	}
+	#endif
+}
+
+#if defined(ARDUINO)
+SX1262* AsyncDevice::init_radio() {
+	// SX1262 has the following connections on this board:
+	// NSS pin:   8
+	// DIO1 pin:  14
+	// NRST pin:  12
+	// BUSY pin:  13
+	SX1262* radio = new SX1262(new Module(8, 14, 12, 13));
+
+	//log_print("[SX1262] Initializing...", "Init Radio...");
+	int state = radio->begin(868.0);
+	if(state != RADIOLIB_ERR_NONE) {
+		// if(log_level == LOG_TERMINAL) log_printf(" Initialization Failed!\nError code: %d\n", state);
+		// else log_printf("!\nError code: %d\n", state);
+		return nullptr;
+	}
+	state = radio->setCRC(2);
+	if(state != RADIOLIB_ERR_NONE) {
+		// if(log_level == LOG_TERMINAL) log_printf(" CRC Initialization Failed!\nError code: %d\n", state);
+		// else log_printf("!\nCRC Error: %d\n", state);
+		return nullptr;
+	}
+	// Set up the interrupt service routine for received data
+	radio->setDio1Action(received_data_handler);
+	// log_print(" Initialization successful!\n", "OK.\n");
+	return radio;
+}
+#else
+SX1262* AsyncDevice::init_radio() {
+	// now we can create the radio module
+	SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20 /*The BUSY pin of the module MUST be specified, otherwise error -2 is thrown*/));
+	
+	//log_print("[SX1262] Initializing...", "Init Radio...");
+	/* The module is being initialized with all the default begin() settings
+	 * The only settings changed are the following:
+	 * - The frequency, according to the EU868 standard must be 868MHz, the default frequency is 434MHz
+	 * - The TCXO voltage, which is the crystal which is powering the clock, since this module is not using TCXO, 
+	 *   not specifying that will cause error -707 to be thrown, so we need to specify its voltage to be 0
+	 */
+	int state = radio->begin(868.0 /*EU868 frequency*/, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0 /*This is not the default value*/, false);
+	if(state != RADIOLIB_ERR_NONE) {
+		//if(log_level == LOG_TERMINAL) log_printf(" Initialization Failed!\nError code: %d\n", state);
+		//else log_printf("!\nError code: %d\n", state);
+		return nullptr;
+	}
+	// Set up the interrupt service routine for received data
+	radio->setDio1Action(received_data_handler);
+	//log_print(" Initialization successful!\n", "OK.\n");
+	return radio;
+}
+#endif
+
+size_t AsyncDevice::getMTU() {
+	return _radio->maxPacketLength;
+}
 
 // ════════════════════════════════════════════════════════════
 //  send()  –  blocking TX, then re-arm RX
