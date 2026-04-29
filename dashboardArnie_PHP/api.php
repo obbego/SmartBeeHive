@@ -81,7 +81,7 @@ foreach ($TB_DEVICES as $hiveId => $deviceId) {
                 break;
         }
         $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries"
-            . "?keys=tempIn,humidity,weight,battery,honeyPct,tempOut,peakFreq"
+            . "?keys=tempIn,humidity,honeyWeightKg,battery,honeyPct,tempOut,peakFreq"
             . "&startTs=$startTs&endTs=$endTs&limit=$limit&orderBy=DESC";
     }
 
