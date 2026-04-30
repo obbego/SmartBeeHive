@@ -65,10 +65,11 @@ void loop() {
         String input_str = Serial.readStringUntil('\n');
         input_str.trim(); // Rimuove carriage return o newline
         Serial.println(input_str);
+		str destination = str("RASPI");
+		str input_str_converted = str(input_str);
 
         Serial.println("=== AVVIO TRASMISSIONE ===");
-        // Nota: Assumo che il secondo parametro accetti const char*
-        Niagara_Ret error = device->send("RASPI", input_str.c_str());
+        Niagara_Ret error = device->send(destination, input_str_converted);
         
         if (error == NIAGARA_OK) {
             Serial.println("-> Trasmissione completata con successo.");

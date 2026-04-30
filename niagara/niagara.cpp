@@ -135,13 +135,13 @@ Niagara_Ret Niagara::send(str destination, str message) {
 	if(log_level == LOG_TERMINAL) log_printf("Initialised fragmenter for send - MTU: %d\n", chip_mtu);
 
 	//Keep sending data to the specified destination using the fragments created
-	int more_fragments;
+	int more_fragments = 0;
 	int repeat_fragment = 0;
 	// String space for fragment data
 	str chunk;
 	do {
 		//Get the next fragment
-		if(repeat_fragment > 0) more_fragments = fragmenter.next_fragment(&chunk);
+		if(repeat_fragment == 0) more_fragments = fragmenter.next_fragment(&chunk);
 		
 		if(more_fragments >= 0) {
 			if(log_level == LOG_TERMINAL) log_printf("Fragments left: %d\n", more_fragments);
@@ -194,6 +194,7 @@ Niagara_Ret Niagara::receive(str* output, str* source) {
 	int frag_status;
 	do {
 		status = receive_fragment(&current_payload, &message_source); //Receive a fragment
+		if(status == NIAGARA_TIMEOUT) return NIAGARA_TIMEOUT;
 		if(status != NIAGARA_OK) continue; //If an error occurred then retry
 
 		//Add this first fragment to the fragmenter
@@ -453,7 +454,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 	//Buffer for the received crc
 	str received_crc;
 	//Buffer for the control message received
-	Niagara_Control control;
+	Niagara_Control control = TxState::SEND_SYN;
 	//Buffer for the status of send and receive functions
 	Niagara_Ret status;
 
@@ -572,7 +573,7 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
 		log_print("No Data!\n");
 		return NIAGARA_NO_DATA;
 	}
-	log_printf(LOG_TERMINAL, " ['%s']", receive_output);
+	log_printf(LOG_TERMINAL, " ['%s']", receive_output.c_str());
 	str processed_output[3];
 	log_print(LOG_TERMINAL, "\t [RECV_RAW] Processing packet... ");
 	//Check for errors on the process message method
