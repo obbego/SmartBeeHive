@@ -260,7 +260,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             impostaZeri();
         }
-        historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
+        try {
+            const allAlarms = await tbLoadAlarms();
+            const hiveName = hive ? hive.name : `Arnia 0${hiveId}`;
+            const hiveAlarms = allAlarms.filter(a => a.hive === hiveName);
+
+            if (hiveAlarms.length === 0) {
+                historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
+            } else {
+                historyDiv.innerHTML = hiveAlarms.map(alarm => {
+                    const statusMap = {
+                        system: { cls: 'tag-system', label: '⚙ DA GESTIRE' },
+                        open:   { cls: 'tag open',   label: '● APERTO'     },
+                        closed: { cls: 'tag closed', label: '✓ RISOLTO'    },
+                    };
+                    const s = statusMap[alarm.status] || statusMap.system;
+                    return `
+            <div class="history-item px-0">
+                <div>
+                    <div style="font-weight:600; color:white;">${alarm.msg}</div>
+                    <div style="font-size:12px; color:var(--text-muted);">${alarm.time}</div>
+                </div>
+                <span class="${s.cls}">${s.label}</span>
+            </div>`;
+                }).join('');
+            }
+        } catch (err) {
+            historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Errore caricamento allarmi.</div>';
+        }
     }
 
     lucide.createIcons();
