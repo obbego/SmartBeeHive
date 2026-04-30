@@ -54,8 +54,13 @@ function computeStats() {
     const honey = parseFloat(h.w);
     return sum + (isNaN(honey) ? 0 : honey);
   }, 0);
-  const activeAlarms = hivesData.filter(h => h.status === 'red').length;
-  const temps = activeHives.map(h => parseFloat(h.t)).filter(v => !isNaN(v) && v > 0);
+
+  const activeAlarms = alertsHistory.filter(a => {
+    const alarmId = a.id || (a.hive + '_' + a.time);
+    const status = getEffectiveAlarmStatus(alarmId, a.status);
+    return status === 'system' || status === 'open';
+  }).length;  const temps = activeHives.map(h => parseFloat(h.t)).filter(v => !isNaN(v) && v > 0);
+
   const avgTemp = temps.length > 0 ? temps.reduce((a, b) => a + b, 0) / temps.length : 0;
   const hums = activeHives.map(h => parseFloat(h.h)).filter(v => !isNaN(v) && v > 0);
   const avgHum = hums.length > 0 ? hums.reduce((a, b) => a + b, 0) / hums.length : 0;
@@ -189,25 +194,94 @@ function renderHistory() {
     const alarmId = alert.id || (alert.hive + '_' + alert.time);
     const effectiveStatus = getEffectiveAlarmStatus(alarmId, alert.status);
     const statusMap = {
-      system: {cls: 'tag-system', label: '⚙ DA GESTIRE'},
-      open:   {cls: 'tag open',   label: '● APERTO'},
-      closed: {cls: 'tag closed', label: '✓ RISOLTO'},
+      system: { cls: 'status-btn st-system', label: '<i data-lucide="bell-ring" style="width:11px;height:11px;margin-right:4px;"></i>Da  Gestire' },
+      open:   { cls: 'status-btn st-open',   label: '● Aperto'     },
+      closed: { cls: 'status-btn st-closed', label: '✓ Risolto'    },
     };
     const s = statusMap[effectiveStatus] || statusMap.system;
     return `
-   <div class="history-item">
-     <div>
-       <div style="font-weight:600; color:white;">${alert.hive} - ${alert.msg}</div>
-       <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
-     </div>
-     <button class="${s.cls}"
-       onclick="cycleAlarmStatus('${alarmId}', '${alert.status}')"
-       style="background:none;border:none;cursor:pointer;font-family:inherit;padding:0;"
-       title="Clicca per cambiare stato">
-       ${s.label}
-     </button>
-   </div>`;
+    <div class="history-item">
+      <div>
+        <div style="font-weight:600; color:white;">${alert.hive} - ${alert.msg}</div>
+        <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
+      </div>
+      <button class="${s.cls}" onclick="openIndexModal('${alarmId}')" title="Gestisci allarme">
+        ${s.label}
+      </button>
+    </div>`;
   }).join('');
+
+  lucide.createIcons();
+}
+
+// ─────────────────────────────────────────────
+// MODAL ALLARMI IN INDEX
+// ─────────────────────────────────────────────
+let indexModalAlarmId       = null;
+let indexModalSelectedStatus = null;
+
+function openIndexModal(alarmId) {
+  const alert = alertsHistory.find(a => (a.id || (a.hive + '_' + a.time)) === alarmId);
+  if (!alert) return;
+
+  indexModalAlarmId = alarmId;
+  const current = getEffectiveAlarmStatus(alarmId, alert.status);
+
+  // Se era "da gestire" → diventa automaticamente "aperto"
+  indexModalSelectedStatus = current === 'system' ? 'open' : current;
+
+  // Se stava diventando "aperto", salvalo subito
+  if (current === 'system') {
+    const states = loadLocalAlarmStates();
+    states[alarmId] = 'open';
+    saveLocalAlarmStates(states);
+    renderHistory();
+  }
+
+  document.getElementById('indexModalTitle').innerText = alert.msg;
+  document.getElementById('indexModalMeta').innerText  = alert.hive + ' · ' + alert.time;
+  document.getElementById('indexModalNote').value = loadLocalAlarmStates()['note_' + alarmId] || '';
+
+  document.querySelectorAll('#alarmModalIndex .modal-status-opt').forEach(el => {
+    el.className = 'modal-status-opt';
+    if (el.dataset.status === indexModalSelectedStatus) {
+      el.classList.add('selected-' + indexModalSelectedStatus);
+    }
+  });
+
+  document.getElementById('alarmModalIndex').classList.add('show');
+  lucide.createIcons();
+}
+
+function selectIndexModalStatus(status) {
+  indexModalSelectedStatus = status;
+  document.querySelectorAll('#alarmModalIndex .modal-status-opt').forEach(el => {
+    el.className = 'modal-status-opt';
+    if (el.dataset.status === status) el.classList.add('selected-' + status);
+  });
+}
+
+function closeIndexModal(event) {
+  if (event.target === document.getElementById('alarmModalIndex')) closeIndexModalDirect();
+}
+
+function closeIndexModalDirect() {
+  // Chiudere con X → se era "da gestire" rimane "aperto" (già salvato in openIndexModal)
+  document.getElementById('alarmModalIndex').classList.remove('show');
+  indexModalAlarmId        = null;
+  indexModalSelectedStatus = null;
+}
+
+function saveIndexAlarmStatus() {
+  if (!indexModalAlarmId || !indexModalSelectedStatus) return;
+  const states = loadLocalAlarmStates();
+  states[indexModalAlarmId] = indexModalSelectedStatus;
+  const note = document.getElementById('indexModalNote').value.trim();
+  if (note) states['note_' + indexModalAlarmId] = note;
+  else      delete states['note_' + indexModalAlarmId];
+  saveLocalAlarmStates(states);
+  closeIndexModalDirect();
+  renderHistory();
 }
 
 // Switch tra le tab della dashboard (Storico, Panoramica, Analisi)

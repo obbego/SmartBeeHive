@@ -126,9 +126,9 @@ function applyFilterRender() {
 function renderAlarmRow(alarm) {
     const status = getEffectiveStatus(alarm.id, alarm.tbStatus);
     const statusMap = {
-        system: { cls: 'st-system', label: '⚙ DA GESTIRE' },
-        open:   { cls: 'st-open',   label: '● APERTO'     },
-        closed: { cls: 'st-closed', label: '✓ RISOLTO'    },
+        system: { cls: 'st-system', label: '<i data-lucide="bell-ring" style="width:11px;height:11px;margin-right:4px;"></i>DA GESTIRE' },
+        open:   { cls: 'st-open',   label: 'Aperto'     },
+        closed: { cls: 'st-closed', label: 'Risolto'    },
     };
     const s = statusMap[status] || statusMap.system;
 

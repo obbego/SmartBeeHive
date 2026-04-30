@@ -16,6 +16,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/allarmi.css" />
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -232,9 +233,41 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
     </div>
 </div>
 
+<div class="alarm-modal-overlay" id="alarmModalIndex" onclick="closeIndexModal(event)">
+    <div class="alarm-modal">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="modal-alarm-title" id="indexModalTitle">Titolo allarme</div>
+                <div class="modal-alarm-meta"  id="indexModalMeta">Arnia · Data</div>
+            </div>
+            <button onclick="closeIndexModalDirect()"
+                    style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+        <hr class="modal-divider">
+        <div class="modal-label">Imposta stato allarme:</div>
+        <div class="modal-status-options">
+            <div class="modal-status-opt" data-status="system" onclick="selectIndexModalStatus('system')">
+                <div class="modal-opt-label" style="color:var(--danger);">Da Gestire</div>
+            </div>
+            <div class="modal-status-opt" data-status="closed" onclick="selectIndexModalStatus('closed')">
+                <div class="modal-opt-label" style="color:var(--success);">Risolto</div>
+            </div>
+        </div>
+        <textarea class="modal-note" id="indexModalNote" rows="3"
+                  placeholder="Aggiungi una nota (opzionale)..."></textarea>
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" onclick="closeIndexModalDirect()">Annulla</button>
+            <button class="btn-modal-save"   onclick="saveIndexAlarmStatus()">Salva</button>
+        </div>
+    </div>
+</div>
+
 <script src="../js/dati.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../js/index.js"></script>
 <script src="../js/thingsboard.js"></script>
+
 </body>
 </html>
