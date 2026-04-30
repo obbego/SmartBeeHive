@@ -44,10 +44,29 @@
     color: var(--success);
 }
 
+.filter-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 5px;
+    background: currentColor;
+}
+
 /* ── SEZIONE PER ARNIA ── */
 .hive-section {
     margin-bottom: 28px;
 }
+
+.alarms-stat.stat-system { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2); }
+.alarms-stat.stat-open   { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); }
+.alarms-stat.stat-closed { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); }
+
+.alarms-stat.stat-system .num { color: var(--danger); }
+.alarms-stat.stat-open   .num { color: var(--warning); }
+.alarms-stat.stat-closed .num { color: var(--success); }
+
+
 
 .hive-section-header {
     display: flex;
@@ -75,8 +94,8 @@
     padding: 3px 10px;
     border-radius: 12px;
 }
-.count-open   { background: rgba(245,158,11,0.2);  color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
-.count-system { background: rgba(239,68,68,0.2);   color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+.count-open   { background: rgba(245,158,11,0.2); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+.count-system { background: rgba(239,68,68,0.2);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
 .count-ok     { background: rgba(16,185,129,0.2); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
 
 .hive-alarms-body {

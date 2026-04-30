@@ -51,16 +51,16 @@ require_once '../auth.php';
             <div style="font-size: 13px; color: var(--text-muted);">Aggiornato in tempo reale da ThingsBoard</div>
         </div>
         <div class="d-flex gap-3 flex-wrap">
-            <div class="alarms-stat" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);">
-                <span class="num" id="countSystem" style="color: var(--warning);">0</span>
+            <div class="alarms-stat stat-system">
+                <span class="num" id="countSystem">0</span>
                 <span class="lbl">Da Gestire</span>
             </div>
-            <div class="alarms-stat" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);">
-                <span class="num" id="countOpen" style="color: var(--danger);">0</span>
+            <div class="alarms-stat stat-open">
+                <span class="num" id="countOpen">0</span>
                 <span class="lbl">Aperti</span>
             </div>
-            <div class="alarms-stat" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
-                <span class="num" id="countClosed" style="color: var(--success);">0</span>
+            <div class="alarms-stat stat-closed">
+                <span class="num" id="countClosed">0</span>
                 <span class="lbl">Risolti</span>
             </div>
         </div>
@@ -71,15 +71,12 @@ require_once '../auth.php';
         <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Filtra:</span>
         <button class="filter-btn active"   data-filter="all"    onclick="applyFilter('all', this)">Tutti</button>
         <button class="filter-btn f-system" data-filter="system" onclick="applyFilter('system', this)">
-            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warning);margin-right:5px;"></span>
             Da gestire
         </button>
         <button class="filter-btn f-open"   data-filter="open"   onclick="applyFilter('open', this)">
-            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--danger);margin-right:5px;"></span>
             Aperti
         </button>
         <button class="filter-btn f-closed" data-filter="closed" onclick="applyFilter('closed', this)">
-            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--success);margin-right:5px;"></span>
             Risolti
         </button>
 
