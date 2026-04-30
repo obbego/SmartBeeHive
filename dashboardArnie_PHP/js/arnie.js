@@ -300,7 +300,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             tab.classList.add('active');
             if (isMockMode) return;
 
-            const selectedInterval = tab.getAttribute('data-value');
+            let selectedInterval = tab.getAttribute('data-value');
+
+            // FIX: Se il pulsante è impostato su 'latest' o è vuoto, forziamo '24h'
+            // per garantire che i grafici ricevano lo storico temporale e non un solo punto.
+            if (!selectedInterval || selectedInterval === 'latest') {
+                selectedInterval = '24h';
+            }
+
             try {
                 ['tempInOutChart', 'humidityChart', 'weightFlowChart', 'peakFreqChart'].forEach(id => {
                     document.getElementById(id).style.opacity = '0.5';

@@ -69,15 +69,15 @@ foreach ($TB_DEVICES as $hiveId => $deviceId) {
             case '24':
             case '24h':
                 $startTs = $endTs - (24 * 60 * 60 * 1000);
-                $limit = 200;
+                $limit = 1000;
                 break;
             case '7d':
                 $startTs = $endTs - (7 * 24 * 60 * 60 * 1000);
-                $limit = 400;
+                $limit = 5000;
                 break;
             case '30d':
                 $startTs = $endTs - (30 * 24 * 60 * 60 * 1000);
-                $limit = 500;
+                $limit = 15000;
                 break;
         }
         $url = "$TB_HOST/api/plugins/telemetry/DEVICE/$deviceId/values/timeseries"
