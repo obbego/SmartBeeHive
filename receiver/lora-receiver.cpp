@@ -80,6 +80,9 @@ void initLogger() {
 /**
  * Function to recover the devices information from a specified
  * file. They're important to establish a well made communication
+ * 
+ * The file where to get the devices respect the following format:
+ * DEVICE_NAME ACCESS_TOKEN
  *
  * @return true if there are some devices registered, false otherwise
  */
