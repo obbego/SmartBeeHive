@@ -255,6 +255,24 @@ h1 {
 /* TABS NAV */
 .tabs-container {
   margin-bottom: 20px;
+  /* Centra il contenitore e gestisce il mobile (come col-12) */
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* Allinea la larghezza a quella di col-lg-11 su schermi desktop */
+@media (min-width: 992px) {
+  .tabs-container {
+    width: 91.666667%; /* È l'esatta percentuale che Bootstrap usa per col-lg-11 */
+  }
+}
+
+/* Ripristina l'allineamento per il titolo "Stato Arnie" nella colonna di sinistra */
+.left .tabs-container {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .tabs-nav {
