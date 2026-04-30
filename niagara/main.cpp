@@ -7,6 +7,9 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <thread>
+
+using namespace std;
 
 // Timestamped logger
 void timestamp_logger(const char* text) {
@@ -68,52 +71,89 @@ void timestamp_logger(const char* text) {
     std::fflush(stdout);
 }
 
-// Define the callback function for logging
-void logger(const char* message) {
-	printf(message);
-}
-
 int main(void) {
-	//Initialise the device
-	Niagara device(timestamp_logger, Niagara_LogLevel::LOG_TERMINAL);
-	if(!device.set_identifier("RASPI")) {
-		fprintf(stderr, "Error while setting identifier.\n");
-		return 1;
-	}
-	
-	//Variable to save error output
-	Niagara_Ret error;
-	//Send timer
-	Timer send_timer;
-	const unsigned int send_time = 5000;
-	
-	send_timer.start();
-	
-	//Start infinite loop
-	for(;;) {
-		/*
-		//If the send timer has elapsed then send a new packet
-		if(send_timer.elapsed() > send_time) {
-			send_timer.start();
-		
-			error = device.send("ESP32", "Hello!");
-			if(error != NIAGARA_OK) {
-				fprintf(stderr, "Error while sending data: %d\n", static_cast<int>(error));
-				continue;
-			}
-		}
-		*/
+    // Inizializza il dispositivo
+    Niagara device(timestamp_logger, Niagara_LogLevel::LOG_TERMINAL);
+    if(!device.set_identifier("RASPI")) {
+        fprintf(stderr, "Errore durante l'impostazione dell'identificatore.\n");
+        return 1;
+    }
+    
+    cout << "\n--- RASPI NIAGARA TEST READY ---" << endl;
 
-		//Try to receive
-		str receive;
-		str source;
-		error = device.receive(&receive, &source);
-		if(error != NIAGARA_OK) {
-			fprintf(stderr, "Error while receiving data: %d\n", static_cast<int>(error));
-			continue;
-		}
+    // Loop infinito per il menu
+    for(;;) {
+        cout << "\n--- MENU PRINCIPALE ---" << endl;
+        cout << "1: Trasmetti messaggio a ESP32" << endl;
+        cout << "2: Mettiti in ricezione" << endl;
+        cout << "Seleziona un'opzione: ";
+        
+        string choice;
+        getline(cin, choice);
 
-		printf("Received: %s\n", receive.c_str());
-		break;
-	}
+        if (choice == "1") {
+            // --- MODALITA' TRASMISSIONE ---
+            cout << "Inserisci la stringa da inviare: ";
+            string input_str;
+            getline(cin, input_str);
+
+            cout << "=== AVVIO TRASMISSIONE ===" << endl;
+            Niagara_Ret error = device.send("ESP32", input_str.c_str());
+            
+            if(error == NIAGARA_OK) {
+                cout << "-> Trasmissione completata con successo." << endl;
+            } else {
+                cout << "-> Errore durante la trasmissione. Codice: " << static_cast<int>(error) << endl;
+            }
+
+        } else if (choice == "2") {
+            // --- MODALITA' RICEZIONE ---
+            cout << "Inserisci il timeout in millisecondi: ";
+            string timeout_str;
+            getline(cin, timeout_str);
+            
+            long timeout_ms;
+            try {
+                timeout_ms = stol(timeout_str);
+            } catch (...) {
+                cout << "Input non valido. Uso 5000ms di default." << endl;
+                timeout_ms = 5000;
+            }
+
+            cout << "=== IN ATTESA DI DATI... ===" << endl;
+            
+            auto start_time = chrono::steady_clock::now();
+            auto timeout_duration = chrono::milliseconds(timeout_ms);
+            
+            Niagara_Ret error = NIAGARA_OK;
+            bool message_received = false;
+
+            while (chrono::steady_clock::now() - start_time < timeout_duration) {
+                str receive_data;
+                str source;
+                // Controlla l'ordine degli argomenti nella tua libreria!
+                error = device.receive(&receive_data, &source);
+                
+                if (error == NIAGARA_OK) {
+                    cout << "-> Messaggio Ricevuto da '" << source.c_str() << "': " 
+                         << receive_data.c_str() << endl;
+                    message_received = true;
+                    break;
+                }
+                
+                // Piccolo sleep per non mandare il core della CPU al 100%
+                this_thread::sleep_for(chrono::milliseconds(10)); 
+            }
+
+            if (!message_received) {
+                cout << "-> Timeout scaduto. Nessun messaggio ricevuto." << endl;
+                cout << "-> Ultimo codice di ritorno (Errore/Status): " << static_cast<int>(error) << endl;
+            }
+
+        } else {
+            cout << "Opzione non valida." << endl;
+        }
+    }
+    
+    return 0;
 }
