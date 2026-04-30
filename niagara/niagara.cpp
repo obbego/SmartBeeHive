@@ -294,8 +294,8 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
 
 	//Keep reiterating until the amount of retransmissions reaches the maximum amount of retransmissions
 	while(true) {
-		// Initialise status as NIAGARA_TIMEOUT so the loop check will work
-		status = NIAGARA_TIMEOUT;
+		// Initialise status as NIAGARA_NO_DATA so the loop check will work
+		status = NIAGARA_NO_DATA;
 		do {
 			//Check if the session time has exceeded the timeout in which case stop the communication
 			if(session_timer.elapsed() > MAX_RECV_WAIT){
@@ -311,13 +311,8 @@ Niagara_Ret Niagara::receive_fragment(str* output, str* source, str filter) {
 				//Receive raw data from the radio module and process it at the lower layer
 				status = Niagara::receive_raw(source, &control, &payload);
 			}
-		} while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); //Keep running while no data is received until external timeout is reached
+		} while(status == NIAGARA_NO_DATA || status == NIAGARA_NOT_DESTINATION); //Keep running while no data is received until external timeout is reached
 
-		// Return no data in case no data is available
-		if(status == NIAGARA_NO_DATA) {
-			log_print(LOG_TERMINAL, "No data available to read!\n");
-			return NIAGARA_NO_DATA;
-		}
 		//If the receive returned an error then propagate it to the whole method
 		if(status != NIAGARA_OK) {
 			log_printf(LOG_TERMINAL, "[RECV] Error while receiving: %d!\n", (int)status);
@@ -492,8 +487,8 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 			case TxState::WAIT_ACK:
 				log_print("==== [WAITING FOR CRC ACKNOWLEDGEMENT] ====\n", "[SEND] Waiting ACK.\n");
 
-				// Before the loop, initialise status as NIAGARA_TIMEOUT so the while loop won't exit immeditaely
-				status = NIAGARA_TIMEOUT;
+				// Before the loop, initialise status as NIAGARA_NO_DATA so the while loop won't exit immeditaely
+				status = NIAGARA_NO_DATA;
 				do {
 					//In case the acknowledgement timed out then try to retransmit the message
 					if(timer.elapsed() > MAX_RECV_WAIT) {
@@ -514,14 +509,10 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 						//Wait for it to be actually received
 						status = Niagara::receive_raw(&remote, &control, &received_crc);
 					}
-				} while(status == NIAGARA_TIMEOUT || status == NIAGARA_NOT_DESTINATION); // Keep receiving until valid data is received or external timeout is reached
+				} while(status == NIAGARA_NO_DATA || status == NIAGARA_NOT_DESTINATION); // Keep receiving until valid data is received or external timeout is reached
 				//If the state has changed, exit from the switch's condition and restart
 				if(state == TxState::SEND_SYN) break;
 				
-				if(status == NIAGARA_NO_DATA) {
-					log_print(LOG_TERMINAL, "No Data Available!\n");
-					return NIAGARA_NO_DATA;
-				}
 				//If the receive method returned an error then propagate it to the whole method
 				if(status != NIAGARA_OK){
 					log_printf("[SEND] Closing send with status code [%d]\n", static_cast<int>(status));
