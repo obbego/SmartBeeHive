@@ -454,7 +454,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 	//Buffer for the received crc
 	str received_crc;
 	//Buffer for the control message received
-	Niagara_Control control = TxState::SEND_SYN;
+	Niagara_Control control = Niagara_Control::NONE;
 	//Buffer for the status of send and receive functions
 	Niagara_Ret status;
 

@@ -116,6 +116,7 @@ enum Niagara_Control {
 		SYN,
 		ACK,
 		RETRANSMISSION_TIMEOUT,
+		NONE,
 		END //This must be the last element
 };
 
