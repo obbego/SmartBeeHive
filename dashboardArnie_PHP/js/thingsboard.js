@@ -115,13 +115,14 @@ async function tbLoadAlarms() {
                 : '--';
 
             return {
+                id: alarm.id?.id || alarm.id || (deviceName + '_' + ts),
                 hive: deviceName,
                 msg: alarmTypeLabels[alarm.type] || alarm.type,
                 time: ts,
-                status: alarm.status === 'CLEARED_ACK' || alarm.status === 'CLEARED_UNACK'
-                    ? 'closed' : 'open',
-                severity: alarm.severity || 'WARNING'
+                status: alarm.status === 'CLEARED_ACK' || alarm.status === 'CLEARED_UNACK' ? 'closed' : 'open',
+                severity: alarm.severity || 'WARNING', tbStatus: alarm.status || ''
             };
+
         });
     } catch (err) {
         console.error("Errore caricamento allarmi", err);
