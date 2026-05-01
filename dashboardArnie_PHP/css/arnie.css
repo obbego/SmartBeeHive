@@ -157,3 +157,43 @@ header a:hover {
     height: auto;           /* Annulla eventuali altezze fisse ereditate */
     min-height: 32px;       /* Imposta un'altezza minima contenuta */
 }
+
+/* Contenitore principale dello storico nella pagina arnia */
+.alarm-history-container-arnie {
+    height: 497px; /* Altezza calcolata per allinearsi a "Stato Sensori" */
+    overflow: hidden; /* Evita che la card si espanda all'esterno */
+}
+
+/* Rende la lista interna scorrevole */
+#localHistory {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 10px; /* Spazio per la scrollbar */
+}
+
+/* Stile Scrollbar personalizzato (coerente con la dashboard) */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(239, 68, 68, 0.3); /* Colore rosso trasparente (tema allarme) */
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--danger);
+}
+
+/* Adattamento per Tablet/Mobile */
+@media (max-width: 992px) {
+    .alarm-history-container-arnie {
+        height: 350px; /* Altezza ridotta su mobile per leggibilità */
+        margin-top: 10px;
+    }
+}

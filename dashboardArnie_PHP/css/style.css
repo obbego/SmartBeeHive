@@ -551,3 +551,44 @@ h1 {
   .tab-btn { padding: 8px 12px; font-size: 13px; }
 }
 
+/* Altezza fissa per il contenitore degli allarmi */
+.alarm-history-container {
+  height: 1232px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Impedisce alla card intera di allungarsi */
+}
+
+/* Rendiamo la lista interna scorrevole */
+#historyList {
+  flex: 1; /* Occupa tutto lo spazio rimanente nella card */
+  overflow-y: auto; /* Attiva lo scroll verticale */
+  padding-right: 10px; /* Spazio per la scrollbar */
+}
+
+/* Personalizzazione della Scrollbar (più elegante per il tema dark) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.3); /* Colore miele trasparente */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--honey-glow);
+}
+
+/* Responsive: su mobile l'altezza fissa potrebbe essere eccessiva,
+   quindi la riduciamo */
+@media (max-width: 992px) {
+  .alarm-history-container {
+    height: 500px;
+  }
+}

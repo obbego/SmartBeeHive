@@ -128,13 +128,14 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 
     <!-- Storico allarmi -->
     <div class="col-lg-6 col-right-fix">
-      <div class="glass-panel p-0 flex-grow-1 d-flex flex-column margin-top-align">
-        <div class="p-3 border-bottom border-white border-opacity-10">
-          <div class="chart-title mb-0" style="color: var(--danger);">Storico Allarmi</div>
-        </div>
-        <div id="localHistory" class="history-list p-3"></div>
+          <div class="glass-panel p-0 d-flex flex-column alarm-history-container-arnie">
+              <div class="p-3 border-bottom border-white border-opacity-10">
+                  <div class="chart-title mb-0" style="color: var(--danger);">Storico Allarmi</div>
+              </div>
+              <div id="localHistory" class="history-list p-3 custom-scrollbar">
+              </div>
+          </div>
       </div>
-    </div>
   </div>
 
   <!-- Selettore temporale grafici -->

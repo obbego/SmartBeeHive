@@ -140,7 +140,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
             <div id="tab-history" class="tab-content active">
                 <div class="row g-4 d-flex justify-content-center">
                     <div class="col-12 col-lg-11">
-                        <div class="glass-panel chart-box" style="height: auto; min-height: 400px;">
+                        <div class="glass-panel chart-box alarm-history-container">
                             <div class="p-3 border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center">
                                 <div class="chart-title mb-0">Log Eventi e Allarmi</div>
                                 <a href="allarmi.php" class="btn-manage-alarms">
@@ -148,7 +148,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
                                     Gestisci Allarmi
                                 </a>
                             </div>
-                            <div id="historyList" class="history-list p-3">
+                            <div id="historyList" class="history-list p-3 custom-scrollbar">
                             </div>
                         </div>
                     </div>
