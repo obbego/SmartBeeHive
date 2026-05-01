@@ -13,7 +13,7 @@ async function tbGetTelemetry(hiveId, interval = '24h') {
     }
 }*/
 
-async function tbGetTelemetry(hiveId, interval = '24h') {
+async function tbGetTelemetry(hiveId, interval = 'latest') {
     try {
         const res = await fetch(`${API_URL}?id=${hiveId}&interval=${interval}`);
         const data = await res.json();

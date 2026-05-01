@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- MODALITA' REALE ---
         let telemetry = null;
         try {
-            telemetry = await tbGetTelemetry(hiveId);
+            telemetry = await tbGetTelemetry(hiveId, '24h');
             if (telemetry && Object.keys(telemetry).length > 0) {
                 const temInVal  = telemetry.tempIn   ? telemetry.tempIn.slice(-1)[0].value   : 0;
                 const humVal    = telemetry.humidity  ? telemetry.humidity.slice(-1)[0].value  : 0;
