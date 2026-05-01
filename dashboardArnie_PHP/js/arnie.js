@@ -184,6 +184,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             telemetry = await tbGetTelemetry(hiveId, '24h');
             if (telemetry && Object.keys(telemetry).length > 0) {
+                ['tempIn', 'tempOut', 'humidity', 'honeyWeightKg', 'honeyPct', 'peakFreq'].forEach(key => {
+                    if (telemetry[key] && telemetry[key].length > 0) {
+                        telemetry[key].sort((a, b) => a.ts - b.ts);
+                    }
+                });
+
                 const temInVal  = telemetry.tempIn   ? telemetry.tempIn.slice(-1)[0].value   : 0;
                 const humVal    = telemetry.humidity  ? telemetry.humidity.slice(-1)[0].value  : 0;
                 const weightVal = telemetry.honeyWeightKg ? telemetry.honeyWeightKg.slice(-1)[0].value : 0;
@@ -226,7 +232,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // --- AGGIORNAMENTO TESTO DATA ---
                 if (telemetry.tempIn && telemetry.tempIn.length > 0) {
                     const date = new Date(telemetry.tempIn.slice(-1)[0].ts);
-                    // Mostriamo anche giorno e mese, utile se il dato è vecchio
                     document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                 } else {
                     document.getElementById('lastUpdate').innerText = 'Ultimo dato: Non disponibile';
