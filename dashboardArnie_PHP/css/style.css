@@ -572,17 +572,31 @@ h1 {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 0, 0, 0.25);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(245, 158, 11, 0.3); /* Colore miele trasparente */
+  background: linear-gradient(
+          180deg,
+          rgba(255, 204, 51, 0.9),   /* giallo chiaro */
+          rgba(245, 158, 11, 0.9),   /* miele */
+          rgba(180, 83, 9, 0.9)      /* ambra scuro */
+  );
   border-radius: 10px;
+  box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.2),
+  0 0 6px rgba(245, 158, 11, 0.3);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--honey-glow);
+  background: linear-gradient(
+          180deg,
+          #ffe066,
+          #f59e0b,
+          #b45309
+  );
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.4),
+  0 0 10px rgba(245, 158, 11, 0.6);
 }
 
 /* Responsive: su mobile l'altezza fissa potrebbe essere eccessiva,
