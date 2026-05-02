@@ -1,7 +1,11 @@
 <?php
+date_default_timezone_set('Europe/Rome'); // <-- AGGIUNGI QUESTA RIGA
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 ini_set('display_errors', '0'); // Nasconde i warning PHP testuali
+
+session_start();
+require 'config.php';
 
 session_start();
 require 'config.php';

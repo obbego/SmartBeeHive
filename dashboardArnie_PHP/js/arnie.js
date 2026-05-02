@@ -95,9 +95,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('valWeight').innerText   = '0kg';
         document.getElementById('barMiele').style.height = '0%';
         document.getElementById('valMiele').innerText    = '0%';
-        document.getElementById('lastUpdate').innerText  = 'Ultimo dato: ND';
+        //document.getElementById('lastUpdate').innerText  = 'Ultimo dato: ND';
         const semaforo = document.getElementById('statusSemaforo');
-        semaforo.className = 'status-alert instabile';
+        semaforo.className = 'status-alert allarme';
         semaforo.innerHTML = '<i data-lucide="help-circle"></i> Sensori non configurati o offline';
         historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme.</div>';
     };
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('valHum').innerText      = hive.h + '%';
         document.getElementById('barMiele').style.height = hive.pct + '%';
         document.getElementById('valMiele').innerText    = hive.pct + '%';
-        document.getElementById('lastUpdate').innerText  = 'Ultimo aggiornamento: ' + hive.lastUpdate;
+        //document.getElementById('lastUpdate').innerText  = 'Ultimo aggiornamento: ' + hive.lastUpdate;
 
         // Colora tutti e 4 i riquadri
         applyMetricColors(hive.t, hive.h, hive.w, hive.peakFreq);
@@ -117,13 +117,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const semaforo = document.getElementById('statusSemaforo');
         if (hive.status === 'green') {
             semaforo.className = 'status-alert ottimale';
-            semaforo.innerHTML = '<i data-lucide="check-circle"></i> Stato Ottimale: Tutto sotto controllo';
+            semaforo.innerHTML = '<i data-lucide="check-circle"></i> Dati ricevuti: tutto regolare (Ultimo aggiornamento dati: ' + hive.lastUpdate + ')';
         } else if (hive.status === 'yellow') {
             semaforo.className = 'status-alert instabile';
-            semaforo.innerHTML = '<i data-lucide="help-circle"></i> Stato Instabile: Monitorare variazioni';
-        } else if (hive.status === 'red') {
+            semaforo.innerHTML = '<i data-lucide="help-circle"></i> Attenzione: ultimo aggiornamento superiore a 24 ore (' + hive.lastUpdate + ')';
+        } else if (hive.status === 'red' || hive.status === 'offline') {
             semaforo.className = 'status-alert allarme';
-            semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Intervento richiesto';
+            semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Arnia non disponibile: uno o più dispositivi sono offline';
         }
 
         const ora = Date.now();
@@ -230,34 +230,45 @@ document.addEventListener('DOMContentLoaded', async () => {
                 */
 
                 // --- AGGIORNAMENTO TESTO DATA ---
-                if (telemetry.tempIn && telemetry.tempIn.length > 0) {
-                    const date = new Date(telemetry.tempIn.slice(-1)[0].ts);
-                    document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-                } else {
-                    document.getElementById('lastUpdate').innerText = 'Ultimo dato: Non disponibile';
+                let dataFormattata = telemetry.last_ts_human || 'Data non disponibile';
+
+                // SE L'API NON TROVA DATI NELLE ULTIME 24H (Restituisce 'Errore' o 'Mai')
+                // Facciamo una rapida chiamata senza limiti di tempo ('latest') per trovare la vera data storica
+                if (dataFormattata === 'Errore' || dataFormattata === 'Mai') {
+                    try {
+                        const datiAssoluti = await tbGetTelemetry(hiveId, 'latest');
+                        if (datiAssoluti && datiAssoluti.last_ts_human && datiAssoluti.last_ts_human !== 'Errore' && datiAssoluti.last_ts_human !== 'Mai') {
+                            dataFormattata = datiAssoluti.last_ts_human;
+                            telemetry.is_stale = true; // Confermiamo che i dati sono vecchi
+                        } else {
+                            dataFormattata = 'Nessun dato registrato';
+                        }
+                    } catch (e) {
+                        console.error("Impossibile recuperare la data assoluta");
+                    }
                 }
 
                 // --- GESTIONE SEMAFORO E WARNING ---
                 const semaforo = document.getElementById('statusSemaforo');
 
                 if (telemetry.is_stale) {
-                    // Controllo prioritario: dati vecchi di oltre 24 ore
                     semaforo.className = 'status-alert instabile';
-                    semaforo.innerHTML = '<i data-lucide="help-circle"></i> Attenzione: Ultimo aggiornamento superiore a 24 ore';
+                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: ultimo aggiornamento superiore a 24 ore (${dataFormattata})`;
                 }
                 else if (temInVal == 0 && weightVal == 0 && humVal == 0) {
-                    semaforo.className = 'status-alert instabile';
-                    semaforo.innerHTML = '<i data-lucide="help-circle"></i> Valori a zero - Verificare sensori';
+                    semaforo.className = 'status-alert allarme';
+                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Arnia non disponibile: uno o più dispositivi sono offline`;
                 }
                 else if (temInVal > 40 || temInVal < -5) {
                     semaforo.className = 'status-alert allarme';
-                    semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Temperatura fuori soglia';
+                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Allarme: Temperatura fuori soglia (Ultimo aggiornamento dati: ${dataFormattata})`;
                 }
                 else {
                     semaforo.className = 'status-alert ottimale';
-                    semaforo.innerHTML = '<i data-lucide="check-circle"></i> Dati Ricevuti: Tutto regolare';
+                    semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: tutto regolare (Ultimo aggiornamento dati: ${dataFormattata})`;
                 }
 
+                if (window.lucide) lucide.createIcons();
                 initDetailCharts(telemetry);
             } else {
                 impostaZeri();

@@ -45,7 +45,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 			  <label class="form-check-label text-white" for="mockDataSwitch"
 					 style="font-size: 13px; cursor: pointer;">Modalità Demo</label>
 		  </div>
-		  <div id="lastUpdate" style="font-size: 13px; color: var(--text-muted);">Ultimo dato: --:--</div>
+          <!-- <div id="lastUpdate" style="font-size: 13px; color: var(--text-muted);">Ultimo dato: --:--</div>-->
 		  <div style="font-size: 13px; color: var(--text-muted);">
 			  <?= htmlspecialchars($utente_nome) ?>
 			  &nbsp;·&nbsp;

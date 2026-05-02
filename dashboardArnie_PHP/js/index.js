@@ -92,7 +92,7 @@ function renderHives() {
   const grid = document.getElementById('hivesGrid');
   grid.innerHTML = hivesData.map((hive) => {
     let statusText = 'OFFLINE';
-    let statusColor = 'var(--warning)';
+    let statusColor = 'var(--danger)';
     if (hive.status === 'green')  { statusText = 'ONLINE';     statusColor = 'var(--success)'; }
     if (hive.status === 'yellow') { statusText = 'ATTENZIONE'; statusColor = 'var(--warning)'; }
     if (hive.status === 'red')    { statusText = 'ALLARME';    statusColor = 'var(--danger)';  }
@@ -118,7 +118,7 @@ function renderHives() {
                <span style="font-size: 11px; font-weight: 600; color: ${statusColor}; letter-spacing: 0.04em;">
                  ${statusText}
                </span>
-               <div class="status-dot status-${hive.status === 'offline' ? 'yellow' : hive.status}"></div>
+               <div class="status-dot status-${hive.status === 'offline' ? 'red' : hive.status}"></div>
              </div>
              ${hive.status === 'yellow' && hive.lastUpdate === 'Dati non aggiornati da oltre 24 ore'
         ? `<div style="font-size: 11px; color: var(--warning); font-style: italic; margin-top: 2px;">
