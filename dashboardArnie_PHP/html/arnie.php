@@ -117,7 +117,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
             <div class="chart-title mb-3">Stato Sensori</div>
             <div id="statusSemaforo" class="status-alert mb-3"></div>
             <div class="d-flex justify-content-between align-items-center pt-3">
-              <span style="font-size: 13px; color: var(--text-muted);">Affidabilità R² (In/Out):</span>
+              <span style="font-size: 13px; color: var(--text-muted);">R² Pearson (In/Out):</span>
               <strong id="valR2" class="text-white">0.82</strong>
             </div>
           </div>

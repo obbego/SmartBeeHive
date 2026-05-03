@@ -7,9 +7,6 @@ ini_set('display_errors', '0'); // Nasconde i warning PHP testuali
 session_start();
 require 'config.php';
 
-session_start();
-require 'config.php';
-
 $requestedId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
 // --- 1. CACHE ---

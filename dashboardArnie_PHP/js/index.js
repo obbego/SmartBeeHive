@@ -8,7 +8,6 @@ const mockAlertsHistory = [
 ];
 let alertsHistory = [];
 
-
 // ─────────────────────────────────────────────
 // LOGICA COLORI METRICHE
 // ─────────────────────────────────────────────
@@ -43,7 +42,6 @@ function getFreqColor(f) {
 function colorStyle(color) {
   return color ? `color: ${color}; font-weight: 700;` : '';
 }
-
 
 // ─────────────────────────────────────────────
 // STATISTICHE DASHBOARD
@@ -347,52 +345,65 @@ Chart.defaults.font.family = "'Inter', sans-serif";
 // UTILITY SERIE TEMPORALI (condivisa da entrambe le sezioni)
 // ─────────────────────────────────────────────
 
-function parseSeries(series) {
-  if (!series || series.length === 0) return {labels: [], data: []};
+// Arrotonda il timestamp al blocco di X minuti più vicino (es. 15 min)
+function roundTs(ts, minutes = 15) {
+  const ms = 1000 * 60 * minutes;
+  return Math.round(ts / ms) * ms;
+}
+
+function parseSeries(series, roundMinutes = 15) {
+  if (!series || series.length === 0) return { labels: [], data: [], raw: [] };
   const sorted = [...series].sort((a, b) => a.ts - b.ts);
+
+  // Arrotondiamo i ts per facilitare l'allineamento nei grafici
+  const alignedData = sorted.map(p => ({
+    ts: roundTs(p.ts, roundMinutes),
+    value: parseFloat(p.value)
+  }));
+
   return {
-    labels: sorted.map(p => {
-      const d = new Date(p.ts);
-      return d.toLocaleString('it-IT', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
-    }),
-    data: sorted.map(p => parseFloat(p.value))
+    labels: alignedData.map(p => new Date(p.ts).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })),
+    data: alignedData.map(p => p.value),
+    raw: alignedData // Teniamo i dati con ts arrotondato per le aggregazioni
   };
 }
 
-function aggregateMean(allSeries) {
-  const tsSet = new Set();
-  allSeries.forEach(s => (s || []).forEach(p => tsSet.add(p.ts)));
-  const sortedTs = [...tsSet].sort((a, b) => a - b);
+function aggregateMean(allSeries, roundMinutes = 15) {
+  const grouped = {};
+  allSeries.forEach(s => {
+    (s || []).forEach(p => {
+      const rTs = roundTs(p.ts, roundMinutes);
+      if (!grouped[rTs]) grouped[rTs] = [];
+      grouped[rTs].push(parseFloat(p.value));
+    });
+  });
+
+  const sortedTs = Object.keys(grouped).map(Number).sort((a, b) => a - b);
   const data = sortedTs.map(ts => {
-    const vals = allSeries
-        .map(s => (s || []).find(p => p.ts === ts))
-        .filter(Boolean)
-        .map(p => parseFloat(p.value));
-    return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    const vals = grouped[ts];
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
   });
-  const labels = sortedTs.map(ts => {
-    const d = new Date(ts);
-    return d.toLocaleString('it-IT', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
-  });
-  return {labels, data};
+  const labels = sortedTs.map(ts => new Date(ts).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
+  return { labels, data, rawTs: sortedTs };
 }
 
-function aggregateSum(allSeries) {
-  const tsSet = new Set();
-  allSeries.forEach(s => (s || []).forEach(p => tsSet.add(p.ts)));
-  const sortedTs = [...tsSet].sort((a, b) => a - b);
+function aggregateSum(allSeries, roundMinutes = 15) {
+  const grouped = {};
+  allSeries.forEach(s => {
+    (s || []).forEach(p => {
+      const rTs = roundTs(p.ts, roundMinutes);
+      if (!grouped[rTs]) grouped[rTs] = [];
+      grouped[rTs].push(parseFloat(p.value));
+    });
+  });
+
+  const sortedTs = Object.keys(grouped).map(Number).sort((a, b) => a - b);
   const data = sortedTs.map(ts => {
-    const vals = allSeries
-        .map(s => (s || []).find(p => p.ts === ts))
-        .filter(Boolean)
-        .map(p => parseFloat(p.value));
-    return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) : null;
+    const vals = grouped[ts];
+    return vals.reduce((a, b) => a + b, 0);
   });
-  const labels = sortedTs.map(ts => {
-    const d = new Date(ts);
-    return d.toLocaleString('it-IT', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
-  });
-  return {labels, data};
+  const labels = sortedTs.map(ts => new Date(ts).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
+  return { labels, data };
 }
 
 // ─────────────────────────────────────────────
@@ -564,40 +575,50 @@ function initAnalysisCharts(allTelemetries) {
     const pairs = [];
     allTelemetries.forEach(tel => {
       if (!tel || !tel.tempIn || !tel.tempOut) return;
+
       tel.tempIn.forEach(pin => {
-        const pout = tel.tempOut.find(p => p.ts === pin.ts);
-        if (pout) pairs.push({x: parseFloat(pout.value), y: parseFloat(pin.value)});
+        let closestPout = null;
+        let minDiff = 30 * 60 * 1000; // Tolleranza: 30 minuti
+
+        tel.tempOut.forEach(pout => {
+          const diff = Math.abs(pout.ts - pin.ts);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestPout = pout;
+          }
+        });
+
+        if (closestPout) {
+          pairs.push({x: parseFloat(closestPout.value), y: parseFloat(pin.value)});
+        }
       });
     });
-    // Fallback: un punto per arnia dal valore più recente
-    if (pairs.length === 0) {
-      allTelemetries.forEach(tel => {
-        if (!tel || !tel.tempIn || !tel.tempOut) return;
-        const inLast  = [...tel.tempIn].sort((a, b) => b.ts - a.ts)[0];
-        const outLast = [...tel.tempOut].sort((a, b) => b.ts - a.ts)[0];
-        if (inLast && outLast) pairs.push({x: parseFloat(outLast.value), y: parseFloat(inLast.value)});
-      });
-    }
 
-    const r2 = pairs.length >= 3
-        ? computeR2(pairs.map(p => p.x), pairs.map(p => p.y))
-        : null;
-    const r2El = document.getElementById('analysisR2');
-    if (r2El) r2El.innerText = r2 !== null ? `R² = ${r2.toFixed(2)}` : 'R² = N/D';
-
-    if (analysisCharts.corr) analysisCharts.corr.destroy();
-    analysisCharts.corr = new Chart(document.getElementById('correlationChart'), {
+    // QUESTA È LA PARTE CHE MANCAVA: Il disegno del grafico
+    if (analysisCharts.correlation) analysisCharts.correlation.destroy();
+    analysisCharts.correlation = new Chart(document.getElementById('correlationChart'), {
       type: 'scatter',
-      data: {datasets: [{
-          label: 'Temp In vs Temp Out', data: pairs,
-          backgroundColor: '#fbbf24', pointRadius: 5, pointHoverRadius: 7
-        }]},
+      data: {
+        datasets: [{
+          label: 'Temp In vs Out',
+          data: pairs,
+          backgroundColor: 'rgba(56, 189, 248, 0.6)',
+          borderColor: 'rgba(56, 189, 248, 1)',
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
       options: {
         ...commonOptions,
-        plugins: {legend: {display: false}},
         scales: {
-          x: {title: {display: true, text: 'Temp Esterna (°C)', color: '#94a3b8'}, grid: {display: false}},
-          y: {title: {display: true, text: 'Temp Interna (°C)', color: '#94a3b8'}}
+          x: {
+            title: { display: true, text: 'Temperatura Esterna (°C)', color: '#94a3b8' },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          },
+          y: {
+            title: { display: true, text: 'Temperatura Interna (°C)', color: '#94a3b8' },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          }
         }
       }
     });
@@ -741,92 +762,4 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error("Errore caricamento allarmi", err);
     }
   }
-
-  // ── Selettore temporale Panoramica ────────────────────────────────────
-  //const overviewTabs = document.querySelectorAll('#overviewTimeSelector .tab-btn');
-  overviewTabs.forEach(tab => {
-    tab.addEventListener('click', async () => {
-      overviewTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const interval = tab.getAttribute('data-value');
-      if (localStorage.getItem('mockMode') === 'true') { initOverviewChartsMock(); return; }
-      ['tempChart', 'humidityChart', 'honeyChart', 'soundChart'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.style.opacity = '0.4';
-      });
-      await loadOverviewCharts(interval);
-      ['tempChart', 'humidityChart', 'honeyChart', 'soundChart'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.style.opacity = '1';
-      });
-    });
-  });
-
-  // ── Selettore temporale Analisi Avanzata ──────────────────────────────
-  //const analysisTabs = document.querySelectorAll('#analysisTimeSelector .tab-btn');
-  analysisTabs.forEach(tab => {
-    tab.addEventListener('click', async () => {
-      analysisTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const interval = tab.getAttribute('data-value');
-      if (localStorage.getItem('mockMode') === 'true') { initAnalysisChartsMock(); return; }
-      ['correlationChart', 'derivative1Chart', 'weightDerivativeChart'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.style.opacity = '0.4';
-      });
-      await loadAnalysisCharts(interval);
-      ['correlationChart', 'derivative1Chart', 'weightDerivativeChart'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.style.opacity = '1';
-      });
-    });
-  });
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Funzione generica per gestire il cambio tab
-  function setupTimeSelector(selectorId, chartUpdateFunction, chartIds) {
-    const tabs = document.querySelectorAll(`#${selectorId} .tab-btn`);
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', async () => {
-        // Cambia stato attivo visivo
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-
-        const interval = tab.getAttribute('data-value');
-        const isMock = localStorage.getItem('mockMode') === 'true';
-
-        // Effetto caricamento (opacità)
-        chartIds.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.style.opacity = '0.4';
-        });
-
-        // Carica i dati
-        if (isMock) {
-          // Se hai funzioni mock specifiche usale, altrimenti ricarica i grafici
-          console.log(`Mock mode: ${interval}`);
-        } else {
-          await chartUpdateFunction(interval);
-        }
-
-        // Ripristina opacità
-        chartIds.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.style.opacity = '1';
-        });
-      });
-    });
-  }
-
-  // Configura Panoramica
-  setupTimeSelector(
-      'overviewTimeSelector',
-      loadOverviewCharts, // Assicurati che questa funzione accetti l'intervallo
-      ['tempChart', 'humidityChart', 'honeyChart', 'soundChart']
-  );
-
-  // Configura Analisi Avanzata
-  setupTimeSelector(
-      'analysisTimeSelector',
-      loadAnalysisCharts,
-      ['correlationChart', 'derivative1Chart', 'weightDerivativeChart']
-  );
 });
