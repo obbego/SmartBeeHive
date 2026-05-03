@@ -4,17 +4,19 @@
 
 #include "AsyncDevice.h"
 
-// ── ESP32 Hardware Spinlock & SPI Mutex Macros ───────────────
+// ── Platform-specific SPI Mutex Macros ───────────────────────
 #if defined(ARDUINO) && defined(ESP32)
 	portMUX_TYPE async_queue_mux = portMUX_INITIALIZER_UNLOCKED;
-	#define SPI_LOCK()   xSemaphoreTake(_spiMutex, portMAX_DELAY)
-	#define SPI_UNLOCK() xSemaphoreGive(_spiMutex)
+	#define SPI_LOCK()   xSemaphoreTake(this->_spiMutex, portMAX_DELAY)
+	#define SPI_UNLOCK() xSemaphoreGive(this->_spiMutex)
+#elif !defined(ARDUINO)
+	#define SPI_LOCK()   this->_linuxSpiMutex.lock()
+	#define SPI_UNLOCK() this->_linuxSpiMutex.unlock()
 #else
 	#define SPI_LOCK()   ((void)0)
 	#define SPI_UNLOCK() ((void)0)
 #endif
 
-// ── Static instance pointer (singleton trampoline) ───────────
 AsyncDevice* AsyncDevice::_instance = nullptr;
 
 // ════════════════════════════════════════════════════════════
@@ -34,42 +36,32 @@ AsyncDevice::AsyncDevice(int* error)
 		_spiMutex = xSemaphoreCreateMutex();
 		#endif
 	#else
-	// use SPI channel 1, because on Waveshare LoRaWAN Hat,
-	// the SX1261 CS is connected to CE1
 	AsyncDevice::hal = new PiHal(1);
+	_processThread = nullptr;
+	_threadRunning = false;
 	#endif
 
-	//Initialize the radio module
 	SX1262* radio_return = init_radio();
 	if(radio_return == nullptr) {
 		if(error != nullptr) *error = -1;
 		return;
 	}
 	AsyncDevice::_radio = radio_return;
-
-	// Register this instance as the singleton target for the ISR
 	_instance = this;
 
-	// Hook DIO1 → our trampoline
 	_radio->setDio1Action(_isrTrampoline);
-
-	// Immediately arm RX
 	startRx();
 
 	#if defined(ARDUINO) && defined(ESP32)
-	// Launch the background task on Core 0 (Arduino loop runs on Core 1)
 	xTaskCreatePinnedToCore(
-		_taskTrampoline,      // Task function
-		"AsyncLoRaTask",      // Name
-		4096,                 // Stack size
-		this,                 // Pass this instance to the static trampoline
-		1,                    // Priority
-		&_processTaskHandle,  // Handle
-		0                     // Pin to core 0
+		_taskTrampoline, "AsyncLoRaTask", 4096, this, 1, &_processTaskHandle, 0
 	);
+	#elif !defined(ARDUINO)
+	// Launch std::thread for Raspberry Pi background processing
+	_threadRunning = true;
+	_processThread = new std::thread(_threadTrampoline, this);
 	#endif
 
-	// Set the error variable to zero in case everything went well
 	if(error != nullptr) *error = 0;
 }
 
@@ -85,6 +77,15 @@ AsyncDevice::~AsyncDevice() {
 	if (_spiMutex) {
 		vSemaphoreDelete(_spiMutex);
 		_spiMutex = nullptr;
+	}
+	#elif !defined(ARDUINO)
+	_threadRunning = false;
+	if (_processThread) {
+		if (_processThread->joinable()) {
+			_processThread->join();
+		}
+		delete _processThread;
+		_processThread = nullptr;
 	}
 	#endif
 
@@ -104,24 +105,17 @@ AsyncDevice::~AsyncDevice() {
 #if defined(ARDUINO)
 SX1262* AsyncDevice::init_radio() {
 	SX1262* radio = new SX1262(new Module(8, 14, 12, 13));
-
 	int state = radio->begin(868.0);
-	if(state != RADIOLIB_ERR_NONE) {
-		return nullptr;
-	}
+	if(state != RADIOLIB_ERR_NONE) return nullptr;
 	state = radio->setCRC(2);
-	if(state != RADIOLIB_ERR_NONE) {
-		return nullptr;
-	}
+	if(state != RADIOLIB_ERR_NONE) return nullptr;
 	return radio;
 }
 #else
 SX1262* AsyncDevice::init_radio() {
 	SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20));
 	int state = radio->begin(868.0, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0, false);
-	if(state != RADIOLIB_ERR_NONE) {
-		return nullptr;
-	}
+	if(state != RADIOLIB_ERR_NONE) return nullptr;
 	return radio;
 }
 #endif
@@ -130,9 +124,6 @@ size_t AsyncDevice::getMTU() {
 	return _radio->maxPacketLength;
 }
 
-// ════════════════════════════════════════════════════════════
-//  send()  –  blocking TX, then re-arm RX
-// ════════════════════════════════════════════════════════════
 int AsyncDevice::send(const str& payload)
 {
 	SPI_LOCK();
@@ -149,32 +140,19 @@ int AsyncDevice::send(const str& payload)
 
 	_txActive = false;
 	SPI_UNLOCK();
-
-	// startRx internally locks the mutex, so we call it after unlocking
 	startRx();
-
 	return status;
 }
 
-// ════════════════════════════════════════════════════════════
-//  recv()  –  pop oldest packet from FIFO (non-blocking)
-// ════════════════════════════════════════════════════════════
 bool AsyncDevice::recv(str& out)
 {
 	AsyncPacket pkt;
-	if (!queuePop(pkt)) {
-		return false;
-	}
+	if (!queuePop(pkt)) return false;
 
-	out = str(reinterpret_cast<const char*>(pkt.data));
 	out = str(reinterpret_cast<const char*>(pkt.data)).substring(0, pkt.len);
-
 	return true;
 }
 
-// ════════════════════════════════════════════════════════════
-//  stop()  –  place radio in STANDBY
-// ════════════════════════════════════════════════════════════
 void AsyncDevice::stop()
 {
 	SPI_LOCK();
@@ -183,9 +161,6 @@ void AsyncDevice::stop()
 	SPI_UNLOCK();
 }
 
-// ════════════════════════════════════════════════════════════
-//  startRx()  –  arm continuous reception
-// ════════════════════════════════════════════════════════════
 void AsyncDevice::startRx()
 {
 	SPI_LOCK();
@@ -194,18 +169,12 @@ void AsyncDevice::startRx()
 	SPI_UNLOCK();
 }
 
-// ════════════════════════════════════════════════════════════
-//  onReceive()  –  called from DIO1 ISR context
-// ════════════════════════════════════════════════════════════
 void AsyncDevice::onReceive()
 {
 	if (!_rxArmed || _txActive) return;
 	_packetReady = true;
 }
 
-// ════════════════════════════════════════════════════════════
-//  process()  –  Deferred ISR processing (Runs automatically on ESP32)
-// ════════════════════════════════════════════════════════════
 void AsyncDevice::process()
 {
 	if (_packetReady) {
@@ -216,7 +185,7 @@ void AsyncDevice::process()
 		size_t   len = _radio->getPacketLength();
 
 		int status = _radio->readData(buf, len);
-		SPI_UNLOCK(); // Unlock before calling startRx
+		SPI_UNLOCK();
 
 		if (status != RADIOLIB_ERR_NONE) {
 			startRx();
@@ -224,15 +193,13 @@ void AsyncDevice::process()
 		}
 
 		if (len > ASYNC_MTU) len = ASYNC_MTU;
-
 		queuePush(buf, static_cast<uint8_t>(len));
-
 		startRx();
 	}
 }
 
 // ════════════════════════════════════════════════════════════
-//  Static Task & ISR Trampolines
+//  Background Thread/Task Trampolines
 // ════════════════════════════════════════════════════════════
 #if defined(ARDUINO) && defined(ESP32)
 void AsyncDevice::_taskTrampoline(void* pvParameters)
@@ -240,10 +207,16 @@ void AsyncDevice::_taskTrampoline(void* pvParameters)
 	AsyncDevice* instance = static_cast<AsyncDevice*>(pvParameters);
 	for(;;) {
 		instance->process();
-		// A 1 tick (~1ms) delay is strictly required here. It keeps the core
-		// from running at 100% capacity and prevents the FreeRTOS Task 
-		// Watchdog Timer (TWDT) from crashing the ESP32.
 		vTaskDelay(pdMS_TO_TICKS(1)); 
+	}
+}
+#elif !defined(ARDUINO)
+void AsyncDevice::_threadTrampoline(AsyncDevice* instance)
+{
+	while (instance->_threadRunning) {
+		instance->process();
+		// Yield/sleep slightly to prevent 100% CPU usage on the Pi
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 #endif
@@ -254,9 +227,7 @@ void IRAM_ATTR AsyncDevice::_isrTrampoline()
 void AsyncDevice::_isrTrampoline()
 #endif
 {
-	if (_instance) {
-		_instance->onReceive();
-	}
+	if (_instance) _instance->onReceive();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -267,7 +238,7 @@ bool AsyncDevice::queuePush(const uint8_t* data, uint8_t len)
 #if defined(ARDUINO)
 	ASYNC_ENTER_CRITICAL();
 #else
-	std::lock_guard<std::mutex> lock(_mutex);
+	std::lock_guard<std::mutex> lock(_queueMutex);
 #endif
 
 	if (_count == ASYNC_QUEUE_DEPTH) {
@@ -283,7 +254,6 @@ bool AsyncDevice::queuePush(const uint8_t* data, uint8_t len)
 #if defined(ARDUINO)
 	ASYNC_EXIT_CRITICAL();
 #endif
-
 	return true;
 }
 
@@ -292,7 +262,7 @@ bool AsyncDevice::queuePop(AsyncPacket& out)
 #if defined(ARDUINO)
 	ASYNC_ENTER_CRITICAL();
 #else
-	std::lock_guard<std::mutex> lock(_mutex);
+	std::lock_guard<std::mutex> lock(_queueMutex);
 #endif
 
 	if (_count == 0) {
@@ -309,7 +279,6 @@ bool AsyncDevice::queuePop(AsyncPacket& out)
 #if defined(ARDUINO)
 	ASYNC_EXIT_CRITICAL();
 #endif
-
 	return true;
 }
 
