@@ -95,6 +95,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('valWeight').innerText   = '0kg';
         document.getElementById('barMiele').style.height = '0%';
         document.getElementById('valMiele').innerText    = '0%';
+        document.getElementById('valR2').innerText       = 'N/D';
+
         //document.getElementById('lastUpdate').innerText  = 'Ultimo dato: ND';
         const semaforo = document.getElementById('statusSemaforo');
         semaforo.className = 'status-alert allarme';
@@ -165,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         initDetailCharts(mockTelemetry);
+        updateR2(mockTelemetry);
 
         historyDiv.innerHTML = "";
         mockAlerts.forEach(alert => {
@@ -183,7 +186,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         let telemetry = null;
         try {
             telemetry = await tbGetTelemetry(hiveId, '24h');
-            if (telemetry && Object.keys(telemetry).length > 0) {
+
+            // Verifica se esistono dati utili nelle ultime 24h
+            const hasData24h = telemetry && telemetry.tempIn && telemetry.tempIn.length > 0;
+
+            if (!hasData24h) {
+                // Nessun dato nelle ultime 24h, recuperiamo l'ultimo dato assoluto ('latest')
+                try {
+                    const latestTelemetry = await tbGetTelemetry(hiveId, 'latest');
+                    if (latestTelemetry && latestTelemetry.tempIn && latestTelemetry.tempIn.length > 0) {
+                        // Sostituiamo per far disegnare l'interfaccia (ed il puntatore nel grafico) usando quest'ultimo dato
+                        telemetry = latestTelemetry;
+                        telemetry.is_stale = true; // Triggera l'allarme giallo "dati vecchi"
+                    }
+                } catch (e) {
+                    console.error("Impossibile recuperare i dati assoluti (latest)", e);
+                }
+            }
+
+            if (telemetry && Object.keys(telemetry).length > 0 && telemetry.tempIn && telemetry.tempIn.length > 0) {
                 ['tempIn', 'tempOut', 'humidity', 'honeyWeightKg', 'honeyPct', 'peakFreq'].forEach(key => {
                     if (telemetry[key] && telemetry[key].length > 0) {
                         telemetry[key].sort((a, b) => a.ts - b.ts);
@@ -203,7 +224,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('barMiele').style.height = parseFloat(pctVal).toFixed(0)    + '%';
                 document.getElementById('valMiele').innerText    = parseFloat(pctVal).toFixed(0)    + '%';
 
-                // Colora tutti e 4 i riquadri
                 applyMetricColors(temInVal, humVal, weightVal, freqVal);
 
                 /*
@@ -231,21 +251,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // --- AGGIORNAMENTO TESTO DATA ---
                 let dataFormattata = telemetry.last_ts_human || 'Data non disponibile';
-
-                // SE L'API NON TROVA DATI NELLE ULTIME 24H (Restituisce 'Errore' o 'Mai')
-                // Facciamo una rapida chiamata senza limiti di tempo ('latest') per trovare la vera data storica
                 if (dataFormattata === 'Errore' || dataFormattata === 'Mai') {
-                    try {
-                        const datiAssoluti = await tbGetTelemetry(hiveId, 'latest');
-                        if (datiAssoluti && datiAssoluti.last_ts_human && datiAssoluti.last_ts_human !== 'Errore' && datiAssoluti.last_ts_human !== 'Mai') {
-                            dataFormattata = datiAssoluti.last_ts_human;
-                            telemetry.is_stale = true; // Confermiamo che i dati sono vecchi
-                        } else {
-                            dataFormattata = 'Nessun dato registrato';
-                        }
-                    } catch (e) {
-                        console.error("Impossibile recuperare la data assoluta");
-                    }
+                    dataFormattata = 'Nessun dato registrato';
                 }
 
                 // --- GESTIONE SEMAFORO E WARNING ---
@@ -267,6 +274,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     semaforo.className = 'status-alert ottimale';
                     semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: tutto regolare (Ultimo aggiornamento dati: ${dataFormattata})`;
                 }
+
+                // --- AGGIORNAMENTO R2 E GRAFICI ---
+                updateR2(telemetry);
 
                 if (window.lucide) lucide.createIcons();
                 initDetailCharts(telemetry);
@@ -442,4 +452,58 @@ function parseTelemetrySeries(series) {
     });
     const data = series.map(p => p.value);
     return { labels, data };
+}
+
+// Funzione matematica per calcolare l'R² tra due array di dati appaiati
+function computeR2(xArr, yArr) {
+    const n = Math.min(xArr.length, yArr.length);
+    if (n < 3) return null;
+    const x = xArr.slice(0, n), y = yArr.slice(0, n);
+    const mx = x.reduce((a, b) => a + b, 0) / n;
+    const my = y.reduce((a, b) => a + b, 0) / n;
+    const num = x.reduce((s, xi, i) => s + (xi - mx) * (y[i] - my), 0);
+    const den = Math.sqrt(
+        x.reduce((s, xi) => s + (xi - mx) ** 2, 0) *
+        y.reduce((s, yi) => s + (yi - my) ** 2, 0)
+    );
+    if (den === 0) return null;
+    return (num / den) ** 2;
+}
+
+function updateR2(telemetry) {
+    const r2El = document.getElementById('valR2');
+    if (!r2El) return;
+
+    // Se non ci sono dati o c'è solo l'ultimo dato (arnia offline)
+    if (!telemetry || !telemetry.tempIn || telemetry.tempIn.length < 3) {
+        r2El.innerText = 'Dati insuff.'; // Invece di N/D, più chiaro
+        return;
+    }
+
+    const pairs = [];
+    const MAX_TIME_DIFF = 60 * 60 * 1000; // Alziamo a 1 ora per sicurezza
+
+    telemetry.tempIn.forEach(pin => {
+        let closestOut = null;
+        let minDiff = Infinity;
+
+        telemetry.tempOut.forEach(pout => {
+            const diff = Math.abs(pout.ts - pin.ts);
+            if (diff < minDiff && diff <= MAX_TIME_DIFF) {
+                minDiff = diff;
+                closestOut = pout;
+            }
+        });
+
+        if (closestOut) {
+            pairs.push({ x: parseFloat(closestOut.value), y: parseFloat(pin.value) });
+        }
+    });
+
+    if (pairs.length >= 3) {
+        const r2 = computeR2(pairs.map(p => p.x), pairs.map(p => p.y));
+        r2El.innerText = r2 !== null ? r2.toFixed(2) : 'N/D';
+    } else {
+        r2El.innerText = 'Sync in corso...';
+    }
 }
