@@ -104,6 +104,11 @@ AsyncDevice::~AsyncDevice() {
 
 #if defined(ARDUINO)
 SX1262* AsyncDevice::init_radio() {
+	// SX1262 has the following connections on this board:
+	// NSS pin:   8
+	// DIO1 pin:  14
+	// NRST pin:  12
+	// BUSY pin:  13
 	SX1262* radio = new SX1262(new Module(8, 14, 12, 13));
 	int state = radio->begin(868.0);
 	if(state != RADIOLIB_ERR_NONE) return nullptr;
@@ -113,8 +118,14 @@ SX1262* AsyncDevice::init_radio() {
 }
 #else
 SX1262* AsyncDevice::init_radio() {
-	SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20));
-	int state = radio->begin(868.0, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0, false);
+	SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20 /*The BUSY pin of the module MUST be specified, otherwise error -2 is thrown*/));
+	/* The module is being initialized with all the default begin() settings
+	 * The only settings changed are the following:
+	 * - The frequency, according to the EU868 standard must be 868MHz, the default frequency is 434MHz
+	 * - The TCXO voltage, which is the crystal which is powering the clock, since this module is not using TCXO, 
+	 *   not specifying that will cause error -707 to be thrown, so we need to specify its voltage to be 0
+	 */
+	int state = radio->begin(868.0 /*EU868 frequency*/, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0 /*This is not the default value*/, false);
 	if(state != RADIOLIB_ERR_NONE) return nullptr;
 	return radio;
 }

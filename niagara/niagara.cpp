@@ -573,7 +573,7 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
 		log_print("No Data!\n");
 		return NIAGARA_NO_DATA;
 	}
-	log_printf(LOG_TERMINAL, " ['%s']", receive_output.c_str());
+	log_printf(LOG_TERMINAL, " ['%s']\n", receive_output.c_str());
 	str processed_output[3];
 	log_print(LOG_TERMINAL, "\t [RECV_RAW] Processing packet... ");
 	//Check for errors on the process message method
