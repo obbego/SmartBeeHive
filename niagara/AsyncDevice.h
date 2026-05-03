@@ -9,6 +9,11 @@
 #if defined(ARDUINO)
 	#include <Arduino.h>
 	#include <RadioLib.h>
+	#if defined(ESP32)
+		#include <freertos/FreeRTOS.h>
+		#include <freertos/task.h>
+		#include <freertos/semphr.h>
+	#endif
 #else
 	// Raspberry Pi (Linux) – assume RadioLib installed system-wide
 	#include <RadioLib/RadioLib.h>
@@ -27,8 +32,15 @@ static constexpr uint8_t  ASYNC_QUEUE_DEPTH  = 8;    // max packets kept in FIFO
 
 // ── Platform-specific ISR / atomic helpers ──────────────────
 #if defined(ARDUINO)
-	#define ASYNC_ENTER_CRITICAL()  noInterrupts()
-	#define ASYNC_EXIT_CRITICAL()   interrupts()
+	#if defined(ESP32)
+		// ESP32 dual-core requires a spinlock to protect variables across cores
+		extern portMUX_TYPE async_queue_mux;
+		#define ASYNC_ENTER_CRITICAL()  portENTER_CRITICAL(&async_queue_mux)
+		#define ASYNC_EXIT_CRITICAL()   portEXIT_CRITICAL(&async_queue_mux)
+	#else
+		#define ASYNC_ENTER_CRITICAL()  noInterrupts()
+		#define ASYNC_EXIT_CRITICAL()   interrupts()
+	#endif
 	#define ASYNC_VOLATILE          volatile
 #else
 	#include <atomic>
@@ -57,58 +69,43 @@ public:
 		~AsyncDevice();
 
 		// ── Public API ────────────────────────────────────────────
-
-		/**
-		 * Blocking transmit.
-		 * Pauses RX, sends the packet, then immediately re-arms RX.
-		 * Returns a RadioLib status code (RADIOLIB_ERR_NONE == 0 on success).
-		 */
 		int send(const str& payload);
-
-		/**
-		 * Non-blocking receive.
-		 * Pops the oldest packet from the FIFO into `out` and returns true.
-		 * Returns false (and leaves `out` unchanged) if the buffer is empty.
-		 */
 		bool recv(str& out);
-
-		/**
-		 * Put the radio into STANDBY – stops background reception.
-		 * Call send() or explicitly restart RX with startRx() to wake up.
-		 */
 		void stop();
-
-		/**
-		 * Re-arm continuous reception (called automatically after send/ISR,
-		 * but exposed publicly so the caller can restart after stop()).
-		 */
 		void startRx();
-
 		size_t getMTU();
-
-		// ── ISR / callback (must be public so the static trampoline can call it) ─
 		void onReceive();   // called from DIO1 interrupt
 
 private:
+		// ── Hardware interrupt processing (Now Private) ──────────
+		void process();
+
 		// ── Radio handle ─────────────────────────────────────────
 		SX1262* _radio;
 
 		#ifndef ARDUINO
-		// instance of the HAL class
 		PiHal* hal;
 		#endif
 
 		SX1262* init_radio();
 
-		// ── State flag ───────────────────────────────────────────
-		ASYNC_VOLATILE bool _rxArmed;   // true when radio is in RX mode
-		ASYNC_VOLATILE bool _txActive;  // true when radio is in TX mode
+		// ── FreeRTOS Dual-Core Abstraction ───────────────────────
+		#if defined(ARDUINO) && defined(ESP32)
+		TaskHandle_t _processTaskHandle;
+		SemaphoreHandle_t _spiMutex;
+		static void _taskTrampoline(void* pvParameters);
+		#endif
+
+		// ── State flags ──────────────────────────────────────────
+		ASYNC_VOLATILE bool _rxArmed;      
+		ASYNC_VOLATILE bool _txActive;     
+		ASYNC_VOLATILE bool _packetReady;  
 
 		// ── FIFO ring-buffer ─────────────────────────────────────
 		AsyncPacket _queue[ASYNC_QUEUE_DEPTH];
-		ASYNC_VOLATILE uint8_t _head;   // next slot to read  (consumer)
-		ASYNC_VOLATILE uint8_t _tail;   // next slot to write (producer / ISR)
-		ASYNC_VOLATILE uint8_t _count;  // packets currently stored
+		ASYNC_VOLATILE uint8_t _head;   
+		ASYNC_VOLATILE uint8_t _tail;   
+		ASYNC_VOLATILE uint8_t _count;  
 
 #if !defined(ARDUINO)
 		std::mutex _mutex;  // protects the ring-buffer on Linux/RPi
@@ -119,9 +116,6 @@ private:
 		bool     queuePop(AsyncPacket& out);
 		uint8_t  queueCount() const;
 
-		// ── Static trampoline for RadioLib callback ───────────────
-		// RadioLib needs a plain function pointer (or IRAM_ATTR on ESP32).
-		// We store a pointer to the single live instance here.
 		static AsyncDevice* _instance;
 
 #if defined(ARDUINO)

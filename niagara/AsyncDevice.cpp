@@ -4,6 +4,16 @@
 
 #include "AsyncDevice.h"
 
+// ── ESP32 Hardware Spinlock & SPI Mutex Macros ───────────────
+#if defined(ARDUINO) && defined(ESP32)
+	portMUX_TYPE async_queue_mux = portMUX_INITIALIZER_UNLOCKED;
+	#define SPI_LOCK()   xSemaphoreTake(_spiMutex, portMAX_DELAY)
+	#define SPI_UNLOCK() xSemaphoreGive(_spiMutex)
+#else
+	#define SPI_LOCK()   ((void)0)
+	#define SPI_UNLOCK() ((void)0)
+#endif
+
 // ── Static instance pointer (singleton trampoline) ───────────
 AsyncDevice* AsyncDevice::_instance = nullptr;
 
@@ -13,11 +23,16 @@ AsyncDevice* AsyncDevice::_instance = nullptr;
 AsyncDevice::AsyncDevice(int* error)
 	: _rxArmed(false)
 	, _txActive(false)
+	, _packetReady(false)
 	, _head(0)
 	, _tail(0)
 	, _count(0)
 {
 	#if defined(ARDUINO)
+		#if defined(ESP32)
+		_processTaskHandle = nullptr;
+		_spiMutex = xSemaphoreCreateMutex();
+		#endif
 	#else
 	// use SPI channel 1, because on Waveshare LoRaWAN Hat,
 	// the SX1261 CS is connected to CE1
@@ -41,6 +56,19 @@ AsyncDevice::AsyncDevice(int* error)
 	// Immediately arm RX
 	startRx();
 
+	#if defined(ARDUINO) && defined(ESP32)
+	// Launch the background task on Core 0 (Arduino loop runs on Core 1)
+	xTaskCreatePinnedToCore(
+		_taskTrampoline,      // Task function
+		"AsyncLoRaTask",      // Name
+		4096,                 // Stack size
+		this,                 // Pass this instance to the static trampoline
+		1,                    // Priority
+		&_processTaskHandle,  // Handle
+		0                     // Pin to core 0
+	);
+	#endif
+
 	// Set the error variable to zero in case everything went well
 	if(error != nullptr) *error = 0;
 }
@@ -49,6 +77,17 @@ AsyncDevice::AsyncDevice(int* error)
 //  Destructor
 // ════════════════════════════════════════════════════════════
 AsyncDevice::~AsyncDevice() {
+	#if defined(ARDUINO) && defined(ESP32)
+	if (_processTaskHandle) {
+		vTaskDelete(_processTaskHandle);
+		_processTaskHandle = nullptr;
+	}
+	if (_spiMutex) {
+		vSemaphoreDelete(_spiMutex);
+		_spiMutex = nullptr;
+	}
+	#endif
+
 	if(AsyncDevice::_radio) {
 		delete AsyncDevice::_radio;
 		AsyncDevice::_radio = nullptr;
@@ -64,48 +103,25 @@ AsyncDevice::~AsyncDevice() {
 
 #if defined(ARDUINO)
 SX1262* AsyncDevice::init_radio() {
-	// SX1262 has the following connections on this board:
-	// NSS pin:   8
-	// DIO1 pin:  14
-	// NRST pin:  12
-	// BUSY pin:  13
 	SX1262* radio = new SX1262(new Module(8, 14, 12, 13));
 
-	//log_print("[SX1262] Initializing...", "Init Radio...");
 	int state = radio->begin(868.0);
 	if(state != RADIOLIB_ERR_NONE) {
-		// if(log_level == LOG_TERMINAL) log_printf(" Initialization Failed!\nError code: %d\n", state);
-		// else log_printf("!\nError code: %d\n", state);
 		return nullptr;
 	}
 	state = radio->setCRC(2);
 	if(state != RADIOLIB_ERR_NONE) {
-		// if(log_level == LOG_TERMINAL) log_printf(" CRC Initialization Failed!\nError code: %d\n", state);
-		// else log_printf("!\nCRC Error: %d\n", state);
 		return nullptr;
 	}
-	// log_print(" Initialization successful!\n", "OK.\n");
 	return radio;
 }
 #else
 SX1262* AsyncDevice::init_radio() {
-	// now we can create the radio module
-	SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20 /*The BUSY pin of the module MUST be specified, otherwise error -2 is thrown*/));
-	
-	//log_print("[SX1262] Initializing...", "Init Radio...");
-	/* The module is being initialized with all the default begin() settings
-	 * The only settings changed are the following:
-	 * - The frequency, according to the EU868 standard must be 868MHz, the default frequency is 434MHz
-	 * - The TCXO voltage, which is the crystal which is powering the clock, since this module is not using TCXO, 
-	 *   not specifying that will cause error -707 to be thrown, so we need to specify its voltage to be 0
-	 */
-	int state = radio->begin(868.0 /*EU868 frequency*/, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0 /*This is not the default value*/, false);
+	SX1262* radio = new SX1262(new Module(hal, 21, 16, 18, 20));
+	int state = radio->begin(868.0, 125.0, 9, 7, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 10, 8, 0, false);
 	if(state != RADIOLIB_ERR_NONE) {
-		//if(log_level == LOG_TERMINAL) log_printf(" Initialization Failed!\nError code: %d\n", state);
-		//else log_printf("!\nError code: %d\n", state);
 		return nullptr;
 	}
-	//log_print(" Initialization successful!\n", "OK.\n");
 	return radio;
 }
 #endif
@@ -119,26 +135,26 @@ size_t AsyncDevice::getMTU() {
 // ════════════════════════════════════════════════════════════
 int AsyncDevice::send(const str& payload)
 {
-    _txActive = true;   // segnala all'ISR che siamo in TX
-	// 1. Disarm RX so we don't race with an incoming packet during TX
+	SPI_LOCK();
+	_txActive = true;
 	if (_rxArmed) {
 		_radio->standby();
 		_rxArmed = false;
 	}
 
-	// 2. Transmit (RadioLib blocking call)
 	const uint8_t* buf = reinterpret_cast<const uint8_t*>(payload.c_str());
 	size_t         len = static_cast<size_t>(payload.length());
 
 	int status = _radio->transmit(buf, len);
 
-    _txActive = false;  // TX terminato, ora è sicuro ricevere
-	// 3. Always re-arm RX regardless of TX outcome
+	_txActive = false;
+	SPI_UNLOCK();
+
+	// startRx internally locks the mutex, so we call it after unlocking
 	startRx();
 
 	return status;
 }
-
 
 // ════════════════════════════════════════════════════════════
 //  recv()  –  pop oldest packet from FIFO (non-blocking)
@@ -147,72 +163,91 @@ bool AsyncDevice::recv(str& out)
 {
 	AsyncPacket pkt;
 	if (!queuePop(pkt)) {
-		return false;   // nothing in buffer
+		return false;
 	}
 
 	out = str(reinterpret_cast<const char*>(pkt.data));
-	// Trim to actual length in case data contains embedded nulls
 	out = str(reinterpret_cast<const char*>(pkt.data)).substring(0, pkt.len);
 
 	return true;
 }
-
 
 // ════════════════════════════════════════════════════════════
 //  stop()  –  place radio in STANDBY
 // ════════════════════════════════════════════════════════════
 void AsyncDevice::stop()
 {
+	SPI_LOCK();
 	_radio->standby();
 	_rxArmed = false;
+	SPI_UNLOCK();
 }
-
 
 // ════════════════════════════════════════════════════════════
 //  startRx()  –  arm continuous reception
 // ════════════════════════════════════════════════════════════
 void AsyncDevice::startRx()
 {
-	// startReceive() puts the chip in continuous RX;
-	// DIO1 fires when a packet CRC passes.
+	SPI_LOCK();
 	int err = _radio->startReceive();
 	_rxArmed = (err == RADIOLIB_ERR_NONE);
+	SPI_UNLOCK();
 }
-
 
 // ════════════════════════════════════════════════════════════
 //  onReceive()  –  called from DIO1 ISR context
 // ════════════════════════════════════════════════════════════
 void AsyncDevice::onReceive()
 {
-    // Guard: ignore spurious DIO1 events fired during or just after TX
-    if (!_rxArmed || _txActive) return;
-
-	// Read raw bytes from the radio FIFO
-	uint8_t  buf[ASYNC_MTU];
-	size_t   len = _radio->getPacketLength();
-
-	int status = _radio->readData(buf, len);
-	if (status != RADIOLIB_ERR_NONE) {
-		// Bad packet / CRC error – discard and re-arm
-		startRx();
-		return;
-	}
-
-	// Clamp to MTU (RadioLib should never exceed it, but just in case)
-	if (len > ASYNC_MTU) len = ASYNC_MTU;
-
-	// Push into FIFO (drops oldest if full – configurable policy)
-	queuePush(buf, static_cast<uint8_t>(len));
-
-	// Re-arm reception immediately so we don't miss the next packet
-	startRx();
+	if (!_rxArmed || _txActive) return;
+	_packetReady = true;
 }
 
+// ════════════════════════════════════════════════════════════
+//  process()  –  Deferred ISR processing (Runs automatically on ESP32)
+// ════════════════════════════════════════════════════════════
+void AsyncDevice::process()
+{
+	if (_packetReady) {
+		_packetReady = false;
+
+		SPI_LOCK();
+		uint8_t  buf[ASYNC_MTU];
+		size_t   len = _radio->getPacketLength();
+
+		int status = _radio->readData(buf, len);
+		SPI_UNLOCK(); // Unlock before calling startRx
+
+		if (status != RADIOLIB_ERR_NONE) {
+			startRx();
+			return;
+		}
+
+		if (len > ASYNC_MTU) len = ASYNC_MTU;
+
+		queuePush(buf, static_cast<uint8_t>(len));
+
+		startRx();
+	}
+}
 
 // ════════════════════════════════════════════════════════════
-//  Static ISR trampoline
+//  Static Task & ISR Trampolines
 // ════════════════════════════════════════════════════════════
+#if defined(ARDUINO) && defined(ESP32)
+void AsyncDevice::_taskTrampoline(void* pvParameters)
+{
+	AsyncDevice* instance = static_cast<AsyncDevice*>(pvParameters);
+	for(;;) {
+		instance->process();
+		// A 1 tick (~1ms) delay is strictly required here. It keeps the core
+		// from running at 100% capacity and prevents the FreeRTOS Task 
+		// Watchdog Timer (TWDT) from crashing the ESP32.
+		vTaskDelay(pdMS_TO_TICKS(1)); 
+	}
+}
+#endif
+
 #if defined(ARDUINO)
 void IRAM_ATTR AsyncDevice::_isrTrampoline()
 #else
@@ -224,13 +259,9 @@ void AsyncDevice::_isrTrampoline()
 	}
 }
 
-
 // ════════════════════════════════════════════════════════════
 //  Ring-buffer helpers
 // ════════════════════════════════════════════════════════════
-
-// Push a packet produced by the ISR (producer side).
-// If the queue is full the OLDEST packet is evicted (drop-tail policy).
 bool AsyncDevice::queuePush(const uint8_t* data, uint8_t len)
 {
 #if defined(ARDUINO)
@@ -240,12 +271,10 @@ bool AsyncDevice::queuePush(const uint8_t* data, uint8_t len)
 #endif
 
 	if (_count == ASYNC_QUEUE_DEPTH) {
-		// Drop oldest: advance head
 		_head = (_head + 1) % ASYNC_QUEUE_DEPTH;
 		--_count;
 	}
 
-	// Write at tail
 	memcpy(_queue[_tail].data, data, len);
 	_queue[_tail].len = len;
 	_tail = (_tail + 1) % ASYNC_QUEUE_DEPTH;
@@ -258,7 +287,6 @@ bool AsyncDevice::queuePush(const uint8_t* data, uint8_t len)
 	return true;
 }
 
-// Pop the oldest packet (consumer side).
 bool AsyncDevice::queuePop(AsyncPacket& out)
 {
 #if defined(ARDUINO)
