@@ -25,7 +25,7 @@ public:
 	 * @param v Value of the measure
 	 * @param ts Timestamp of the measure
 	 */
-	Measure(char *type, float v, unsigned long ts)
+	Measure(const char *type, float v, unsigned long ts)
 	{
 		strncpy(this->measureType, type, sizeof(measureType) - 1);
 		this->measureType[sizeof(this->measureType) - 1] = '\0'; // Ensure null-termination
