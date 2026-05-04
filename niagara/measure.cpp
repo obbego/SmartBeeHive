@@ -83,7 +83,7 @@ public:
 	const char *toJSON()
 	{
 		static char buffer[MAX_LENGTH_JSON_STRING];
-		sprintf(buffer, "{\"ts\":%lu, \"values\"={\"%s\"=%f}}", timestamp, measureType, value);
+		sprintf(buffer, "{\"ts\":%lu, \"values\":{\"%s\":%f}}", timestamp, measureType, value);
 		return buffer;
 	}
 };
@@ -91,7 +91,7 @@ public:
 /**
  * Function to format an array of measures as a JSON string. 
  * 
- * Remember to free the returned string after use.
+ * REMEMBER TO FREE THE RETURNED STRING AFTER THE USE. 
  * @param array array of measures
  * @param size size of the array
  * @return JSON string with the data of the measures
