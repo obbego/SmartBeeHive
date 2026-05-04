@@ -1,0 +1,12 @@
+AuthType Basic
+AuthName "Area riservata dashboard"
+AuthUserFile /data/sites/web/iisviolamarchesinieduit/www/.htpasswd
+Require valid-user
+
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+<IfModule mod_headers.c>
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+</IfModule>
+RewriteEngine On
+RewriteRule ^$ /dashboard-agrario-alveare/html/login.php [L,R=302]
