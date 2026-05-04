@@ -120,7 +120,7 @@ Niagara::~Niagara() {
 bool Niagara::set_identifier(str _identifier) {
 	if(Niagara::lora == nullptr) return false;
 
-	if(!check_identifier(_identifier), false)
+	if(!check_identifier(_identifier, false))
 		return false;
 
 	Niagara::identifier = _identifier;
@@ -437,7 +437,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 	}
 
 	// If the destination is not a valid identifier then return with an error
-	if(!check_identifier(destination), true) {
+	if(!check_identifier(destination, true)) {
 		log_print("Cannot start receive - invalid destination.\n", "[SEND] Invalid Destination!\n");
 		return NIAGARA_NOT_DESTINATION;
 	}
