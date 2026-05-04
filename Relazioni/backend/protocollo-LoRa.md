@@ -64,7 +64,7 @@ In ogni caso, per la corretta comunicazione tramite LoRaWAN, il gateway deve ess
 
 Il chip per la comunicazione è stato scelto sulla base del supporto di librerie. Il chip SX1262 è supportato dalla libreria [RadioLib](https://github.com/jgromes/RadioLib), che a sua volta supporta contemporaneamente sia la piattaforma Arduino che la piattaforma Raspberry Pi, permettendo di scrivere codice portabile su entrambe le piattaforme con modifiche minori.
 
-# Creazione del protocollo di comunicazione
+## Creazione del protocollo di comunicazione
 
 Date le problematiche citate in questo documento, è sembrata plausibile la creazione di un protocollo che permetta la comunicazione con una certa affidabilità, facendo solamente uso di radio LoRa.
 
@@ -80,30 +80,31 @@ Il protocollo introduce le seguenti funzionalità alla comunicazione permessa da
 - Invio e verifica della CRC32 durante la handshake per il controllo errori
 - Frammentazione a layer superiore nel caso il pacchetto superi la MTU del chip utilizzato
 - Logging robusto con due livelli differenti
+- Stack FIFO per la lettura dei dati ricevuti in maniera asincrona e non bloccante, facendo uso del multithreading su Raspberry Pi e della funzionalitá dual-core del chip ESP32 contenuto nella scheda di sviluppo.
 
 Un pacchetto inviato dal protocollo contiene la sorgente e la destinazione del messaggio. Il dispositivo ricevente viene identificato con una stringa di testo che deve combaciare con quella contenuta nella destinazione del pacchetto ricevuto, altrimenti il pacchetto viene ignorato. Seguono le specifiche per la costruzione dell'identificatore:
-# Identificatore
-Secondo le specifiche del protocollo, l'identificatore deve avere sottostare alle seguenti caratteristiche:
+## Identificatore
+Secondo le specifiche del protocollo, l'identificatore deve sottostare alle seguenti caratteristiche:
   - Deve avere una lunghezza compresa fra 4 e 12 caratteri
   - Deve essere alfanumerico, nessun carattere speciale consentito in quanto potrebbe andare ad interferire con i separatori che vengono aggiungi a layer 2
   - Non deve essere l'identificatore di broadcast, definito all'interno della libreria come la stringa `BROAD`. Questo identificatore non può essere impostato come identificatore di alcun nodo, ma può solamente essere una destinazione
 
 Nell’header, in seguito alla sezione contenente sorgente e destinazione del pacchetto, segue un valore numerico contenente il messaggio di controllo, che può essere un `SYN`, un `ACK`, oppure un `RETRANSMISSION_TIMEOUT`. Questi messaggi di controllo vengono utilizzati per identificare la funzione dei pacchetti durante la handshake.
-# Handshake a 3 vie e ritrasmissioni
+## Handshake a 3 vie e ritrasmissioni
 Il protocollo implementa una handshake a 3 vie. Questa viene utilizzata ad ogni invio di ogni pacchetto. Se un pacchetto viene frammentato, ogni frammento verrà inviato utilizzando questa handshake, si illustrano le fasi di questa:
 - Il mittente invia un `SYN` al destinatario, contenente come payload la stringa da recepire
 - Il destinatario, alla ricevuta del `SYN`, calcola il CRC32 del suo payload e risponde con un `ACK`, il cui payload sarà a sua volta riempito con il risultato di questo calcolo
 - Il mittente procede a verificare la CRC32 ricevuta dal destinatario comparandola con quella da lui calcolata sul messaggio originale. Se le due combaciano, allora procede a rispondere con un `ACK` finale di conferma con payload vuoto, altrimenti viene inviato un nuovo `SYN`. All'invio del nuovo `SYN` viene effettuata una ritrasmissione che causa la ripetizione della handshake.
 - Se vengono effettuate piú di `MAX_RETRANSMISSIONS` ritrasmissioni, allora il mittente invia un pacchetto di tipo `RETRANSMISSION_TIMEOUT` indicando che é stato raggiunto il numero massimo di queste. Se questo pacchetto viene recepito correttamente al destinatario, allora questo interromperà la ricezione restituendo un codice di errore. Altrimenti sarà necessario attendere un timeout.
 
-# Funzionalità di basso livello
+## Funzionalità di basso livello
 Ogni volta che viene inviato un pacchetto attraverso `send` o `receive`, in background viene effettuato un handshake a tre vie fra il dispositivo e la destinazione tramite funzioni di livello più basso, implementate privatamente all'interno della libreria, che possono essere denominate `send_raw` e `receive_raw`. Queste funzioni "raw" si occupano esclusivamente di incapsulare tre informazioni, all'interno di un vettore di dati grezzo, che può essere inviato al layer 1 verso l'esterno tramite segnali radio LoRa in broadcast
 Queste informazioni sono le seguenti: 
     - ID del dispositivo e della destinazione
     - Messaggio di controllo 
     - Corpo effettivo del pacchetto
 
-# Classe per la conversione in JSON dei dati
+## Classe per la conversione in JSON dei dati
 È stata implementata una classe per gestire la conversione in JSON dei dati inviati verso il lato ricevente, al fine di semplificarne l'invio a ThingsBoard, sebbene tale funzionalità non sia ancora stata effettivamente implementata dal punto di vista pratico.
 La classe in questione si chiama **Measure** e contiene i seguenti attributi:
 - *measureType* grandezza fisica misurata
@@ -134,7 +135,7 @@ All'interno contiene il metodo per la conversione in una stringa JSON con un for
 Nonostante non dovrebbe essere necessario per il ricevitore, è presente anche una funziona statica per la conversione della stringa in formato JSON in un oggetto **Measure**. 
 Ulteriori informazioni sull'output atteso in JSON e la comunicazione con ThingsBoard consultare la [documentazione di progetto](./ThingsBoard.md/#esempio-con-http). 
 
-# Frammentazione
+## Frammentazione
 Il protocollo implementa un fragmenter che gestisce la frammentazione (`FragmentConstructor`) e la deframmentazione (`FragmentDestructor`) dei pacchetti. Segue una descrizione della gestione della frammentazione:
 - **Invio**:
     - Alla chiamata della funzione `send(str, str)`, viene utilizzato il `FragmentConstructor` per separare il messaggio in segmenti, ognuno con header che separa:
@@ -152,7 +153,7 @@ Il protocollo implementa un fragmenter che gestisce la frammentazione (`Fragment
     - La libreria gestisce anche il contesto dell'invio dei pacchetti frammentati. Viene salvata la sorgente del primo pacchetto frammentato ricevuto dalla funzione `receive(str*, str*)`. Questa sorgente viene verificata ad ogni ricezione di pacchetti frammentati successivi. Qualora avvenga che pacchetti frammentati vengano inviati al destinatario di un altro flusso di pacchetti frammentati non terminato, i primi verranno ignorati fino a quando il destinatario non ha cessato la ricezione e ricostruzione del messaggio originale.
 
 
-## Utilizzo della libreria
+# Utilizzo della libreria
 
 - **Costruttore**  
   Il costruttore della libreria permette la creazione e gestione del logger
@@ -161,12 +162,14 @@ Il protocollo implementa un fragmenter che gestisce la frammentazione (`Fragment
     `void funzione(const char*)`
     Questa funzione gestisce i messaggi di log prodotti dalla libreria. Astrae l'output del log dalla libreria stessa, permettendo la definizione di un output qualunque, che esso sia un file, un display o una seriale di uscita. Ció è indipendente dalla piattaforma.
   - Il secondo parametro definisce il livello di log. Qualora la funzione handler del logger stampi in output su un display di un microcontrollore a dimensioni ridotte, il logger può essere impostato con livello `Niagara_LogLevel::DISPLAY` per produrre log output piú concisi, altrimenti si può utilizzare `Niagara_LogLevel::TERMINAL` per un log completo.
+  Esiste un overload di questo costruttore per non definire alcun logger, per disabilitarlo e quindi rimuovere il suo overhead:
+  `Niagara();`
 
 - **Impostazione Identificatore**
   Dopo aver chiamato il costruttore, è necessario impostare l'identificatore del dispositivo prima di poter chiamare i metodi di invio e ricezione:
   `bool set_identifier(str identifier);`
   La chiamata di questo identificatore provoca un controllo di verifica dei requisiti sull'identificatore passato. Se questo controllo va a buon fine, la funzione restituisce `true` e imposta l'identificatore nel dispositivo corrente.
-  La mancata chiamata di questo metodo prima di effettuare chiamate a funzioni di invio o ricezione provoca il ritorno di `NIAGARA_NO_IDENTIFIER` da queste.
+  La mancata chiamata di questo metodo prima di effettuare chiamate a funzioni di invio o ricezione provoca il ritorno di `Niagara_Ret::NIAGARA_NO_IDENTIFIER` da queste.
 
 - **Invio dati**  
   L’invio dei dati avviene attraverso l’utilizzo del seguente metodo:  
@@ -181,10 +184,123 @@ Il protocollo implementa un fragmenter che gestisce la frammentazione (`Fragment
   Richiede un puntatore a una stringa che verrà riempita con l’identificatore della sorgente che ha inviato il messaggio. Mentre un'altra stringa viene popolata con il messaggio ricevuto effettivo.
   Nel caso ci sia stato un errore durante la ricezione dei dati, viene ritornato un valore diverso da `NIAGARA_OK` contenuto nell'enumeratore `Niagara_Ret`.
 
-## Criteri minimi di validazione
-Nella prima iterazione del protocollo, il minimo indispensabile per consentire la comunicazione è rappresentato dalle funzioni di basso livello, quali `receive_raw` e `send_raw`, che vengono utilizzate dalle funzioni pubbliche di livello più alto `receive` e `send` all'interno della libreria durante l'handshake.
+## Codice di esempio
+Il seguente codice dimostra il funzionamento della libreria:
+```c++
+/* Semplice callback di logging per la stampa dei messaggi di log
+ * nello standard output.
+ */
+void simple_logger(const char* text) {
+    printf(text);
+}
 
-Queste funzioni si occupano esclusivamente dell'incapsulamento dei parametri di invio in una singola sequenza di dati destinata all'invio in broadcast radio. In fase di ricezione, si occupano invece del deincapsulamento dei dati e del controllo della stringa di destinazione, al fine di verificare che il dispositivo di destinazione corrisponda a quello corrente. Quest'ultima operazione, data la sua complessità, è quella che al momento causa problemi, rendendo impossibile il test completo del protocollo.
+/* 
+ * Punto di partenza principale del programma
+ */
+int main(void) {
+    // Inizializza il dispositivo con la funzione di logging precedentemente definita
+    Niagara device(simple_logger, Niagara_LogLevel::LOG_TERMINAL);
+    /* Una volta inizializzato il dispositivo, viene impostato l'identificatore, 
+     * verificandone il valore di ritorno.
+     */
+    if(!device.set_identifier("RASPI")) {
+        // Terminare l'esecuzione del programma nel caso l'identificatore non sia valido
+        fprintf(stderr, "Errore durante l'impostazione dell'identificatore.\n");
+        return 1;
+    }
+
+    // Esempio con un menu a scelta dell'operazione da eseguire
+    for(;;) {
+        cout << "\n--- MENU PRINCIPALE ---" << endl;
+        cout << "1: Trasmetti messaggio" << endl;
+        cout << "2: Mettiti in ricezione" << endl;
+        cout << "Seleziona un'opzione: ";
+        
+        string choice;
+        getline(cin, choice);
+
+        if (choice == "1") {
+            // --- MODALITA' TRASMISSIONE ---
+            cout << "Inserisci la destinazione: ";
+            string destination;
+            getline(cin, destination);
+            cout << "Inserisci la stringa da inviare: ";
+            string input_str;
+            getline(cin, input_str);
+
+            cout << "=== AVVIO TRASMISSIONE ===" << endl;
+            /* Invio del messaggio alla destinazione, facendo uso delle stringhe integrate "str" cross-platform
+             * Se vengono passati dei parametri const char* allora avviene automaticamente una conversione a "str"
+             */
+            Niagara_Ret error = device.send(destination.c_str(), input_str.c_str());
+            
+            // Verifica del valore di ritorno per eventuale messaggio di errore
+            if(error == NIAGARA_OK) {
+                cout << "-> Trasmissione completata con successo." << endl;
+            } else {
+                cout << "-> Errore durante la trasmissione. Codice: " << static_cast<int>(error) << endl;
+            }
+
+        } else if (choice == "2") {
+            // --- MODALITA' RICEZIONE ---
+            cout << "Inserisci il timeout in millisecondi: ";
+            string timeout_str;
+            getline(cin, timeout_str);
+            
+            long timeout_ms;
+            try {
+                timeout_ms = stol(timeout_str);
+            } catch (...) {
+                cout << "Input non valido. Uso 5000ms di default." << endl;
+                timeout_ms = 5000;
+            }
+
+            cout << "=== IN ATTESA DI DATI... ===" << endl;
+            
+            // Avvio del timer per attendere il termine del timeout
+            auto start_time = chrono::steady_clock::now();
+            auto timeout_duration = chrono::milliseconds(timeout_ms);
+            
+            // Variabile contenente il valore di ritorno di ogni chiamata di ricezione
+            Niagara_Ret error = NIAGARA_OK;
+            bool message_received = false;
+
+            // Attesa del termine del timer di timeout
+            while (chrono::steady_clock::now() - start_time < timeout_duration) {
+                // Oggetti "str" per il salvataggio dei dati ricevuti
+                str receive_data;
+                str source;
+                // Ricezione dei parametri
+                error = device.receive(&receive_data, &source);
+                
+                // Controllo sul valore di ritorno
+                if (error == NIAGARA_OK) {
+                    cout << "-> Messaggio Ricevuto da '" << source.c_str() << "': " 
+                         << receive_data.c_str() << endl;
+                    message_received = true; // Viene impostata la flag per il messaggio ricevuto
+                    break;
+                }
+                
+                // Piccolo sleep per non mandare il core della CPU al 100%
+                this_thread::sleep_for(chrono::milliseconds(10)); 
+            }
+
+            /* Se il timeout e' scaduto prima che il messaggio venisse ricevuto, 
+             * allora stampare il messaggio di errore dell'ultima chiamata receive.
+             */
+            if (!message_received) {
+                cout << "-> Timeout scaduto. Nessun messaggio ricevuto." << endl;
+                cout << "-> Ultimo codice di ritorno (Errore/Status): " << static_cast<int>(error) << endl;
+            }
+        // Verifica del parametro inserito nel menu
+        } else {
+            cout << "Opzione non valida." << endl;
+        }
+    }
+    
+    return 0;
+}
+```
 
 ## Miglioramenti futuri
 Si prevede di integrare il protocollo con le seguenti funzionalità:

@@ -31,6 +31,8 @@ class FragmentConstructor {
 		int _cursor;
 		int _total_fragments;
 		int _current_index;
+
+		int count_digits(unsigned int input);
 };
 
 class FragmentDestructor {

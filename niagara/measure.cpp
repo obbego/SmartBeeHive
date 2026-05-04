@@ -1,119 +1,60 @@
-#include <string.h>
-#include <stdio.h>
+#include "measure.h"
+
 #include <stdlib.h>
 
-/**
- * Class to collect a measure with a specific
- * timestamp
- */
-class Measure
+Measure::Measure(const char *type, float v, unsigned long ts) : measureType(type), value(v), timestamp(ts) {}
+
+const char* Measure::getMeasureType(){
+	return measureType.c_str();
+}
+
+float Measure::getValue(){
+	return value;
+}
+
+unsigned long Measure::getTimestamp(){
+	return timestamp;
+}
+
+void Measure::setValue(float v){
+	value = v;
+}
+
+bool Measure::equals(Measure otherMeasure)
 {
-private:
-	char measureType[20];
-	float value;
-	unsigned long timestamp;
-public:
-	/**
-	 * Constant value for the maximum length of the string
-	 * that contains the JSON format of the measure
-	 */
-	static const int MAX_LENGTH_JSON_STRING = 60;
+	return this->timestamp == otherMeasure.timestamp && measureType == otherMeasure.measureType;
+}
 
-	/**
-	 * Constructor for a measure
-	 * @param type Type of measure (temperature, humidity, etc.)
-	 * @param v Value of the measure
-	 * @param ts Timestamp of the measure
-	 */
-	Measure(char *type, float v, unsigned long ts)
-	{
-		strncpy(this->measureType, type, sizeof(measureType) - 1);
-		this->measureType[sizeof(this->measureType) - 1] = '\0'; // Ensure null-termination
-		this->value = v;
-		this->timestamp = ts;
-	}
-
-	/**
-	 * Function to return the physical type of measure
-	 * @return string with the type of measure
-	 */
-	char* getMeasureType(){
-		return this->measureType;
-	}
-
-	/**
-	 * Return the value of measure
-	 * @return value of the measure
-	 */
-	float getValue(){
-		return this->value;
-	}
-
-	/**
-	 * Return the timestamp of the measure
-	 * @return timestamp of the measure
-	 */
-	unsigned long getTimestamp(){
-		return this->timestamp;
-	}
-
-	/**
-	 * Set a new value for the measure
-	 * @param v new value for the measure
-	 */
-	void setValue(float v){
-		this->value = v;
-	}
-
-	/**
-	 * Equals to compare two measures.
-	 * Two measures are equal if they have the same timestamp and measure type.
-	 * @param otherMeasure Measure to compare with
-	 * @return true if the measures are equal, false otherwise
-	 */
-	bool equals(Measure otherMeasure)
-	{
-		return this->timestamp == otherMeasure.timestamp && strcmp(this->measureType, otherMeasure.measureType) == 0;
-	}
-
-	/**
-	 * function to convert the measure to a JSON string
-	 * @return JSON string with the data of the measure
-	 */
-	const char *toJSON()
-	{
-		static char buffer[MAX_LENGTH_JSON_STRING];
-		sprintf(buffer, "{\"ts\":%lu, \"values\"={\"%s\"=%f}}", timestamp, measureType, value);
-		return buffer;
-	}
-};
-
-/**
- * Function to format an array of measures as a JSON string. 
- * 
- * Remember to free the returned string after use.
- * @param array array of measures
- * @param size size of the array
- * @return JSON string with the data of the measures
- */
-const char *formatMeasuresJSON(Measure array[], int size)
+str Measure::toJSON()
 {
-	char *output = (char *)malloc(Measure::MAX_LENGTH_JSON_STRING * size + 2); // +2 for brackets
+	// Retrieve the size of the string
+	int bufSize = snprintf(NULL, 0, "{\"ts\":%lu, \"values\":{\"%s\":%f}}", timestamp, measureType.c_str(), value);
+	if(bufSize < 0) return ""; // Return an empty string in case of error while handling JSON format
+	bufSize++; //Include the null-termination
+	char buffer[bufSize]; 
+	snprintf(buffer, bufSize, "{\"ts\":%lu, \"values\":{\"%s\":%f}}", timestamp, measureType.c_str(), value);
+	// Create a safe object string which contains the buffer contents
+	return str(buffer);
+}
+
+str Measure::formatMeasuresJSON(Measure array[], int size)
+{
+	str output; // Make use of strings to avoid memory allocation
 	/* if the array is null or empty return empty brackets
 	for the JSON format */
 	if(array==nullptr || size == 0){
-		strcpy(output, "[]");
-		return output;
+		output = "[]";
+		return output.c_str();
 	}
 
 	/* start to concatenate strings */
-	strcpy(output, "[");
+	output = "[";
 	for(int i=0;i<size;i++){
-		strcat(output, array[i].toJSON()); //add the JSON format for the data
-		if(i<size-1) // if it's not the last element, add a comma
-			strcat(output, ",");
+		output += array[i].toJSON(); //add the JSON format for the data
+		if(i < size-1) // if it's not the last element, add a comma
+			output += ",";
 	}
-	strcat(output, "]"); // end with the closing bracket
+	output += "]"; // end with the closing bracket
 
-	return output; // return the string
+	return output; // return the c-string output of the used string
 }

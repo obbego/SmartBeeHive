@@ -77,7 +77,10 @@ enum Niagara_Ret {
 		NIAGARA_TOO_LARGE,
 		/**
 		 * Returned by the raw receive method when the
-		 * message received's destination isn't this device
+		 * message received's destination isn't this device.
+		 * 
+		 * Otherwise it's returned by the send method when the destination
+		 * passed isn't a valid identifier.
 		*/
 		NIAGARA_NOT_DESTINATION,
 		/**
@@ -283,9 +286,14 @@ class Niagara {
 
 		/**
 		 * Method used to check the validity of the identifier
-		 * given to the constructor
+		 * given to the constructor.
+		 * 
+		 * The second parameter defines whether the method is being used
+		 * to check an identifier being sent. If this value is false, 
+		 * the method will return invalid identifier if the identifier passed is
+		 * broadcast.
 		 */
-		bool check_identifier(str identifier);
+		bool check_identifier(str identifier, bool sending);
 
 		/**
 		 * Function which cleans the received crc and checks

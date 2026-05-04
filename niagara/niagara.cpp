@@ -120,7 +120,7 @@ Niagara::~Niagara() {
 bool Niagara::set_identifier(str _identifier) {
 	if(Niagara::lora == nullptr) return false;
 
-	if(!check_identifier(_identifier))
+	if(!check_identifier(_identifier), false)
 		return false;
 
 	Niagara::identifier = _identifier;
@@ -130,8 +130,10 @@ bool Niagara::set_identifier(str _identifier) {
 Niagara_Ret Niagara::send(str destination, str message) {
 	log_print("[SEND START]\n");
 
-	//Istance a new fragmenter with the message passed
-	FragmentConstructor fragmenter(message, chip_mtu - 50);
+	/* Istance a new fragmenter with the message passed
+	 * The MTU is decreased due to the overhead of the layer 2 header.
+	 */
+	FragmentConstructor fragmenter(message, chip_mtu - this->identifier.length() - destination.length() - 4);
 	if(log_level == LOG_TERMINAL) log_printf("Initialised fragmenter for send - MTU: %d\n", chip_mtu);
 
 	//Keep sending data to the specified destination using the fragments created
@@ -432,6 +434,12 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 	if(identifier.length() == 0) {
 		log_print("Cannot start receive - identifier not set yet.\n", "[SEND] No identifier!\n");
 		return NIAGARA_NO_IDENTIFIER;
+	}
+
+	// If the destination is not a valid identifier then return with an error
+	if(!check_identifier(destination), true) {
+		log_print("Cannot start receive - invalid destination.\n", "[SEND] Invalid Destination!\n");
+		return NIAGARA_NOT_DESTINATION;
 	}
 
 	//Saves the current send state of the handshake  
@@ -736,7 +744,7 @@ bool Niagara::valid_destination(str destination) {
 	return true;
 }
 
-bool Niagara::check_identifier(str identifier) {
+bool Niagara::check_identifier(str identifier, bool sending) {
 	//Print to the log the check for the identifier
 	if(log_level == LOG_TERMINAL) log_printf("Checking identifier: '%s'.. ", identifier.c_str());
 	else log_print("Checking callsign.\n");
@@ -746,7 +754,7 @@ bool Niagara::check_identifier(str identifier) {
 		log_print("Invalid size (must be between 4 and 12 characters).\n", "Invalid size.\n");
 		return false;
 	}
-	if(identifier == BROADCAST) {
+	if(!sending && identifier == BROADCAST) {
 		log_print("Invalid, it's broadcast.\n", "Can't be broadcast.\n");
 		return false;
 	}

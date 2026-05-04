@@ -1,22 +1,69 @@
 #include "fragmenter.h"
 
-// === FragmentConstructor ===
+int FragmentConstructor::count_digits(unsigned int input) {
+    if (input == 0) return 1;
+    int count = 0;
 
+    while (input > 0) {
+        input /= 10;
+        count++;
+    }
+    return count;
+}
+
+// === FragmentConstructor ===
 FragmentConstructor::FragmentConstructor(str data, const int _max_size) {
-	// Initialise values
-	_data = data;
-	_cursor = 0;
-	_current_index = 0;
-	FRAG_SIZE = _max_size; // Defines the maximum size of a single packet.
-	
-	// Retrieve the fragment amount
-	int len = _data.length();
-	if (len == 0) {
-		_total_fragments = 0;
-	} else {
-		// Computed necessary fragments
-		_total_fragments = (len + FRAG_SIZE - 1) / FRAG_SIZE;
-	}
+    // Initialise values
+    _data = data;
+    _cursor = 0;
+    _current_index = 0;
+    
+    int len = _data.length();
+    
+    if (len == 0) {
+        _total_fragments = 0;
+        FRAG_SIZE = _max_size; 
+        return;
+    }
+
+    // Iterative loop to compute the MTU based on header overhead
+    // We start by "guessing" we only need 1 fragment.
+    unsigned int n_fragments = 1;
+    int payload_size = 0;
+    while (true) {
+        // 1. Calculate the digit length of our current fragment guess 'n_fragments'
+		int max_digits = count_digits(n_fragments);
+        
+        // 2. Compute worst-case header size: "index#total#" 
+        // Worst-case is when index has the same amount of digits as total fragments.
+        // Example: "12#12#" -> 2 digits + 2 digits + 2 separators = 6 bytes
+        int max_header_len = max_digits + max_digits + 2; 
+        
+        // 3. Deduct header from the max size to get our actual Payload MTU
+        payload_size = _max_size - max_header_len;
+        
+        // Failsafe: if the max size is too small to even fit the header
+        if (payload_size <= 0) {
+            _total_fragments = 0;
+            FRAG_SIZE = 0;
+            return;
+        }
+        
+        // 4. Test our guess: How many fragments do we ACTUALLY need with this payload size?
+        int required_fragments = (len + payload_size - 1) / payload_size;
+        
+        // 5. Did our guess provide enough capacity?
+        if (required_fragments <= n_fragments) {
+            // Yes! We found the exact amount of fragments needed.
+            _total_fragments = required_fragments; 
+            FRAG_SIZE = payload_size;
+            break;
+        }
+        
+        // No, our guess was too low (the header ate up too much space). 
+        // We jump our guess to the new required amount and try again.
+        n_fragments = required_fragments; 
+    }
 }
 
 int FragmentConstructor::next_fragment(str* output) {
