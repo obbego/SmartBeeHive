@@ -143,10 +143,19 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
                         <div class="glass-panel chart-box alarm-history-container">
                             <div class="p-3 border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center">
                                 <div class="chart-title mb-0">Log Eventi e Allarmi</div>
-                                <a href="allarmi.php" class="btn-manage-alarms">
-                                    <i data-lucide="bell-ring" style="width:14px;height:14px;"></i>
-                                    Gestisci Allarmi
-                                </a>
+                                <div class="d-flex align-items-center gap-2">
+                                    <a href="archivio.php"
+                                       style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.05);
+                                              border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 12px;
+                                              color:var(--text-muted);font-size:12px;transition:0.2s;"
+                                       onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'">
+                                        <i data-lucide="archive" style="width:13px;height:13px;"></i>Archivio
+                                    </a>
+                                    <a href="allarmi.php" class="btn-manage-alarms">
+                                        <i data-lucide="bell-ring" style="width:14px;height:14px;"></i>
+                                        Gestisci Allarmi
+                                    </a>
+                                </div>
                             </div>
                             <div id="historyList" class="history-list p-3 custom-scrollbar">
                             </div>
@@ -266,6 +275,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 
 <script src="../js/dati.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/alarm_state.js"></script>
 <script src="../js/index.js"></script>
 <script src="../js/thingsboard.js"></script>
 

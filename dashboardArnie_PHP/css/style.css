@@ -553,19 +553,20 @@ h1 {
 
 /* Altezza fissa per il contenitore degli allarmi */
 .alarm-history-container {
-  height: 1232px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* Impedisce alla card intera di allungarsi */
+    max-height: 1232px; /* limite massimo */
+    height: auto;       /* segue il contenuto */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /* Rendiamo la lista interna scorrevole */
 #historyList {
-  flex: 1; /* Occupa tutto lo spazio rimanente nella card */
-  overflow-y: auto; /* Attiva lo scroll verticale */
-  padding-right: 10px; /* Spazio per la scrollbar */
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+    min-height: 0;
 }
-
 /* Personalizzazione della Scrollbar (più elegante per il tema dark) */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

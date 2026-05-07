@@ -85,21 +85,21 @@ async function tbLoadAlarms() {
         const alarms = allData.alarms || [];
 
         const alarmTypeLabels = {
-            'HoneyReady':                   'Miele pronto da raccogliere',
-            'ErrorDeviceTimeseries':         'Errore lettura telemetria',
-            'TelemetryInvalidKey':           'Chiave telemetria non valida',
-            'FailedAssetAttributes':         'Errore attributi asset',
+            'HoneyReady':                    'Miele pronto per la raccolta',
+            'ErrorDeviceTimeseries':         'Errore nella ricezione dei dati',
+            'TelemetryInvalidKey':           'Dato ricevuto non valido',
+            'FailedAssetAttributes':         'Errore nel caricamento dei dati del dispositivo',
             'DeviceOldTemperature':          'Temperatura non aggiornata',
             'DeviceOldHumidity':             'Umidità non aggiornata',
             'DeviceOldWeight':               'Peso non aggiornato',
-            'DeviceOldNoiseFrequency':       'Freq. rumore non aggiornata',
-            'DeviceOldNoiseIntensity':       'Intensità rumore non aggiornata',
+            'DeviceOldNoiseFrequency':       'Frequenza sonora non aggiornata',
+            'DeviceOldNoiseIntensity':       'Intensità sonora non aggiornata',
             'DeviceDifferentTemperature':    'Temperatura anomala rispetto alle altre arnie',
             'DeviceDifferentHumidity':       'Umidità anomala rispetto alle altre arnie',
             'DeviceDifferentWeight':         'Peso anomalo rispetto alle altre arnie',
-            'DeviceDifferentNoiseFrequency': 'Frequenza rumore anomala',
-            'DeviceDifferentNoiseIntensity': 'Intensità rumore anomala',
-            'ErrorTimeSeriesWeightDevice':   'Errore lettura peso'
+            'DeviceDifferentNoiseFrequency': 'Frequenza sonora anomala',
+            'DeviceDifferentNoiseIntensity': 'Intensità sonora anomala',
+            'ErrorTimeSeriesWeightDevice':   'Errore nella lettura del peso'
         };
 
         return alarms.map(alarm => {
@@ -119,8 +119,8 @@ async function tbLoadAlarms() {
                 hive: deviceName,
                 msg: alarmTypeLabels[alarm.type] || alarm.type,
                 time: ts,
-                status: alarm.status === 'CLEARED_ACK' || alarm.status === 'CLEARED_UNACK' ? 'closed' : 'open',
-                severity: alarm.severity || 'WARNING', tbStatus: alarm.status || ''
+                severity: alarm.severity || 'WARNING',
+                tbStatus: alarm.status || ''  // status grezzo TB — mappato da getEffectiveAlarmStatus()
             };
 
         });

@@ -76,9 +76,6 @@ require_once '../auth.php';
         <button class="filter-btn f-open"   data-filter="open"   onclick="applyFilter('open', this)">
             Aperti
         </button>
-        <button class="filter-btn f-closed" data-filter="closed" onclick="applyFilter('closed', this)">
-            Risolti
-        </button>
 
         <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
             <div class="form-check form-switch d-flex align-items-center mb-0">
@@ -87,6 +84,14 @@ require_once '../auth.php';
                 <label class="form-check-label" for="mockDataSwitch"
                        style="font-size: 13px; cursor: pointer; color: var(--text-muted);">Demo</label>
             </div>
+            <a href="archivio.php"
+               style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);
+                      border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 14px;
+                      color:var(--text-muted);font-size:13px;font-family:inherit;transition:0.2s;"
+               onmouseover="this.style.color='white';this.style.borderColor='rgba(255,255,255,0.3)'"
+               onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='rgba(255,255,255,0.12)'">
+                <i data-lucide="archive" style="width:13px;height:13px;"></i>Archivio
+            </a>
             <button onclick="refreshAlarms()"
                     style="background: rgba(255,255,255,0.07); border: 1px solid var(--glass-border); color: var(--text-muted);
                      padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; transition: 0.2s;"
@@ -145,6 +150,7 @@ require_once '../auth.php';
 </div>
 
 <script src="../js/dati.js"></script>
+<script src="../js/alarm_state.js"></script>
 <script src="../js/thingsboard.js"></script>
 <script src="../js/allarmi.js"></script>
 

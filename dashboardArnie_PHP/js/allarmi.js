@@ -1,43 +1,35 @@
 // js/allarmi.js
-
-// ── STATI LOCALI (condivisi con index.js tramite localStorage) ──
-function loadLocalStates() {
-    try { return JSON.parse(localStorage.getItem('alarmStates') || '{}'); } catch(e) { return {}; }
-}
-function saveLocalStates(states) {
-    localStorage.setItem('alarmStates', JSON.stringify(states));
-}
-let alarmStates = loadLocalStates();
+// Dipende da alarm_state.js (caricato prima in allarmi.php)
 
 // ── DATI MOCK PER MODALITÀ DEMO ──
 const mockAlarmsData = [
-    { id: 'mock-1', hive: 'Arnia 01', msg: 'Miele pronto da raccogliere',   time: '14/04/26, 14:33', severity: 'WARNING'  },
-    { id: 'mock-2', hive: 'Arnia 01', msg: 'Errore attributi asset',         time: '23/04/26, 10:27', severity: 'MINOR'    },
-    { id: 'mock-3', hive: 'Arnia 02', msg: 'Temperatura critica',            time: '14/04/26, 17:11', severity: 'CRITICAL' },
-    { id: 'mock-4', hive: 'Arnia 02', msg: 'Errore attributi asset',         time: '24/04/26, 15:31', severity: 'MINOR'    },
-    { id: 'mock-5', hive: 'Arnia 03', msg: 'Frequenza rumore anomala',       time: '22/04/26, 09:15', severity: 'MAJOR'    },
-    { id: 'mock-6', hive: 'Arnia 04', msg: 'Miele pronto da raccogliere',   time: '09/04/26, 10:24', severity: 'WARNING'  },
-    { id: 'mock-7', hive: 'Arnia 04', msg: 'Calo peso anomalo',             time: '21/04/26, 16:00', severity: 'MAJOR'    },
-    { id: 'mock-8', hive: 'Arnia 05', msg: 'Miele pronto da raccogliere',   time: '14/04/26, 17:12', severity: 'WARNING'  },
+    { id: 'mock-1', hive: 'Arnia 01', msg: 'Miele pronto per la raccolta',                 time: '14/04/26, 14:33', severity: 'WARNING',  tbStatus: 'ACTIVE_UNACK'  },
+    { id: 'mock-2', hive: 'Arnia 01', msg: 'Errore nel caricamento dei dati del dispositivo', time: '23/04/26, 10:27', severity: 'MINOR',    tbStatus: 'ACTIVE_ACK'    },
+    { id: 'mock-3', hive: 'Arnia 02', msg: 'Temperatura anomala rispetto alle altre arnie', time: '14/04/26, 17:11', severity: 'CRITICAL', tbStatus: 'ACTIVE_UNACK'  },
+    { id: 'mock-4', hive: 'Arnia 02', msg: 'Errore nel caricamento dei dati del dispositivo', time: '24/04/26, 15:31', severity: 'MINOR',    tbStatus: 'CLEARED_ACK'   },
+    { id: 'mock-5', hive: 'Arnia 03', msg: 'Frequenza sonora anomala',                      time: '22/04/26, 09:15', severity: 'MAJOR',    tbStatus: 'ACTIVE_UNACK'  },
+    { id: 'mock-6', hive: 'Arnia 04', msg: 'Miele pronto per la raccolta',                  time: '09/04/26, 10:24', severity: 'WARNING',  tbStatus: 'CLEARED_UNACK' },
+    { id: 'mock-7', hive: 'Arnia 04', msg: 'Peso anomalo rispetto alle altre arnie',        time: '21/04/26, 16:00', severity: 'MAJOR',    tbStatus: 'ACTIVE_ACK'    },
+    { id: 'mock-8', hive: 'Arnia 05', msg: 'Miele pronto per la raccolta',                  time: '14/04/26, 17:12', severity: 'WARNING',  tbStatus: 'ACTIVE_UNACK'  },
 ];
 
-// ── LABEL TIPI ALLARMI DA THINGSBOARD ──
+// ── LABEL TIPI ALLARMI ──
 const alarmTypeLabels = {
-    'HoneyReady':                    'Miele pronto da raccogliere',
-    'ErrorDeviceTimeseries':         'Errore lettura telemetria',
-    'TelemetryInvalidKey':           'Chiave telemetria non valida',
-    'FailedAssetAttributes':         'Errore attributi asset',
+    'HoneyReady':                    'Miele pronto per la raccolta',
+    'ErrorDeviceTimeseries':         'Errore nella ricezione dei dati',
+    'TelemetryInvalidKey':           'Dato ricevuto non valido',
+    'FailedAssetAttributes':         'Errore nel caricamento dei dati del dispositivo',
     'DeviceOldTemperature':          'Temperatura non aggiornata',
     'DeviceOldHumidity':             'Umidità non aggiornata',
     'DeviceOldWeight':               'Peso non aggiornato',
-    'DeviceOldNoiseFrequency':       'Freq. rumore non aggiornata',
-    'DeviceOldNoiseIntensity':       'Intensità rumore non aggiornata',
+    'DeviceOldNoiseFrequency':       'Frequenza sonora non aggiornata',
+    'DeviceOldNoiseIntensity':       'Intensità sonora non aggiornata',
     'DeviceDifferentTemperature':    'Temperatura anomala rispetto alle altre arnie',
     'DeviceDifferentHumidity':       'Umidità anomala rispetto alle altre arnie',
     'DeviceDifferentWeight':         'Peso anomalo rispetto alle altre arnie',
-    'DeviceDifferentNoiseFrequency': 'Frequenza rumore anomala',
-    'DeviceDifferentNoiseIntensity': 'Intensità rumore anomala',
-    'ErrorTimeSeriesWeightDevice':   'Errore lettura peso'
+    'DeviceDifferentNoiseFrequency': 'Frequenza sonora anomala',
+    'DeviceDifferentNoiseIntensity': 'Intensità sonora anomala',
+    'ErrorTimeSeriesWeightDevice':   'Errore nella lettura del peso'
 };
 
 // ── STATO CORRENTE ──
@@ -45,17 +37,8 @@ let currentFilter = 'all';
 let allAlarms     = [];
 
 // ── MODAL ──
-let modalAlarmId       = null;
+let modalAlarmId        = null;
 let modalSelectedStatus = null;
-
-// ─────────────────────────────────────────────
-// CALCOLO STATO EFFETTIVO
-// ─────────────────────────────────────────────
-function getEffectiveStatus(alarmId, tbStatus) {
-    if (alarmStates[alarmId] !== undefined) return alarmStates[alarmId];
-    if (tbStatus === 'CLEARED_ACK' || tbStatus === 'CLEARED_UNACK') return 'closed';
-    return 'system';
-}
 
 // ─────────────────────────────────────────────
 // RENDER
@@ -69,12 +52,14 @@ function renderAlarms(alarms) {
 function applyFilterRender() {
     const container = document.getElementById('alarmsContainer');
 
-    // Raggruppa per arnia
+    // Raggruppa per arnia (esclude sempre i risolti — vanno in archivio.php)
     const byHive = {};
-    allAlarms.forEach(alarm => {
-        if (!byHive[alarm.hive]) byHive[alarm.hive] = { name: alarm.hive, alarms: [] };
-        byHive[alarm.hive].alarms.push(alarm);
-    });
+    allAlarms
+        .filter(a => getEffectiveAlarmStatus(a.id, a.tbStatus) !== 'closed')
+        .forEach(alarm => {
+            if (!byHive[alarm.hive]) byHive[alarm.hive] = { name: alarm.hive, alarms: [] };
+            byHive[alarm.hive].alarms.push(alarm);
+        });
 
     let html = '';
     Object.keys(byHive).sort().forEach(hiveName => {
@@ -82,12 +67,12 @@ function applyFilterRender() {
         let filtered = group.alarms;
 
         if (currentFilter !== 'all') {
-            filtered = filtered.filter(a => getEffectiveStatus(a.id, a.tbStatus) === currentFilter);
+            filtered = filtered.filter(a => getEffectiveAlarmStatus(a.id, a.tbStatus) === currentFilter);
         }
         if (filtered.length === 0) return;
 
-        const openCount   = group.alarms.filter(a => getEffectiveStatus(a.id, a.tbStatus) === 'open').length;
-        const systemCount = group.alarms.filter(a => getEffectiveStatus(a.id, a.tbStatus) === 'system').length;
+        const openCount   = group.alarms.filter(a => getEffectiveAlarmStatus(a.id, a.tbStatus) === 'open').length;
+        const systemCount = group.alarms.filter(a => getEffectiveAlarmStatus(a.id, a.tbStatus) === 'system').length;
         const totalCount  = group.alarms.length;
 
         let countBadge = '';
@@ -124,18 +109,15 @@ function applyFilterRender() {
 }
 
 function renderAlarmRow(alarm) {
-    const status = getEffectiveStatus(alarm.id, alarm.tbStatus);
+    const status = getEffectiveAlarmStatus(alarm.id, alarm.tbStatus);
     const statusMap = {
         system: { cls: 'st-system', label: '<i data-lucide="bell-ring" style="width:11px;height:11px;margin-right:4px;"></i>DA GESTIRE' },
-        open:   { cls: 'st-open',   label: 'Aperto'     },
-        closed: { cls: 'st-closed', label: 'Risolto'    },
+        open:   { cls: 'st-open',   label: 'Aperto'  },
+        closed: { cls: 'st-closed', label: 'Risolto' },
     };
     const s = statusMap[status] || statusMap.system;
-
-    const sevClass   = alarm.severity ? `sev-${alarm.severity}`   : 'sev-INFO';
-    const badgeClass = alarm.severity ? `badge-${alarm.severity}` : 'badge-INFO';
-
     const dotClass = { system: 'dot-system', open: 'dot-open', closed: 'dot-closed' }[status] || 'dot-system';
+
     return `
     <div class="alarm-row" data-alarm-id="${escHtml(alarm.id)}">
       <div class="alarm-severity-dot ${dotClass}"></div>
@@ -148,9 +130,10 @@ function renderAlarmRow(alarm) {
 }
 
 function updateStats(alarms) {
+    // Modifica questa riga:
     let sys = 0, open = 0, closed = 0;
     alarms.forEach(a => {
-        const st = getEffectiveStatus(a.id, a.tbStatus);
+        const st = getEffectiveAlarmStatus(a.id, a.tbStatus);
         if      (st === 'system') sys++;
         else if (st === 'open')   open++;
         else                      closed++;
@@ -179,20 +162,18 @@ window.openModal = function(alarmId) {
     if (!alarm) return;
 
     modalAlarmId = alarmId;
-
-    // Diventa automaticamente "open" quando si apre il popup
-    const current = getEffectiveStatus(alarmId, alarm.tbStatus);
+    const current = getEffectiveAlarmStatus(alarmId, alarm.tbStatus);
+    // Aprendo il modal passiamo da 'system' → 'open' come pre-selezione
     modalSelectedStatus = current === 'system' ? 'open' : current;
 
     document.getElementById('modalAlarmTitle').innerText = alarm.msg;
     document.getElementById('modalAlarmMeta').innerText  = alarm.hive + ' · ' + alarm.time;
-    document.getElementById('modalNote').value = alarmStates['note_' + alarmId] || '';
+    const states = loadLocalAlarmStates();
+    document.getElementById('modalNote').value = states['note_' + alarmId] || '';
 
     document.querySelectorAll('.modal-status-opt').forEach(el => {
         el.className = 'modal-status-opt';
-        if (el.dataset.status === modalSelectedStatus) {
-            el.classList.add('selected-' + modalSelectedStatus);
-        }
+        if (el.dataset.status === modalSelectedStatus) el.classList.add('selected-' + modalSelectedStatus);
     });
 
     document.getElementById('alarmModal').classList.add('show');
@@ -212,13 +193,14 @@ window.closeModal = function(event) {
 };
 
 window.closeModalDirect = function() {
-    // Se l'allarme era "da gestire" e l'utente chiude con X, lo marca come "aperto"
+    // Se era 'system' e l'utente chiude con X, segna come 'open'
     if (modalAlarmId) {
         const alarm = allAlarms.find(a => a.id === modalAlarmId);
-        const current = alarm ? getEffectiveStatus(modalAlarmId, alarm.tbStatus) : null;
+        const current = alarm ? getEffectiveAlarmStatus(modalAlarmId, alarm.tbStatus) : null;
         if (current === 'system') {
-            alarmStates[modalAlarmId] = 'open';
-            saveLocalStates(alarmStates);
+            const states = loadLocalAlarmStates();
+            states[modalAlarmId] = 'open';
+            saveLocalAlarmStates(states);
             applyFilterRender();
             updateStats(allAlarms);
         }
@@ -228,7 +210,7 @@ window.closeModalDirect = function() {
     modalSelectedStatus = null;
 };
 
-// Toast di feedback (successo / errore)
+// Toast di feedback
 function showToast(message, type = 'success') {
     const existing = document.getElementById('alarmToast');
     if (existing) existing.remove();
@@ -264,10 +246,9 @@ window.saveAlarmStatus = async function() {
 
     try {
         if (!isMock) {
-            // Mapping:
-            //   "closed" → clear  (TB: CLEARED_ACK)
-            //   "open"   → ack    (TB: ACTIVE_ACK)
-            //   "system" → nessuna chiamata TB (ACTIVE_UNACK è lo stato di default)
+            // 'closed' → clear (TB: CLEARED_ACK)
+            // 'open'   → ack   (TB: ACTIVE_ACK)
+            // 'system' → nessuna chiamata TB
             if (modalSelectedStatus === 'closed') {
                 await tbClearAlarm(modalAlarmId);
             } else if (modalSelectedStatus === 'open') {
@@ -275,13 +256,20 @@ window.saveAlarmStatus = async function() {
             }
         }
 
-        alarmStates[modalAlarmId] = modalSelectedStatus;
+        const states = loadLocalAlarmStates();
+        states[modalAlarmId] = modalSelectedStatus;
         const note = document.getElementById('modalNote').value.trim();
-        if (note) alarmStates['note_' + modalAlarmId] = note;
-        else      delete alarmStates['note_' + modalAlarmId];
+        if (note) states['note_' + modalAlarmId] = note;
+        else      delete states['note_' + modalAlarmId];
+        saveLocalAlarmStates(states);
 
-        saveLocalStates(alarmStates);
-        closeModalDirect();
+        // Reset modalAlarmId PRIMA di closeModalDirect per non innescare
+        // la logica "se era system → segna open"
+        const savedId = modalAlarmId;
+        modalAlarmId  = null;
+        document.getElementById('alarmModal').classList.remove('show');
+        modalSelectedStatus = null;
+
         applyFilterRender();
         updateStats(allAlarms);
 
@@ -318,23 +306,19 @@ window.refreshAlarms = async function() {
         const data = await res.json();
         const raw  = data.alarms || [];
 
-        const mapped = raw.map(alarm => {
-            const deviceName = alarm.originatorName || 'Dispositivo sconosciuto';
-            const ts = alarm.createdTime
+        const mapped = raw.map(alarm => ({
+            id:       alarm.id?.id || String(alarm.createdTime),
+            hive:     alarm.originatorName || 'Dispositivo sconosciuto',
+            msg:      alarmTypeLabels[alarm.type] || alarm.type || 'Allarme sconosciuto',
+            time:     alarm.createdTime
                 ? new Date(alarm.createdTime).toLocaleString('it-IT', {
                     day: '2-digit', month: '2-digit', year: '2-digit',
                     hour: '2-digit', minute: '2-digit'
                 })
-                : '--';
-            return {
-                id:       alarm.id?.id || String(alarm.createdTime),
-                hive:     deviceName,
-                msg:      alarmTypeLabels[alarm.type] || alarm.type || 'Allarme sconosciuto',
-                time:     ts,
-                severity: alarm.severity || 'WARNING',
-                tbStatus: alarm.status   || ''
-            };
-        });
+                : '--',
+            severity: alarm.severity || 'WARNING',
+            tbStatus: alarm.status   || ''   // ← status grezzo TB, mai pre-mappato
+        }));
 
         renderAlarms(mapped);
     } catch (err) {
