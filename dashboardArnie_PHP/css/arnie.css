@@ -160,7 +160,7 @@ header a:hover {
 
 /* Contenitore principale dello storico nella pagina arnia */
 .alarm-history-container-arnie {
-    height: 497px; /* Altezza calcolata per allinearsi a "Stato Sensori" */
+    height: 475px; /* Altezza calcolata per allinearsi a "Stato Sensori" */
     overflow: hidden; /* Evita che la card si espanda all'esterno */
 }
 
@@ -215,4 +215,31 @@ header a:hover {
     font-size: 0.95rem;
     line-height: 1.2;
     word-break: break-word;
+}
+
+/* Overlay per grafici senza dati */
+.chart-box {
+    position: relative;
+}
+
+.chart-box.no-data .chart-area {
+    opacity: 0.2; /* Opacizza il grafico vuoto */
+    filter: blur(2px);
+}
+
+.chart-box.no-data::after {
+    content: "Nessun dato registrato in questo intervallo";
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px 16px;
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 500;
+    pointer-events: none;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
