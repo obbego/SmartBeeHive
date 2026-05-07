@@ -260,19 +260,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (telemetry.is_stale) {
                     semaforo.className = 'status-alert instabile';
-                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: ultimo aggiornamento superiore a 24 ore (${dataFormattata})`;
+                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 24 ore (${dataFormattata})`;
                 }
                 else if (temInVal == 0 && weightVal == 0 && humVal == 0) {
                     semaforo.className = 'status-alert allarme';
-                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Arnia non disponibile: uno o più dispositivi sono offline`;
-                }
-                else if (temInVal > 40 || temInVal < -5) {
-                    semaforo.className = 'status-alert allarme';
-                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Allarme: Temperatura fuori soglia (Ultimo aggiornamento dati: ${dataFormattata})`;
+                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Arnia non disponibile: <br> uno o più dispositivi sono offline`;
                 }
                 else {
                     semaforo.className = 'status-alert ottimale';
-                    semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: tutto regolare (Ultimo aggiornamento dati: ${dataFormattata})`;
+                    semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: <br> Tutto regolare (Ultimo aggiornamento dati: ${dataFormattata})`;
                 }
 
                 // --- AGGIORNAMENTO R2 E GRAFICI ---

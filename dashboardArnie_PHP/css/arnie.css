@@ -210,3 +210,9 @@ header a:hover {
         margin-top: 10px;
     }
 }
+
+#valR2 {
+    font-size: 0.95rem;
+    line-height: 1.2;
+    word-break: break-word;
+}
