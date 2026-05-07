@@ -112,16 +112,26 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
         </div>
 
         <!-- Stato sensori -->
-        <div class="col-12">
-          <div class="glass-panel p-4">
-            <div class="chart-title mb-3">Stato Sensori</div>
-            <div id="statusSemaforo" class="status-alert mb-3"></div>
-            <div class="d-flex justify-content-between align-items-center pt-3">
-              <span style="font-size: 13px; color: var(--text-muted);">R² Pearson (In/Out):</span>
-              <strong id="valR2" class="text-white">0.82</strong>
-            </div>
+          <div class="col-3">
+              <div class="glass-panel stat-card h-100 text-center d-flex flex-column">
+                  <div class="stat-label justify-content-center mt-2">
+                      R² Pearson
+                  </div>
+
+                  <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+                      <div class="stat-value" id="valR2" style="font-size: 1.2rem;">
+                          --
+                      </div>
+                  </div>
+              </div>
           </div>
-        </div>
+
+          <div class="col-9">
+              <div class="glass-panel p-4 h-100 d-flex flex-column justify-content-center">
+                  <div class="chart-title mb-3">Attività Sensori</div>
+                  <div id="statusSemaforo" class="status-alert mb-0"></div>
+              </div>
+          </div>
 
       </div>
     </div>

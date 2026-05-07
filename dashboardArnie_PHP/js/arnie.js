@@ -260,19 +260,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (telemetry.is_stale) {
                     semaforo.className = 'status-alert instabile';
-                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: ultimo aggiornamento superiore a 24 ore (${dataFormattata})`;
+                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 24 ore (${dataFormattata})`;
                 }
                 else if (temInVal == 0 && weightVal == 0 && humVal == 0) {
                     semaforo.className = 'status-alert allarme';
-                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Arnia non disponibile: uno o più dispositivi sono offline`;
-                }
-                else if (temInVal > 40 || temInVal < -5) {
-                    semaforo.className = 'status-alert allarme';
-                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Allarme: Temperatura fuori soglia (Ultimo aggiornamento dati: ${dataFormattata})`;
+                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Arnia non disponibile: <br> uno o più dispositivi sono offline`;
                 }
                 else {
                     semaforo.className = 'status-alert ottimale';
-                    semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: tutto regolare (Ultimo aggiornamento dati: ${dataFormattata})`;
+                    semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: <br> Tutto regolare (Ultimo aggiornamento dati: ${dataFormattata})`;
                 }
 
                 // --- AGGIORNAMENTO R2 E GRAFICI ---
@@ -356,7 +352,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 let charts = {};
 
 function initDetailCharts(telemetry) {
-    // Opzioni base per il primo grafico (quello con la legenda VISIBILE)
+    /**
+     * Funzione interna per gestire lo stato visivo "Nessun Dato".
+     * Aggiunge o rimuove la classe CSS .no-data al contenitore del grafico.
+     */
+
+    const warningVisible = document.body.innerText.includes("Ultimo aggiornamento superiore a 24 ore");
+    const currentRange = document.querySelector('.tab-btn.active').dataset.value;
+
+    const checkEmpty = (dataArray, canvasId) => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return true;
+        const container = canvas.closest('.chart-box');
+
+        // Controlliamo se l'array esiste e ha elementi
+        const isEmpty = !dataArray || dataArray.length === 0;
+
+        if (isEmpty) {
+            container.classList.add('no-data');
+        } else {
+            container.classList.remove('no-data');
+        }
+        return isEmpty;
+    };
+
+    // Configurazione comune per i grafici
     const optionsWithLegend = {
         responsive: true,
         maintainAspectRatio: false,
@@ -365,7 +385,6 @@ function initDetailCharts(telemetry) {
         }
     };
 
-    // Opzioni per gli altri grafici (legenda NASCOSTA)
     const optionsNoLegend = {
         responsive: true,
         maintainAspectRatio: false,
@@ -374,36 +393,42 @@ function initDetailCharts(telemetry) {
         }
     };
 
-    // 1. Temperatura In/Out (MANTIENE LA LEGENDA)
-    const tempIn  = parseTelemetrySeries(telemetry.tempIn);
+    // 1. GRAFICO: Temperatura Interna vs Esterna
+    const tempIn = parseTelemetrySeries(telemetry.tempIn);
     const tempOut = parseTelemetrySeries(telemetry.tempOut);
+    checkEmpty(tempIn.data, 'tempInOutChart');
+
     if (charts.temp) charts.temp.destroy();
     charts.temp = new Chart(document.getElementById('tempInOutChart'), {
         type: 'line',
         data: {
             labels: tempIn.labels,
             datasets: [
-                { label: 'Temp In',  data: tempIn.data,  borderColor: '#fbbf24', fill: true },
+                { label: 'Temp In',  data: tempIn.data,  borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', fill: true },
                 { label: 'Temp Out', data: tempOut.data, borderColor: '#60a5fa', fill: false }
             ]
         },
         options: optionsWithLegend
     });
 
-    // 2. Umidità (LEGENDA NASCOSTA)
+    // 2. GRAFICO: Umidità Interna
     const hum = parseTelemetrySeries(telemetry.humidity);
+    checkEmpty(hum.data, 'humidityChart');
+
     if (charts.hum) charts.hum.destroy();
     charts.hum = new Chart(document.getElementById('humidityChart'), {
         type: 'line',
         data: {
             labels: hum.labels,
-            datasets: [{ label: 'Umidità', data: hum.data, borderColor: '#3b82f6', fill: true }]
+            datasets: [{ label: 'Umidità', data: hum.data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true }]
         },
         options: optionsNoLegend
     });
 
-    // 3. Peso (LEGENDA NASCOSTA)
+    // 3. GRAFICO: Variazione Peso (Barre)
     const weight = parseTelemetrySeries(telemetry.honeyWeightKg);
+    checkEmpty(weight.data, 'weightFlowChart');
+
     if (charts.weight) charts.weight.destroy();
     charts.weight = new Chart(document.getElementById('weightFlowChart'), {
         type: 'bar',
@@ -414,8 +439,10 @@ function initDetailCharts(telemetry) {
         options: optionsNoLegend
     });
 
-    // 4. Frequenza Picco (LEGENDA NASCOSTA)
+    // 4. GRAFICO: Frequenza Picco
     const freq = parseTelemetrySeries(telemetry.peakFreq);
+    checkEmpty(freq.data, 'peakFreqChart');
+
     if (charts.freq) charts.freq.destroy();
     charts.freq = new Chart(document.getElementById('peakFreqChart'), {
         type: 'line',
@@ -431,7 +458,7 @@ function initDetailCharts(telemetry) {
             }]
         },
         options: {
-            ...optionsNoLegend, // Applica l'assenza di legenda
+            ...optionsNoLegend,
             scales: {
                 y: {
                     suggestedMin: 150,
