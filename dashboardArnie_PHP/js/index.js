@@ -310,6 +310,7 @@ function renderTimeSelector(type) {
     <button class="tab-btn" data-value="24h">24 Ore</button>
     <button class="tab-btn" data-value="7d">7 Giorni</button>
     <button class="tab-btn" data-value="30d">1 Mese</button>
+    <button class="tab-btn" data-value="1a">1 Anno</button>
   `;
 
     // reset + set default active
@@ -592,7 +593,17 @@ function initAnalysisCharts(allTelemetries) {
             });
         });
 
-        // QUESTA È LA PARTE CHE MANCAVA: Il disegno del grafico
+        const xValues = pairs.map(p => p.x);
+        const yValues = pairs.map(p => p.y);
+        const r2 = computeR2(xValues, yValues);
+
+        // Aggiorna la scritta nella pagina HTML
+        const r2El = document.getElementById('analysisR2');
+        if (r2El) {
+            r2El.innerText = r2 !== null ? `R² = ${r2.toFixed(3)}` : 'R² = N/A';
+        }
+
+        // Disegno del grafico
         if (analysisCharts.correlation) analysisCharts.correlation.destroy();
         analysisCharts.correlation = new Chart(document.getElementById('correlationChart'), {
             type: 'scatter',

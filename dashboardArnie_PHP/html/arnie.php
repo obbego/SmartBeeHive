@@ -155,6 +155,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
       <button class="tab-btn active" data-value="24h">24 Ore</button>
       <button class="tab-btn" data-value="7d">7 Giorni</button>
       <button class="tab-btn" data-value="30d">1 Mese</button>
+        <button class="tab-btn" data-value="1a">1 Anno</button>
     </nav>
   </div>
 

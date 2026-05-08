@@ -281,18 +281,21 @@ h1 {
   padding: 4px;
   border-radius: 10px;
   border: 1px solid var(--glass-border);
+  gap: 2px;
 }
 
 .tab-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: 10px 24px;
+  padding: 9px 16px;
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
   font-weight: 500;
+  font-size: 16px;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {

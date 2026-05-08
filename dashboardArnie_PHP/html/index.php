@@ -123,7 +123,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 
         <!-- div storico, panoramica e analisi avanzata -->
         <div class="right">
-            <div class="tabs-container mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="tabs-container mb-4 d-flex justify-content-between align-items-center gap-2">
 
                 <!-- TAB PRINCIPALI -->
                 <nav class="tabs-nav d-inline-flex gap-1">
