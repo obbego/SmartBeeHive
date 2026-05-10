@@ -478,10 +478,34 @@ function initDetailCharts(telemetry) {
 function parseTelemetrySeries(series) {
     if (!series || series.length === 0) return { labels: [], data: [] };
     series.sort((a, b) => a.ts - b.ts);
+
+    // Recuperiamo l'intervallo selezionato dal selettore temporale
+    const activeTab = document.querySelector('#timeRangeSelector .tab-btn.active');
+    const range = activeTab ? activeTab.getAttribute('data-value') : '24h';
+
     const labels = series.map(p => {
         const d = new Date(p.ts);
-        return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+        // Se l'intervallo è '1a' (un anno), usiamo il formato richiesto
+        if (range === '1a') {
+            return d.toLocaleString('it-IT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).replace(',', ''); // Rimuove la virgola tra data e ora se presente
+        }
+
+        // Formato predefinito per gli altri intervalli (già presente nel tuo script)
+        return d.toLocaleString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     });
+
     const data = series.map(p => p.value);
     return { labels, data };
 }
