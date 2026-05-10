@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (telemetry.is_stale) {
                     semaforo.className = 'status-alert instabile';
-                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 24 ore (${dataFormattata})`;
+                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 24 ore: ${dataFormattata}`;
                 }
                 else if (temInVal == 0 && weightVal == 0 && humVal == 0) {
                     semaforo.className = 'status-alert allarme';
@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 else {
                     semaforo.className = 'status-alert ottimale';
-                    semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: <br> Tutto regolare (Ultimo aggiornamento dati: ${dataFormattata})`;
+                    semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: Tutto regolare <br> Ultimo aggiornamento dati: ${dataFormattata}`;
                 }
 
                 // --- AGGIORNAMENTO R2 E GRAFICI ---
@@ -347,6 +347,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     });
+
+    const defaultTab = document.querySelector('#timeRangeSelector .tab-btn.active');
+    if (defaultTab && !isMockMode) {
+        defaultTab.click();
+    }
 });
 
 let charts = {};
