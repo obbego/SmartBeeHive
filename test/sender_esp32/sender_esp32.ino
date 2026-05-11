@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <heltec_unofficial.h>
 #include "niagara.h"
+#include "measure.h"
 
 bool log_initialised = false;
 
@@ -102,7 +103,7 @@ void loop() {
   Serial.println(input_str);
   str destination = str("RASPI");
   Measure telemetry = getInstantTelemetry(); 
-  str input_str_converted = str(telemetry.toJSON());
+  str input_str_converted = telemetry.toJSON();
 
   Serial.println("=== AVVIO TRASMISSIONE ===");
   Niagara_Ret error = device->send(destination, input_str_converted);

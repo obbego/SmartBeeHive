@@ -146,7 +146,7 @@ bool sendDataToThingsBoard(str payload, str source)
 
         /* configuration of all the parts of
         the request */
-        curl_easy_setopt(curl, CURLOPT_URL, THINGSBOARD_HOST + "/api/v1/" + string(it->getAccessToken().c_str()) + "telemetry");
+        curl_easy_setopt(curl, CURLOPT_URL, THINGSBOARD_HOST + "/api/v1/" + string(it->getAccessToken().c_str()) + "/telemetry");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
 
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
     /* initialize variables and objects for the
     execution of the program */
     Niagara niagara;
-    niagara.set_identifier("LoRa_rec"); // set identifier
+    niagara.set_identifier("LoRaREC"); // set identifier
 
     /* setup the environment */
     if (!recoverDevices()){
