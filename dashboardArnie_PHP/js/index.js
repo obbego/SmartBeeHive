@@ -8,6 +8,18 @@ const mockAlertsHistory = [
 ];
 let alertsHistory = [];
 
+const zoomConfig = {
+    pan: {
+        enabled: true,
+        mode: 'x',
+    },
+    zoom: {
+        wheel: { enabled: true },
+        pinch: { enabled: true },
+        mode: 'x',
+    }
+};
+
 // ─────────────────────────────────────────────
 // LOGICA COLORI METRICHE
 // ─────────────────────────────────────────────
@@ -414,8 +426,15 @@ const HIVE_COLORS = ['#fbbf24', '#60a5fa', '#34d399', '#f87171', '#a78bfa'];
 
 function initOverviewCharts(allTelemetries) {
     const commonOptions = {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        scales: {x: {grid: {display: false}, ticks: {maxTicksLimit: 8, maxRotation: 0}}}
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+            x: {grid: {display: false}, ticks: {maxTicksLimit: 8, maxRotation: 0}}
+        },
+        plugins: {
+            zoom: zoomConfig // <--- Aggiunto qui
+        }
     };
 
     // 1. Temperatura per arnia + linea media
@@ -446,8 +465,15 @@ function initOverviewCharts(allTelemetries) {
         const labels = avgSeries.labels.length > 0 ? avgSeries.labels : (datasets[0]?._labels || []);
         if (overviewCharts.temp) overviewCharts.temp.destroy();
         overviewCharts.temp = new Chart(document.getElementById('tempChart'), {
-            type: 'line', data: {labels, datasets},
-            options: {...commonOptions, plugins: {legend: {display: true, labels: {boxWidth: 10, font: {size: 11}}}}}
+            type: 'line',
+            data: {labels, datasets},
+            options: {
+                ...commonOptions,
+                plugins: {
+                    ...commonOptions.plugins, // Mantiene lo zoom
+                    legend: {display: true, labels: {boxWidth: 10, font: {size: 11}}}
+                }
+            }
         });
     }
 
@@ -564,8 +590,13 @@ function computeDerivative(series) {
 
 function initAnalysisCharts(allTelemetries) {
     const commonOptions = {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: {legend: {display: false}},
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+            legend: {display: false},
+            zoom: zoomConfig // <--- Aggiunto qui
+        },
         scales: {x: {grid: {display: false}, ticks: {maxTicksLimit: 8, maxRotation: 0}}}
     };
 
@@ -620,6 +651,7 @@ function initAnalysisCharts(allTelemetries) {
             options: {
                 ...commonOptions,
                 scales: {
+                    ...commonOptions.scales,
                     x: {
                         title: { display: true, text: 'Temperatura Esterna (°C)', color: '#94a3b8' },
                         grid: { color: 'rgba(255,255,255,0.05)' }
