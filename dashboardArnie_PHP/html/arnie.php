@@ -18,11 +18,12 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+	<script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <link rel="stylesheet" href="../css/style.css" />
-  <link rel="stylesheet" href="../css/arnie.css" />
+	<link rel="stylesheet" href="../css/style.css" />
+	<link rel="stylesheet" href="../css/arnie.css" />
+	<link rel="stylesheet" href="../css/navbar.css" />
 
   <style>
     h1, h2, h3, h4, h5, h6, p { margin-bottom: 0; }
@@ -31,31 +32,12 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 </head>
 
 <body>
-<header class="mb-4 py-3 border-bottom border-secondary border-opacity-25" style="background: rgba(15, 23, 42, 0.3);">
-  <div class="container d-flex justify-content-between align-items-center">
-    <h1>
-      <a href="index.php" class="text-white me-3" style="opacity: 0.8; transition: 0.2s;">
-        <i data-lucide="arrow-left"></i>
-      </a>
-      <span id="hiveName">Caricamento...</span>
-    </h1>
+<?php require_once '../includes/navbar.php'; ?>
 
-	  <div class="d-flex align-items-center gap-4">
-		  <div class="form-check form-switch d-flex align-items-center mb-0">
-			  <input class="form-check-input me-2" type="checkbox" role="switch" id="mockDataSwitch"
-					 style="cursor: pointer; width: 2.5em; height: 1.25em; border-color: rgba(255,255,255,0.5);">
-			  <label class="form-check-label text-white" for="mockDataSwitch"
-					 style="font-size: 13px; cursor: pointer;">Modalità Demo</label>
-		  </div>
-          <!-- <div id="lastUpdate" style="font-size: 13px; color: var(--text-muted);">Ultimo dato: --:--</div>-->
-		  <div style="font-size: 13px; color: var(--text-muted);">
-			  <?= htmlspecialchars($utente_nome) ?>
-			  &nbsp;·&nbsp;
-			  <a href="../logout.php" style="color: var(--text-muted); text-decoration: underline;">Esci</a>
-		  </div>
-	  </div>
-  </div>
-</header>
+<div class="container d-flex justify-content-between align-items-center py-2" style="font-size:13px; color:var(--text-muted);">
+	<h2 id="hiveName" style="font-size:20px; font-weight:700; color:white;">Caricamento...</h2>
+	<span id="lastUpdate">Ultimo dato: --:--</span>
+</div>
 
 <div class="container">
   <div class="row g-4 mb-4 align-items-stretch">

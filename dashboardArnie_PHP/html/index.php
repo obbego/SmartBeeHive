@@ -43,24 +43,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 
 <body>
 
-<header class="mb-4 py-3 border-bottom border-secondary border-opacity-25" style="background: rgba(15, 23, 42, 0.3);">
-    <div class="container d-flex justify-content-between align-items-center">
-        <h1><i data-lucide="layout-grid" class="brand-icon me-2"></i> FrontEnd Managment Arnie</h1>
-
-        <div class="d-flex align-items-center gap-4">
-            <div class="form-check form-switch d-flex align-items-center mb-0">
-                <input class="form-check-input me-2" type="checkbox" role="switch" id="mockDataSwitch" style="cursor: pointer; width: 2.5em; height: 1.25em; border-color: rgba(255,255,255,0.5);">
-                <label class="form-check-label text-white" for="mockDataSwitch" style="font-size: 13px; cursor: pointer;">Modalità Demo</label>
-            </div>
-
-            <div style="font-size: 13px; color: var(--text-muted);">
-                Benvenuto, <strong class="text-white"><?= htmlspecialchars($utente_nome) ?></strong>
-                &nbsp;·&nbsp;
-                <a href="../logout.php" style="color: var(--text-muted); font-size: 13px; text-decoration: underline;">Esci</a>
-            </div>
-        </div>
-    </div>
-</header>
+<?php require_once '../includes/navbar.php'; ?>
 
 <div class="container pb-5">
     <div class="row g-3 mb-4">
@@ -278,6 +261,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 <script src="../js/alarm_state.js"></script>
 <script src="../js/index.js"></script>
 <script src="../js/thingsboard.js"></script>
+<script src="../js/navbar.js"></script>
 
 </body>
 </html>

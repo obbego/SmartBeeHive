@@ -16,6 +16,7 @@ require_once '../auth.php';
 
     <link rel="stylesheet" href="../css/style.css" />
     <link rel="stylesheet" href="../css/allarmi.css" />
+	<link rel="stylesheet" href="../css/navbar.css" />
 
     <style>
         h1, h2, h3, h4, h5, h6, p { margin-bottom: 0; }
@@ -25,22 +26,7 @@ require_once '../auth.php';
 
 <body>
 
-<header class="mb-4 py-3 border-bottom border-secondary border-opacity-25" style="background: rgba(15, 23, 42, 0.3);">
-    <div class="container d-flex justify-content-between align-items-center">
-        <h1>
-            <a href="allarmi.php" class="text-white me-3" style="opacity: 0.8; transition: 0.2s;">
-                <i data-lucide="arrow-left"></i>
-            </a>
-            <i data-lucide="archive" style="color: var(--success); filter: drop-shadow(0 0 8px rgba(16,185,129,0.4));"></i>
-            <span style="margin-left: 8px;">Archivio Allarmi Risolti</span>
-        </h1>
-        <div style="font-size: 13px; color: var(--text-muted);">
-            <?= htmlspecialchars($utente_nome) ?>
-            &nbsp;·&nbsp;
-            <a href="../logout.php" style="color: var(--text-muted); text-decoration: underline;">Esci</a>
-        </div>
-    </div>
-</header>
+<?php require_once '../includes/navbar.php'; ?>
 
 <div class="container pb-5">
 
@@ -95,6 +81,7 @@ require_once '../auth.php';
 <script src="../js/alarm_state.js"></script>
 <script src="../js/thingsboard.js"></script>
 <script src="../js/archivio.js"></script>
+<script src="../js/navbar.js"></script>
 
 </body>
 </html>
