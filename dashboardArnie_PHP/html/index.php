@@ -19,6 +19,8 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
     <link rel="stylesheet" href="../css/allarmi.css" />
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <link rel="stylesheet" href="../css/style.css">
