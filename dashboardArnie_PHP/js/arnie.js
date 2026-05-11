@@ -381,12 +381,30 @@ function initDetailCharts(telemetry) {
         return isEmpty;
     };
 
+    // Configurazione del plugin per scorrimento e zoom
+    const zoomConfig = {
+        pan: {
+            enabled: true,
+            mode: 'x', // Permette di scorrere solo a destra e sinistra (asse temporale)
+        },
+        zoom: {
+            wheel: {
+                enabled: true, // Abilita lo zoom con la rotellina del mouse
+            },
+            pinch: {
+                enabled: true  // Abilita lo zoom "pizzicando" lo schermo su mobile
+            },
+            mode: 'x', // Zooma solo sull'asse X
+        }
+    };
+
     // Configurazione comune per i grafici
     const optionsWithLegend = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { display: true }
+            legend: { display: true },
+            zoom: zoomConfig // <--- Aggiunto qui
         }
     };
 
@@ -394,9 +412,11 @@ function initDetailCharts(telemetry) {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            zoom: zoomConfig // <--- Aggiunto qui
         }
     };
+
 
     // 1. GRAFICO: Temperatura Interna vs Esterna
     const tempIn = parseTelemetrySeries(telemetry.tempIn);
