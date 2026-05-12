@@ -84,6 +84,10 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
 			<i data-lucide="archive" style="width:18px;height:18px;"></i>
 			Archivio
 		</a>
+        <a href="profile.php" class="sidebar-link" data-page="profile.php">
+            <i data-lucide="user" style="width:18px;height:18px;"></i>
+            Il mio profilo
+        </a>
 
         <!-- Admin — solo per admin -->
         <?php if ($utente_ruolo === 'admin'): ?>
@@ -115,5 +119,3 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
     </div>
 
 </nav>
-
-<!-- JS navbar — va dopo lucide.createIcons() quindi lo carichiamo in fondo body -->

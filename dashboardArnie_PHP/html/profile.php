@@ -4,7 +4,6 @@
 // ============================================================
 // require_once '../auth.php';
 
-
 // DATI MOCK
 $utente_nome = $utente_nome ?? 'Dev User';
 $ruolo = 'Amministratore';
@@ -14,12 +13,10 @@ $data_iscrizione = "12 Maggio 2024";
 <!DOCTYPE html>
 <html lang="it" data-bs-theme="dark">
 
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profilo • Smart Hive</title>
-
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,7 +35,6 @@ $data_iscrizione = "12 Maggio 2024";
         <p class="text-muted">Gestisci sicurezza, notifiche e accessi del tuo account</p>
     </div>
 
-
     <div class="row g-4 justify-content-center">
         <div class="col-lg-4">
             <div class="glass-panel text-center h-100">
@@ -50,7 +46,6 @@ $data_iscrizione = "12 Maggio 2024";
                     <i data-lucide="shield-check" size="16"></i> <?= $ruolo ?>
                 </div>
 
-
                 <div class="text-start mt-4">
                     <div class="info-box">
                         <div class="info-label">Email</div>
@@ -60,7 +55,6 @@ $data_iscrizione = "12 Maggio 2024";
                         <div class="info-label">Iscrizione</div>
                         <div class="info-value"><?= $data_iscrizione ?></div>
                     </div>
-
 
                     <div class="mt-4">
                         <label class="info-label d-block mb-2">Permessi attivi</label>
@@ -74,13 +68,11 @@ $data_iscrizione = "12 Maggio 2024";
                     </div>
                 </div>
 
-
                 <button class="btn btn-logout w-100 mt-4">
                     <i data-lucide="log-out" class="me-2"></i> Disconnetti
                 </button>
             </div>
         </div>
-
 
         <div class="col-lg-8">
             <div class="glass-panel mb-4">
@@ -91,7 +83,6 @@ $data_iscrizione = "12 Maggio 2024";
                         <p class="text-muted small mb-0">Aggiorna le tue credenziali</p>
                     </div>
                 </div>
-
 
                 <form action="#" method="POST">
                     <div class="mb-4">
@@ -114,7 +105,6 @@ $data_iscrizione = "12 Maggio 2024";
                 </form>
             </div>
 
-
             <div class="glass-panel">
                 <div class="d-flex align-items-center gap-3 mb-4">
                     <div class="mini-badge p-2"><i data-lucide="bell"></i></div>
@@ -123,7 +113,6 @@ $data_iscrizione = "12 Maggio 2024";
                         <p class="text-muted small mb-0">Gestisci i canali di avviso</p>
                     </div>
                 </div>
-
 
                 <div class="settings-group">
                     <div class="setting-item">
@@ -150,11 +139,9 @@ $data_iscrizione = "12 Maggio 2024";
     </div>
 </div>
 
-
 <script>
     lucide.createIcons();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
