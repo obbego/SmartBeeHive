@@ -34,8 +34,14 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 <body>
 <?php require_once '../includes/navbar.php'; ?>
 
-<div class="container d-flex justify-content-between align-items-center py-2" style="font-size:13px; color:var(--text-muted);">
-	<h2 id="hiveName" style="font-size:20px; font-weight:700; color:white;">Caricamento...</h2>
+<div class="container d-flex justify-content-between align-items-center mt-1 mb-1" style="font-size:13px; color:var(--text-muted);">
+	<div class="d-flex align-items-center gap-3">
+		<a href="index.php" style="color:var(--text-muted); display:flex; align-items:center; transition:0.2s;"
+		   onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'">
+			<i data-lucide="arrow-left" style="width:20px;height:20px;"></i>
+		</a>
+		<h2 id="hiveName" style="font-size:20px; font-weight:700; color:white; margin:0;">Caricamento...</h2>
+	</div>
 	<span id="lastUpdate">Ultimo dato: --:--</span>
 </div>
 
@@ -177,6 +183,7 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 <script src="../js/dati.js"></script>
 <script src="../js/thingsboard.js"></script>
 <script src="../js/arnie.js"></script>
+<script src="../js/navbar.js"></script>
 </body>
 
 </html>
