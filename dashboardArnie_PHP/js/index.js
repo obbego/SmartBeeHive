@@ -121,6 +121,7 @@ function renderHives() {
           onclick="window.location.href='arnie.php?id=${hive.id}'"
           style="cursor: pointer; transition: transform 0.2s;">
        <div class="hive-info">
+
          <div class="hive-header">
            <div class="hive-name text-truncate">${hive.name}</div>
            <div class="d-flex flex-column align-items-end">
@@ -137,17 +138,20 @@ function renderHives() {
             : ''}
            </div>
          </div>
+
          <div class="columns_arnie">
+           <!-- Tank verticale: nascosto su mobile via CSS -->
            <div class="honey-tank-wrapper me-3">
              <div class="honey-tank" title="Riempimento: ${hive.pct}%">
                <div class="honey-liquid" style="height: ${hive.pct}%"></div>
              </div>
              <span class="honey-pct">${hive.pct}%</span>
            </div>
+
            <div class="hive-metrics">
              <div class="metric-box">
                <div class="metric-label">PESO</div>
-               <div class="metric-val" style="${weightStyle}">${hive.w}kg</div>
+               <div class="metric-val" style="${weightStyle}">${hive.w} kg</div>
              </div>
              <div class="metric-box">
                <div class="metric-label">FREQ. PICCO</div>
@@ -163,6 +167,16 @@ function renderHives() {
              </div>
            </div>
          </div>
+
+         <!-- Barra orizzontale miele: visibile solo su mobile via CSS -->
+         <div class="honey-bar-wrapper">
+           <span class="honey-bar-label">Miele</span>
+           <div class="honey-bar-track">
+             <div class="honey-bar-fill" style="width: ${hive.pct}%"></div>
+           </div>
+           <span class="honey-bar-pct">${hive.pct}%</span>
+         </div>
+
        </div>
      </div>
    </div>`;

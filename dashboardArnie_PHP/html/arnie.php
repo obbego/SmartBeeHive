@@ -42,7 +42,6 @@ require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
 		</a>
 		<h2 id="hiveName" style="font-size:20px; font-weight:700; color:white; margin:0;">Caricamento...</h2>
 	</div>
-	<span id="lastUpdate">Ultimo dato: --:--</span>
 </div>
 
 <div class="container">
