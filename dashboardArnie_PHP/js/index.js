@@ -488,7 +488,13 @@ function initOverviewCharts(allTelemetries) {
                     borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)',
                     fill: true, tension: 0.4, pointRadius: 2
                 }]},
-            options: {...commonOptions, plugins: {legend: {display: false}}}
+            options: {
+                ...commonOptions,
+                plugins: {
+                    ...commonOptions.plugins, // AGGIUNTO: mantiene lo zoom
+                    legend: {display: false}
+                }
+            }
         });
     }
 
@@ -503,7 +509,13 @@ function initOverviewCharts(allTelemetries) {
                     borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)',
                     fill: true, tension: 0.4, pointRadius: 2
                 }]},
-            options: {...commonOptions, plugins: {legend: {display: false}}}
+            options: {
+                ...commonOptions,
+                plugins: {
+                    ...commonOptions.plugins, // AGGIUNTO: mantiene lo zoom
+                    legend: {display: false}
+                }
+            }
         });
     }
 
@@ -520,7 +532,10 @@ function initOverviewCharts(allTelemetries) {
                 }]},
             options: {
                 ...commonOptions,
-                plugins: {legend: {display: false}},
+                plugins: {
+                    ...commonOptions.plugins, // AGGIUNTO: mantiene lo zoom
+                    legend: {display: false}
+                },
                 scales: {
                     x: {grid: {display: false}, ticks: {maxTicksLimit: 8, maxRotation: 0}},
                     y: {suggestedMin: 150, suggestedMax: 600, ticks: {callback: v => v + ' Hz'}}
