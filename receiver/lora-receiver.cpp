@@ -88,34 +88,25 @@ void initLogger() {
  */
 bool recoverDevices()
 {
-    /* open the file */
     ifstream file(DEVICES_FILE);
     if (!file){
-        logger->error("Error in opening file "+DEVICES_FILE+". Please check if the file exists and has the right path and permissions");
+        logger->error("Error in opening file "+DEVICES_FILE);
         return false;
     }
 
-    /* every two words add a device file */
-    int counter = 0;
-    string token, firstAttribute;
-
-    while (getline(file, token, ' '))
+    string identifier, token;
+    // L'operatore >> legge una parola alla volta separata da QUALSIASI spazio/invio
+    while (file >> identifier >> token)
     {
-        counter++;
-
-        /* every two words add a device file */
-        if (counter % 2 != 0)
-            firstAttribute = token;
-        else
-            devices.push_back(DeviceInfo(firstAttribute, token));
+        devices.push_back(DeviceInfo(identifier.c_str(), token.c_str()));
     }
-    file.close(); // close file
+    
+    file.close();
 
-    if (counter == 0){
-        logger->error("No devices registered. Please add some to continue.");
+    if (devices.empty()){
+        logger->error("No devices registered.");
         return false;
     }
-
     return true;
 }
 
