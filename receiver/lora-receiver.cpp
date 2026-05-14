@@ -78,6 +78,16 @@ void initLogger() {
 }
 
 /**
+ * Trims an std::string of all trailing/preceding invisible
+ * characters.
+ */
+string trim(const string& s) {
+    auto start = s.find_first_not_of(" \n\r\t");
+    auto end = s.find_last_not_of(" \n\r\t");
+    return (start == string::npos) ? "" : s.substr(start, end - start + 1);
+}
+
+/**
  * Function to recover the devices information from a specified
  * file. They're important to establish a well made communication
  * 
@@ -98,7 +108,7 @@ bool recoverDevices()
     // L'operatore >> legge una parola alla volta separata da QUALSIASI spazio/invio
     while (file >> identifier >> token)
     {
-        devices.push_back(DeviceInfo(identifier.c_str(), token.c_str()));
+        devices.push_back(DeviceInfo(trim(identifier).c_str(), trim(token).c_str()));
     }
     
     file.close();
