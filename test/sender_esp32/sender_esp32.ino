@@ -39,7 +39,7 @@ void log_handler_serial(const char* text) {
 
 /* function to generate the measure
 and return the corresponding string to send */
-const char* getInstantTelemetry(){
+Measure getInstantTelemetry(){
   int number = random(0, size); // pick a random telemetry type
   float value = 0.0;
 
