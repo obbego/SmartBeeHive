@@ -61,7 +61,7 @@ public:
 the execution of the program */
 const string DEVICES_FILE = "devices.txt";
 const string POST_FILE = "post_data.json";
-const string THINGSBOARD_HOST = "http://localhost:8080";
+const string THINGSBOARD_HOST = "http://172.20.10.2:8080";
 /* define global variables in order to be used all over the program */
 vector<DeviceInfo> devices;
 /* define logger to register device operation. 
@@ -143,13 +143,17 @@ bool sendDataToThingsBoard(str payload, str source)
     {
         /* create the header of the request */
         struct curl_slist *headers = NULL;
-        headers = curl_slist_append(headers, "Content-Type: application/json");
+        headers = curl_slist_append(headers, "Content-Type:application/json");
 
         /* configuration of all the parts of
         the request */
-        curl_easy_setopt(curl, CURLOPT_URL, THINGSBOARD_HOST + "/api/v1/" + string(it->getAccessToken().c_str()) + "/telemetry");
+        string fullURL = THINGSBOARD_HOST + "/api/v1/" + string(it->getAccessToken().c_str()) + "/telemetry";
+        cout << "Full URL: '" << fullURL << "'" << endl; 
+        curl_easy_setopt(curl, CURLOPT_URL, fullURL.c_str());
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
+        
+        cout << "Payload: " << payload.c_str() << endl;
 
         /* get the result of the request about the connection
         and data validity */
@@ -157,6 +161,7 @@ bool sendDataToThingsBoard(str payload, str source)
         if (res != CURLE_OK)
         {
             logger->error("Error "+ string(curl_easy_strerror(res)) + " in curl sending data to ThingsBoard using device "+string(source.c_str()));
+            cout << "Error " << string(curl_easy_strerror(res)) << " in curl sending data to ThingsBoard using device " << string(source.c_str()) << endl;
             check = false;
         }
         else
@@ -166,10 +171,12 @@ bool sendDataToThingsBoard(str payload, str source)
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
             if (httpCode == 200){
                 logger->info("Successfully sent data to ThingsBoard from device "+string(source.c_str()));
+                cout << "Successfully sent data to ThingsBoard from device " << string(source.c_str()) << endl;
                 check = true;
             }
             else {
                 logger->error("Return code error "+to_string(httpCode)+" while sending data to ThingsBoard using device " + string(source.c_str()));
+                cout << "Return code error " << to_string(httpCode) << " while sending data to ThingsBoard using device " << string(source.c_str()) << endl;
                 check = false;
             }
         }
@@ -183,6 +190,7 @@ bool sendDataToThingsBoard(str payload, str source)
     else
     {
         logger->error("Error in creating curl connection.");
+        cout << "Error in creating curl connection." << endl;
         return false;
     }
 }
@@ -219,9 +227,11 @@ int main(int argc, char *argv[])
         if (niagara_status != NIAGARA_OK)
         {
             logger->error("Error in receiving data from "+string(source.c_str())+" with error code: "+to_string(niagara_status));
+            cout << "Error in receiving data from " << string(source.c_str()) << " with error code: " << to_string(niagara_status) <<endl;
             continue;
         }
         logger->info("Data received from "+string(source.c_str()));
+        cout << "Data received from " << string(source.c_str()) << endl;
 
         /* send the data to ThingsBoard server.
         Try two times to send the message if there are some problems */
