@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <heltec_unofficial.h>
-#include "niagara.h"
-#include "measure.h"
+#include <niagara.h>
+#include <measure.h>
 
 bool log_initialised = false;
 
@@ -30,16 +30,12 @@ void log_handler_display(const char* text) {
 }
 
 void log_handler_serial(const char* text) {
-    if(!log_initialised) {
-        Serial.begin(115200);
-        log_initialised = true;
-    }
     Serial.print(text);
 }
 
 /* function to generate the measure
 and return the corresponding string to send */
-const char* getInstantTelemetry(){
+Measure getInstantTelemetry(){
   int number = random(0, size); // pick a random telemetry type
   float value = 0.0;
 
@@ -73,13 +69,11 @@ Niagara *device;
 
 void setup() {
     // Inizializza la seriale (chiamando l'handler o direttamente)
-    if(!log_initialised) {
-        Serial.begin(115200);
-        log_initialised = true;
-    }
+    Serial.begin(115200);
+    log_initialised = true;
 
-    device = new Niagara(log_handler_serial, Niagara_LogLevel::LOG_TERMINAL);
-    if(!device->set_identifier("ESP32")) {
+    device = new Niagara();
+    if(!device->set_identifier("Arnia0")) {
         log_handler_serial("Errore: impossibile impostare l'identificatore.\n");
         while(true); 
     }
@@ -96,12 +90,7 @@ void loop() {
     the telemetry sent and the whole environment
     connected to ThingsBoard  
   */
-  Serial.print("Inserisci la stringa da inviare: ");
-  while (!Serial.available()) { delay(10); }
-  String input_str = Serial.readStringUntil('\n');
-  input_str.trim(); // Rimuove carriage return o newline
-  Serial.println(input_str);
-  str destination = str("RASPI");
+  str destination = str("LoRaREC");
   Measure telemetry = getInstantTelemetry(); 
   str input_str_converted = telemetry.toJSON();
 
