@@ -1,4 +1,4 @@
-#include "niagara_message.h"
+#include "niagara_measure.h"
 
 // --- GESTIONE CROSS-PLATFORM DEL TEMPO ---
 #ifdef ARDUINO
@@ -82,7 +82,7 @@ NiagaraReceiver::NiagaraReceiver(Niagara& lora_device)
 
 int NiagaraReceiver::receive() {
     str remote_device, payload;
-    Niagara_Ret ret = device.recv(&remote_device, &payload);
+    Niagara_Ret ret = device.receive(&remote_device, &payload);
     
     if(ret != NIAGARA_OK) return static_cast<int>(ret);
 

@@ -1,5 +1,5 @@
-#ifndef NIAGARA_MESSAGE_H
-#define NIAGARA_MESSAGE_H
+#ifndef NIAGARA_MEASURE_H
+#define NIAGARA_MEASURE_H
 
 #include "niagara.h"
 #include "str.h"
@@ -44,7 +44,7 @@ public:
     // Costruttore Variadico per accettare N misure in inizializzazione
     template<typename... Args>
     NiagaraSender(Niagara& lora_device, Args... initial_measures) 
-        : NiagaraSender(lora_device, identifier, error_code) 
+        : NiagaraSender(lora_device) 
     {
         add_measures_internal(initial_measures...);
     }
