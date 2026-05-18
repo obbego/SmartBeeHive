@@ -1,17 +1,23 @@
-#ifndef NIAGARA_MEASURE_H
-#define NIAGARA_MEASURE_H
+#ifndef NIAGARA_MESSAGE_H
+#define NIAGARA_MESSAGE_H
 
 #include "niagara.h"
+#include "str.h"
 #include <vector>
 
 // Funzioni cross-platform per la gestione del tempo
 unsigned long get_system_millis();
 unsigned long long get_unix_time_ms();
 
-// Struttura della singola misura
+// Struttura della singola misura aggiornata con timestamp predefinito a 0
 struct NiagaraMeasure {
     str key;
     float value;
+    unsigned long timestamp;
+
+    // Costruttore per permettere l'inizializzazione implicita ed esplicita con default a 0
+    NiagaraMeasure(str k, float v, unsigned long ts = 0) 
+        : key(k), value(v), timestamp(ts) {}
 };
 
 // ==========================================
@@ -19,10 +25,8 @@ struct NiagaraMeasure {
 // ==========================================
 class NiagaraSender {
 private:
-    Niagara device;
+    Niagara& device; // Riferimento all'istanza Niagara esterna
     std::vector<NiagaraMeasure> measures;
-    unsigned long custom_ts;
-    bool has_custom_ts;
 
     // Helper interno per l'aggiunta variadica
     void add_measures_internal() {}
@@ -34,24 +38,21 @@ private:
     }
 
 public:
-    // Costruttore base
-    NiagaraSender(const char* identifier, int* error_code);
+    // Costruttore base che accetta il riferimento all'oggetto Niagara
+    NiagaraSender(Niagara& lora_device);
 
     // Costruttore Variadico per accettare N misure in inizializzazione
     template<typename... Args>
-    NiagaraSender(const char* identifier, int* error_code, Args... initial_measures) 
-        : NiagaraSender(identifier, error_code) 
+    NiagaraSender(Niagara& lora_device, Args... initial_measures) 
+        : NiagaraSender(lora_device, identifier, error_code) 
     {
         add_measures_internal(initial_measures...);
     }
 
     void add_measure(const NiagaraMeasure& measure);
     void remove_measure(const char* key);
-    
-    // Imposta un timestamp custom (se non chiamato, usa il tempo di quando si fa send())
-    void set_timestamp(unsigned long ts_millis);
 
-    // Costruisce il payload compatto e lo invia via LoRa
+    // Costruisce il payload inserendo i timestamp per ogni misura e invia
     int send(const char* destination);
 };
 
@@ -60,16 +61,16 @@ public:
 // ==========================================
 class NiagaraReceiver {
 private:
-    Niagara device;
+    Niagara& device; // Riferimento all'istanza Niagara esterna
     str last_json;
 
 public:
-    NiagaraReceiver(const char* identifier, int* error_code);
+    NiagaraReceiver(Niagara& lora_device);
 
-    // Mettiti in ascolto. Ritorna NIAGARA_OK (0) se riceve, o codice di timeout/errore
+    // Ricezione e parsing dinamico dell'array JSON
     int receive();
 
-    // Ritorna l'ultima stringa JSON generata
+    // Ritorna l'array JSON generato
     str getJSON() const;
 };
 

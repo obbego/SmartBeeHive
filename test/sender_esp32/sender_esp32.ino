@@ -61,7 +61,7 @@ Measure getInstantTelemetry(){
       value = random(0,100);
   }
 
-  Measure telemetry = Measure(TELEMETRYTYPE[number], value, millis());
+  Measure telemetry = Measure(TELEMETRYTYPE[number], value);
   return telemetry;
 }
 

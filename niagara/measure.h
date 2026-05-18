@@ -7,6 +7,7 @@ class Measure {
         const str measureType;
         float value;
         unsigned long timestamp;
+        bool timestamp_set;
 
     public:
         /**
@@ -17,6 +18,14 @@ class Measure {
          * @param timestamp The timestamp of this measure
          */
         Measure(const char* type, float value, unsigned long timestamp);
+
+        /**
+         * Constructor for a new measure with no timestamp
+         * 
+         * @param type The c-str containing the measure type (`temperature`, `humidity`, etc.) 
+         * @param value The value of the measure described by `type`
+         */
+        Measure(const char *type, float value);
 
         /**
          * Getter for the measure type string.

@@ -2,7 +2,8 @@
 
 #include <stdlib.h>
 
-Measure::Measure(const char *type, float v, unsigned long ts) : measureType(type), value(v), timestamp(ts) {}
+Measure::Measure(const char *type, float v, unsigned long ts) : measureType(type), value(v), timestamp(ts), timestamp_set(true) {}
+Measure::Measure(const char *type, float v) : measureType(type), value(v), timestamp(0), timestamp_set(false) {}
 
 const char* Measure::getMeasureType(){
 	return measureType.c_str();
@@ -27,14 +28,25 @@ bool Measure::equals(Measure otherMeasure)
 
 str Measure::toJSON()
 {
-	// Retrieve the size of the string
-	int bufSize = snprintf(NULL, 0, "{\"ts\":%lu, \"values\":{\"%s\":%f}}", timestamp, measureType.c_str(), value);
-	if(bufSize < 0) return ""; // Return an empty string in case of error while handling JSON format
-	bufSize++; //Include the null-termination
-	char buffer[bufSize]; 
-	snprintf(buffer, bufSize, "{\"ts\":%lu, \"values\":{\"%s\":%f}}", timestamp, measureType.c_str(), value);
-	// Create a safe object string which contains the buffer contents
-	return str(buffer);
+	if(timestamp_set) {
+		// Retrieve the size of the string
+		int bufSize = snprintf(NULL, 0, "{\"ts\":%lu, \"values\":{\"%s\":%f}}", timestamp, measureType.c_str(), value);
+		if(bufSize < 0) return ""; // Return an empty string in case of error while handling JSON format
+		bufSize++; //Include the null-termination
+		char buffer[bufSize]; 
+		snprintf(buffer, bufSize, "{\"ts\":%lu, \"values\":{\"%s\":%f}}", timestamp, measureType.c_str(), value);
+		// Create a safe object string which contains the buffer contents
+		return str(buffer);
+	} else {
+		// Retrieve the size of the string
+		int bufSize = snprintf(NULL, 0, "{\"%s\":%f}", measureType.c_str(), value);
+		if(bufSize < 0) return ""; // Return an empty string in case of error while handling JSON format
+		bufSize++; //Include the null-termination
+		char buffer[bufSize]; 
+		snprintf(buffer, bufSize, "{\"%s\":%f}", measureType.c_str(), value);
+		// Create a safe object string which contains the buffer contents
+		return str(buffer);
+	}
 }
 
 str Measure::formatMeasuresJSON(Measure array[], int size)
