@@ -1,0 +1,51 @@
+{
+  "type": "SCRIPT",
+  "name": "honeyPct",
+  "debugSettings": {
+    "failuresEnabled": true,
+    "allEnabled": false,
+    "allEnabledUntil": 1774789151976
+  },
+  "configurationVersion": 0,
+  "configuration": {
+    "type": "SCRIPT",
+    "arguments": {
+      "beesNumber": {
+        "refEntityKey": {
+          "key": "beesNumber",
+          "type": "ATTRIBUTE",
+          "scope": "SHARED_SCOPE"
+        },
+        "defaultValue": ""
+      },
+      "emptyHiveWeight": {
+        "refEntityKey": {
+          "key": "emptyHiveWeight",
+          "type": "ATTRIBUTE",
+          "scope": "SHARED_SCOPE"
+        },
+        "defaultValue": ""
+      },
+      "weight": {
+        "refEntityKey": {
+          "key": "weight",
+          "type": "TS_LATEST"
+        },
+        "defaultValue": ""
+      }
+    },
+    "expression": "var weightVal = weight * 1.0;\nvar beesNumberVal = beesNumber * 1.0;\nvar emptyHiveWeightVal = emptyHiveWeight * 1.0;\n\n// peso medio ape\nvar beeWeightKg = 0.0001;\n\n// miele per ape\nvar honeyPerBee = 0.0008;\n\n// capacità arnia\nvar hiveCapacity = 35;\n\n// peso api\nvar beesWeight = beesNumberVal * beeWeightKg;\n\n// peso minimo\nvar minWeight = emptyHiveWeightVal + beesWeight;\n\n// miele\nvar honeyWeight = weightVal - minWeight;\n\nif (honeyWeight < 0) {\n    honeyWeight = 0;\n}\n\n// miele teorico\nvar maxHoneyFromBees = beesNumberVal * honeyPerBee;\n\n// massimo miele\nvar maxHoneyWeight = maxHoneyFromBees;\n\nif (hiveCapacity < maxHoneyWeight) {\n    maxHoneyWeight = hiveCapacity;\n}\n\n// percentuale\nvar honeyPercentage = 0;\n\nif (maxHoneyWeight > 0) {\n    honeyPercentage = (honeyWeight / maxHoneyWeight) * 100;\n}\n\nif (honeyPercentage > 100) {\n    honeyPercentage = 100;\n}\n\nreturn {\n    honeyPct: honeyPercentage,\n    honeyWeightKg: honeyWeight,\n    minWeightKg: minWeight\n};",
+    "output": {
+      "type": "TIME_SERIES",
+      "strategy": {
+        "type": "IMMEDIATE",
+        "ttl": 0,
+        "saveTimeSeries": true,
+        "saveLatest": true,
+        "sendWsUpdate": true,
+        "processCfs": true
+      }
+    }
+  },
+  "additionalInfo": {}
+}
