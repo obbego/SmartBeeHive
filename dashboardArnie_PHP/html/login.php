@@ -1,56 +1,44 @@
 <?php
-// ============================================================
-// LOGIN DISABILITATO — server DB raggiungibile solo dalla scuola
-// In sviluppo locale si viene reindirizzati direttamente alla dashboard.
-// ============================================================
-header('Location: index.php');
-exit;
+session_start();
 
-// --- CODICE ORIGINALE (commentato) ---
-//
-// session_start();
-//
-// // Se già loggato, vai alla dashboard
-// if (isset($_SESSION['utente_id'])) {
-//     header('Location: index.php');
-//     exit;
-// }
-//
-// require_once '../db.php';
-//
-// $errore = '';
-//
-// if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-//     $nome = trim($_POST['nome'] ?? '');
-//     $pass = $_POST['password'] ?? '';
-//
-//     if (empty($nome) || empty($pass)) {
-//         $errore = 'Inserisci username e password.';
-//     } else {
-//         $stmt = mysqli_prepare($conn,
-//             "SELECT id, nome, password_hash, ruolo FROM arnie_users WHERE nome = ? LIMIT 1"
-//         );
-//         mysqli_stmt_bind_param($stmt, 's', $nome);
-//         mysqli_stmt_execute($stmt);
-//         $result = mysqli_stmt_get_result($stmt);
-//         $utente = mysqli_fetch_assoc($result);
-//         mysqli_stmt_close($stmt);
-//
-//         if ($utente && password_verify($pass, $utente['password_hash'])) {
-//             // Login ok — imposta sessione
-//             $_SESSION['utente_id']   = $utente['id'];
-//             $_SESSION['utente_nome'] = $utente['nome'];
-//             $_SESSION['utente_ruolo'] = $utente['ruolo'];
-//
-//             header('Location: index.php');
-//             exit;
-//         } else {
-//             $errore = 'Username o password errati.';
-//         }
-//     }
-//
-//     mysqli_close($conn);
-// }
+if (isset($_SESSION['utente_id'])) {
+	header('Location: index.php');
+	exit;
+}
+
+require_once '../db.php';
+
+$errore = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+	$nome = trim($_POST['nome'] ?? '');
+	$pass = $_POST['password'] ?? '';
+
+	if (empty($nome) || empty($pass)) {
+		$errore = 'Inserisci username e password.';
+	} else {
+		$stmt = mysqli_prepare($conn,
+				"SELECT id, nome, password_hash, ruolo FROM arnie_users WHERE nome = ? LIMIT 1"
+		);
+		mysqli_stmt_bind_param($stmt, 's', $nome);
+		mysqli_stmt_execute($stmt);
+		$result = mysqli_stmt_get_result($stmt);
+		$utente = mysqli_fetch_assoc($result);
+		mysqli_stmt_close($stmt);
+
+		if ($utente && password_verify($pass, $utente['password_hash'])) {
+			$_SESSION['utente_id']    = $utente['id'];
+			$_SESSION['utente_nome']  = $utente['nome'];
+			$_SESSION['utente_ruolo'] = $utente['ruolo'];
+			header('Location: index.php');
+			exit;
+		} else {
+			$errore = 'Username o password errati.';
+		}
+	}
+
+	mysqli_close($conn);
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -88,12 +76,12 @@ exit;
             </p>
         </div>
 
-        <!-- <?php if ($errore): ?>
+        <?php if ($errore): ?>
         <div class="mb-3 p-3 text-center"
              style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; color: var(--danger); font-size: 14px;">
             <?= htmlspecialchars($errore) ?>
         </div>
-        <?php endif; ?> -->
+        <?php endif; ?>
 
         <form method="POST">
             <div class="mb-3">
