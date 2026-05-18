@@ -1,6 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <mutex>
+#include <thread>
+#include <chrono> // library for time units
 
 #include <curl/curl.h>     // library to handle HTTP requests
 #include <spdlog/spdlog.h> // library to handle logging
@@ -55,6 +58,15 @@ public:
     {
         return this->accessToken;
     }
+
+    /**
+     * Getter of the identifier of the 
+     * beehive device used in Niagara protocol
+     * @return the identifier ot the device
+     */
+    str getDeviceIdentifier() const{
+        return this->identifier;
+    }
 };
 
 /* define constants for
@@ -62,15 +74,29 @@ the execution of the program */
 const string DEVICES_FILE = "devices.txt";
 const string POST_FILE = "post_data.json";
 const string THINGSBOARD_HOST = "http://172.20.10.2:8080";
+const int PERIODIC_REQUEST_TELEMETRIES = 5; // hours 
 /* define global variables in order to be used all over the program */
 vector<DeviceInfo> devices;
 /* define logger to register device operation. 
 Keep track of the last seven days of actions which will be stored. */
 std::shared_ptr<spdlog::logger> logger;
 
-void initLogger() {
+/* create global niagara object and use
+corresponding mutex to manage the access
+between threads */
+Niagara niagara;
+mutex niagaraMutex;
+
+/**
+ * Function to init the logger using the name and file
+ * name for different processes
+ * @param loggerName name of the instance of the logger
+ * @param loggerFileName name of the single rotating file of the logger
+ * @return void
+ */
+void initLogger(string loggerName, string loggerFilename) {
     try {
-        logger = spdlog::daily_logger_mt("daily_logger", "logs/lora_receiver.log", 0, 0, true, 7);
+        logger = spdlog::daily_logger_mt(loggerName, loggerFilename, 0, 0, true, 7);
         logger->set_level(spdlog::level::debug);
     } catch (const spdlog::spdlog_ex &ex) {
         std::cerr << "Log initialization failed: " << ex.what() << std::endl;
@@ -105,7 +131,8 @@ bool recoverDevices()
     }
 
     string identifier, token;
-    // L'operatore >> legge una parola alla volta separata da QUALSIASI spazio/invio
+    /* operator reads every word and separated it from 
+    every space or backspace */
     while (file >> identifier >> token)
     {
         devices.push_back(DeviceInfo(trim(identifier).c_str(), trim(token).c_str()));
@@ -195,26 +222,39 @@ bool sendDataToThingsBoard(str payload, str source)
     }
 }
 
-int main(int argc, char *argv[])
-{
-    /* initialize logger */
-    initLogger();
-    
-    /* start of the program */
-    cout << "Starting of the LoRA receiver..." << endl;
-    logger->info("Starting of the LoRA receiver...");
+/***
+ * Function to ask for telemetries to the current device
+ * from the beehives using the Niagara protocol
+ * @return void
+ */
+void askTelemetriesFromDevices(){
+    /* variable declaration */
+    Niagara_Ret sendStatus;
+    string message = "TELEMETRY_REQUEST";
 
-    /* initialize variables and objects for the
-    execution of the program */
-    Niagara niagara;
-    niagara.set_identifier("LoRaREC"); // set identifier
+    /* cycle all the devices registered and 
+    send the request */
+    for(int i=0; i<devices.size(); i++){
+        {
+            lock_guard<mutex> lock(niagaraMutex); // lock the niagara instance
+            sendStatus = niagara.send(devices[i].getDeviceIdentifier(), message.c_str());
+        }
 
-    /* setup the environment */
-    if (!recoverDevices()){
-        logger->error("Error in recovering devices from the file. LoRa receiver shuts down.");
-        exit(1);
+        if(sendStatus != NIAGARA_OK)
+        {
+            logger->error("Error in sending telemetry request to device "+string(devices[i].getDeviceIdentifier().c_str()) + " with code: " + to_string(sendStatus));
+            cout << "Error in sending telemetry request to device " << string(devices[i].getDeviceIdentifier().c_str()) << " with code: " << to_string(sendStatus) << endl;
+        }
     }
+}
 
+/**
+ * Function used in a thread to start a continuous receiver which 
+ * constantly checks for new updates and send them into
+ * the ThingsBoard platform registered
+ * @return return error code
+ */
+int thread_continuousReceiver(){
     /* create an infinite loop to receive data and
     send them to ThingsBoard server */
     while (true)
@@ -223,7 +263,11 @@ int main(int argc, char *argv[])
 
         /* receive data from LoRa receiver and control
         the return code */
-        Niagara_Ret niagara_status = niagara.receive(&payload, &source);
+        Niagara_Ret niagara_status = NIAGARA_NO_DATA;
+        {
+            lock_guard<mutex> lock(niagaraMutex); // lock the resource
+            niagara_status = niagara.receive(&payload, &source);
+        }
         if (niagara_status != NIAGARA_OK)
         {
             logger->error("Error in receiving data from "+string(source.c_str())+" with error code: "+to_string(niagara_status));
@@ -239,6 +283,59 @@ int main(int argc, char *argv[])
         for (int i = 0; i < 2 && send_thingsboard_check == false; i++)
             send_thingsboard_check = sendDataToThingsBoard(payload, source);
     }
+
+    logger->error("Generic error occured in the pcontinous receiver thread");
+
+    return 1;
+}
+
+
+/**
+ * Function to run periodic requests for telemetries
+ * to all the devices registered in the receiver.
+ * This helps devices to know how often the telemetries
+ * are pushed, in order to select the specific time to send them
+ * and reduce noise for the bees and electricity consume
+ * @return return error code
+ */
+int thread_periodTelemetryRequest(){
+    while(true){
+        askTelemetriesFromDevices(); // first ask for telemetries
+        this_thread::sleep_for(chrono::hours(PERIODIC_REQUEST_TELEMETRIES)); // then sleep for the amount of hours required
+    }
+
+    logger->error("Generic error occured in the periodic telemetry request thread");
+
+    return 1;
+}
+
+int main(int argc, char *argv[])
+{
+    /* initialize logger */
+    initLogger("daily_logger", "logs/lora_receiver.log");
+    
+    /* start of the program */
+    cout << "Starting of the LoRA receiver..." << endl;
+    logger->info("Starting of the LoRA receiver...");
+
+    niagara.set_identifier("LoRaREC"); // set identifier
+
+    /* setup the environment */
+    if (!recoverDevices()){
+        logger->error("Error in recovering devices from the file. LoRa receiver shuts down.");
+        exit(1);
+    }
+
+    /* create the threads and start them 
+    right after the instantiaton */
+    thread receiveng_thread(thread_continuousReceiver);
+    thread request_thread(thread_periodTelemetryRequest);
+
+    /* join the threads when they end */
+    if(receiveng_thread.joinable())
+        receiveng_thread.join();
+    if(request_thread.joinable())
+        request_thread.join();
 
     return 0;
 }
