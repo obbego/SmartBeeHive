@@ -54,6 +54,17 @@ La ricezione via LoRa verrà effettuata all'interno della funzione **main** invo
 Il programma è monothread e monoprocesso, in quanto il protocollo LoRa e relativa libreria non prevede la ricezione simultanea dei messaggi. 
 Ciò quindi costituisce una sorta di "imbuto", che però è da considerarsi accettabile visto la frequenza di invio delle telemetrie (3 volte al giorno). 
 
+### Utilizzo thread
+Il codice del ricevitore implementa due thread, al fine di soddisfare i requisiti funzionali. 
+Tali thread sono:
+1. thread per la ricezione delle misure
+2. thread per l'invio periodico di richieste ai dispositivi per l'ottenimento delle telemetrie. 
+
+Il secondo thread potrà essere utilizzato in futuro anche per altre tipologie di richieste, (come operazioni configurate dal server ThingsBoard). 
+
+La scelta dei thread comporta una migliore gestione di entrambe le operazioni contemporaneamente, essendo supportata da un dispositivo come Raspberry Pi.
+Alcune risorse indicate in precedenza (come logger, lista dispositivi o le risorse della libreria *niagara*) **dovranno essere gestiti mediante mutex**. 
+
 
 ## Server ThingsBoard
 Le parti da configurare del server ThingsBoard saranno quelle indicate di seguito.
