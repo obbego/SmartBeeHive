@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 // DB LOCALE (scuola - rete interna)
 try {
     $conn = @mysqli_connect(
-        '192.168.60.999',
+        '192.168.60.144',
         'francesco_bego',
         'accaduti.immaginosa.',
         'francesco_bego_alveare'
