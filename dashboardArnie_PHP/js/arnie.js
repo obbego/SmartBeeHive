@@ -3,10 +3,10 @@ Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
 Chart.defaults.font.family = "'Inter', sans-serif";
 
 const mockAlerts = [
-    { text: "Temperatura fuori soglia", date: "10 min fa", status: "open" },
-    { text: "Variazione peso anomala", date: "02/03/2026 14:32", status: "closed" },
-    { text: "Batteria sensore quasi scarica", date: "03/03/2026 07:48", status: "closed" },
-    { text: "Sensore temperatura non risponde", date: "04/03/2026 11:20", status: "open" }
+    { id: 'mock-a1', hive: 'Arnia 01', msg: 'Temperatura anomala rispetto alle altre arnie', time: '10 min fa',           severity: 'CRITICAL', tbStatus: 'ACTIVE_UNACK'  },
+    { id: 'mock-a2', hive: 'Arnia 01', msg: 'Variazione peso anomala',                        time: '02/03/2026 14:32',   severity: 'MAJOR',    tbStatus: 'ACTIVE_ACK'    },
+    { id: 'mock-a3', hive: 'Arnia 01', msg: 'Frequenza sonora non aggiornata',                time: '03/03/2026 07:48',   severity: 'MINOR',    tbStatus: 'CLEARED_ACK'   },
+    { id: 'mock-a4', hive: 'Arnia 01', msg: 'Miele pronto per la raccolta',                   time: '04/03/2026 11:20',   severity: 'WARNING',  tbStatus: 'CLEARED_UNACK' },
 ];
 
 // ─────────────────────────────────────────────
@@ -169,17 +169,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         initDetailCharts(mockTelemetry);
         updateR2(mockTelemetry);
 
-        historyDiv.innerHTML = "";
-        mockAlerts.forEach(alert => {
-            historyDiv.innerHTML += `
-            <div class="history-item px-0 mb-3">
+        const statusMap = {
+            system: { cls: 'tag-system', label: '⚙ DA GESTIRE' },
+            open:   { cls: 'tag open',   label: '● APERTO'     },
+            closed: { cls: 'tag closed', label: '✓ RISOLTO'    },
+        };
+        const statusOrder = { system: 0, open: 1, closed: 2 };
+
+        const resolvedMock = mockAlerts.map(alert => ({
+            ...alert,
+            _status: typeof tbStatusToUI === 'function' ? tbStatusToUI(alert.tbStatus) : 'system'
+        })).sort((a, b) => (statusOrder[a._status] ?? 9) - (statusOrder[b._status] ?? 9));
+
+        const activeAlerts  = resolvedMock.filter(a => a._status !== 'closed');
+        const closedAlerts  = resolvedMock.filter(a => a._status === 'closed');
+
+        const renderAlertRow = (alert, extraClass = '') => {
+            const s = statusMap[alert._status] || statusMap.system;
+            return `
+            <div class="history-item px-0${extraClass}">
                 <div>
-                    <div style="font-weight:600; color:white;">${alert.text}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">${alert.date}</div>
+                    <div style="font-weight:600; color:white;">${alert.msg}</div>
+                    <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
                 </div>
-                <span class="tag ${alert.status}">${alert.status === "open" ? "APERTO" : "RISOLTO"}</span>
+                <span class="${s.cls}">${s.label}</span>
             </div>`;
-        });
+        };
+
+        historyDiv.innerHTML = "";
+        activeAlerts.forEach(alert => { historyDiv.innerHTML += renderAlertRow(alert); });
+        if (activeAlerts.length > 0 && closedAlerts.length > 0) {
+            historyDiv.innerHTML += `<div style="border-top:1px solid rgba(255,255,255,0.08); margin:6px 0; font-size:11px; color:var(--text-muted); padding:6px 0 2px; text-transform:uppercase; letter-spacing:0.06em;">Risolti</div>`;
+        }
+        closedAlerts.forEach(alert => { historyDiv.innerHTML += renderAlertRow(alert, ' opacity-50'); });
 
     } else {
         // --- MODALITA' REALE ---
@@ -285,27 +307,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const allAlarms = await tbLoadAlarms();
             const hiveName = hive ? hive.name : `Arnia 0${hiveId}`;
-            const hiveAlarms = allAlarms.filter(a => a.hive === hiveName);
+            // Confronto normalizzato: case-insensitive e trim per robustezza
+            const normalizeHiveName = s => (s || '').trim().toLowerCase();
+            const hiveAlarms = allAlarms.filter(a =>
+                normalizeHiveName(a.hive) === normalizeHiveName(hiveName) ||
+                normalizeHiveName(a.hive).includes(normalizeHiveName(hiveName)) ||
+                normalizeHiveName(hiveName).includes(normalizeHiveName(a.hive))
+            );
+
+            const statusMap = {
+                system: { cls: 'tag-system', label: '⚙ DA GESTIRE' },
+                open:   { cls: 'tag open',   label: '● APERTO'     },
+                closed: { cls: 'tag closed', label: '✓ RISOLTO'    },
+            };
+            const statusOrder = { system: 0, open: 1, closed: 2 };
 
             if (hiveAlarms.length === 0) {
                 historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
             } else {
-                historyDiv.innerHTML = hiveAlarms.map(alarm => {
-                    const statusMap = {
-                        system: { cls: 'tag-system', label: '⚙ DA GESTIRE' },
-                        open:   { cls: 'tag open',   label: '● APERTO'     },
-                        closed: { cls: 'tag closed', label: '✓ RISOLTO'    },
-                    };
-                    const s = statusMap[alarm.status] || statusMap.system;
+                // Risolve lo stato effettivo e ordina: system → open → closed
+                const resolved = hiveAlarms.map(alarm => ({
+                    ...alarm,
+                    _status: typeof getEffectiveAlarmStatus === 'function'
+                        ? getEffectiveAlarmStatus(alarm.id, alarm.tbStatus)
+                        : tbStatusToUI(alarm.tbStatus)
+                })).sort((a, b) => (statusOrder[a._status] ?? 9) - (statusOrder[b._status] ?? 9));
+
+                const active = resolved.filter(a => a._status !== 'closed');
+                const closed = resolved.filter(a => a._status === 'closed');
+
+                const renderRow = (alarm, extraClass = '') => {
+                    const s = statusMap[alarm._status] || statusMap.system;
                     return `
-            <div class="history-item px-0">
+            <div class="history-item px-0${extraClass}">
                 <div>
                     <div style="font-weight:600; color:white;">${alarm.msg}</div>
                     <div style="font-size:12px; color:var(--text-muted);">${alarm.time}</div>
                 </div>
                 <span class="${s.cls}">${s.label}</span>
             </div>`;
-                }).join('');
+                };
+
+                let html = active.map(a => renderRow(a)).join('');
+                if (active.length > 0 && closed.length > 0) {
+                    html += `<div style="border-top:1px solid rgba(255,255,255,0.08); margin:6px 0; font-size:11px; color:var(--text-muted); padding:6px 0 2px; text-transform:uppercase; letter-spacing:0.06em;">Risolti</div>`;
+                }
+                html += closed.map(a => renderRow(a, ' opacity-50')).join('');
+                historyDiv.innerHTML = html;
             }
         } catch (err) {
             historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Errore caricamento allarmi.</div>';
