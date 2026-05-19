@@ -1,8 +1,6 @@
 <?php
-// ============================================================
-// ACCOUNT DISABILITATI — decommentare quando si lavora a scuola
-// ============================================================
-require_once '../auth.php'; // fornisce $utente_nome = 'Dev' in modalità locale
+require_once '../auth.php';
+require_once '../db.php';
 ?>
 <!DOCTYPE html>
 <html lang="it" data-bs-theme="dark">

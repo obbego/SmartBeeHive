@@ -1,35 +1,33 @@
 <?php
 // auth.php deve essere già stato incluso dalla pagina chiamante
-// $utente_nome e $utente_ruolo sono quindi già disponibili
-
-// Lettura arnie da dati.js non è possibile server-side,
-// usiamo i nomi fissi (sono sempre 5 arnie hardcoded in dati.js)
-$arnie = [1, 2, 3, 4, 5];
-
-// Prima lettera del nome per l'avatar
+$arnie    = [1, 2, 3, 4, 5];
 $iniziale = strtoupper(substr($utente_nome, 0, 1));
 ?>
 
-<!-- CSS navbar -->
 <link rel="stylesheet" href="../css/navbar.css">
 
 <!-- ─── TOP BAR ───────────────────────────────────────────── -->
 <div class="topbar">
-    <div class="d-flex align-items-center gap-3">
-        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Apri menu">
-            <i data-lucide="menu" style="width:20px;height:20px;"></i>
-        </button>
-        <a href="index.php" class="topbar-brand">
-            <img src="../img/logo.png" alt="Smart Hive" style="height:28px; width:auto;">
-            Smart Hive
-        </a>
-    </div>
+	<div class="d-flex align-items-center gap-3">
+		<button class="hamburger-btn" id="hamburgerBtn" aria-label="Apri menu">
+			<i data-lucide="menu" style="width:20px;height:20px;"></i>
+		</button>
+		<a href="index.php" class="topbar-brand">
+			<img src="../img/logo.png" alt="Smart Hive" style="height:28px; width:auto;">
+			Smart Hive
+		</a>
+	</div>
 
-    <div class="topbar-right">
-        <div class="topbar-user">
-            Ciao, <strong><?= htmlspecialchars($utente_nome) ?></strong>
-        </div>
-    </div>
+	<div class="topbar-right">
+		<?php if (OFFLINE_MODE): ?>
+			<span style="font-size:11px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:var(--warning); padding:3px 10px; border-radius:20px;">
+            ⚠ Offline
+        </span>
+		<?php endif; ?>
+		<div class="topbar-user">
+			Ciao, <strong><?= htmlspecialchars($utente_nome) ?></strong>
+		</div>
+	</div>
 </div>
 
 <!-- ─── OVERLAY ───────────────────────────────────────────── -->
@@ -38,84 +36,89 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
 <!-- ─── SIDEBAR ───────────────────────────────────────────── -->
 <nav class="sidebar" id="mainSidebar">
 
-    <!-- Header -->
-    <div class="sidebar-header">
-        <a href="index.php" class="sidebar-brand">
-            <img src="../img/logo.png" alt="Smart Hive" style="height:28px; width:auto;">
-            Smart Hive
-        </a>
-        <button class="sidebar-close" id="sidebarClose" aria-label="Chiudi menu">
-            <i data-lucide="x" style="width:20px;height:20px;"></i>
-        </button>
-    </div>
+	<div class="sidebar-header">
+		<a href="index.php" class="sidebar-brand">
+			<img src="../img/logo.png" alt="Smart Hive" style="height:28px; width:auto;">
+			Smart Hive
+		</a>
+		<button class="sidebar-close" id="sidebarClose" aria-label="Chiudi menu">
+			<i data-lucide="x" style="width:20px;height:20px;"></i>
+		</button>
+	</div>
 
-    <!-- Corpo -->
-    <div class="sidebar-body">
+	<div class="sidebar-body">
 
-        <!-- Dashboard -->
-        <a href="index.php" class="sidebar-link" data-page="index.php">
-            <i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i>
-            Dashboard
-        </a>
+		<a href="index.php" class="sidebar-link" data-page="index.php">
+			<i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i>
+			Dashboard
+		</a>
 
-        <div class="sidebar-divider"></div>
+		<div class="sidebar-divider"></div>
 
-        <!-- Arnie -->
-        <div class="sidebar-section-label">Arnie</div>
+		<div class="sidebar-section-label">Arnie</div>
 
-        <?php foreach ($arnie as $id): ?>
-        <a href="arnie.php?id=<?= $id ?>" class="sidebar-link" data-page="arnie.php">
-            <i data-lucide="box" style="width:18px;height:18px;"></i>
-            Arnia 0<?= $id ?>
-            <span class="sidebar-dot offline" id="dot-hive-<?= $id ?>"></span>
-        </a>
-        <?php endforeach; ?>
+		<?php foreach ($arnie as $id): ?>
+			<a href="arnie.php?id=<?= $id ?>" class="sidebar-link" data-page="arnie.php">
+				<i data-lucide="box" style="width:18px;height:18px;"></i>
+				Arnia 0<?= $id ?>
+				<span class="sidebar-dot offline" id="dot-hive-<?= $id ?>"></span>
+			</a>
+		<?php endforeach; ?>
 
-        <div class="sidebar-divider"></div>
+		<div class="sidebar-divider"></div>
 
-        <!-- Gestione — visibile a tutti -->
-        <div class="sidebar-section-label">Gestione</div>
+		<div class="sidebar-section-label">Gestione</div>
 
-        <a href="allarmi.php" class="sidebar-link" data-page="allarmi.php">
-            <i data-lucide="bell" style="width:18px;height:18px;"></i>
-            Allarmi
-        </a>
+		<a href="allarmi.php" class="sidebar-link" data-page="allarmi.php">
+			<i data-lucide="bell" style="width:18px;height:18px;"></i>
+			Allarmi
+		</a>
 		<a href="archivio.php" class="sidebar-link" data-page="archivio.php">
 			<i data-lucide="archive" style="width:18px;height:18px;"></i>
 			Archivio
 		</a>
-        <a href="profile.php" class="sidebar-link" data-page="profile.php">
-            <i data-lucide="user" style="width:18px;height:18px;"></i>
-            Il mio profilo
-        </a>
+		<a href="profile.php" class="sidebar-link" data-page="profile.php">
+			<i data-lucide="user" style="width:18px;height:18px;"></i>
+			Il mio profilo
+		</a>
 
-        <!-- Admin — solo per admin -->
-        <?php if ($utente_ruolo === 'admin'): ?>
-        <div class="sidebar-divider"></div>
+		<?php if ($utente_ruolo === 'admin'): ?>
+			<div class="sidebar-divider"></div>
+			<div class="sidebar-section-label">Admin</div>
+			<a href="utenti.php" class="sidebar-link" data-page="utenti.php">
+				<i data-lucide="users" style="width:18px;height:18px;"></i>
+				Gestione Utenti
+			</a>
+		<?php endif; ?>
 
-        <div class="sidebar-section-label">Admin</div>
+	</div>
 
-        <a href="utenti.php" class="sidebar-link" data-page="utenti.php">
-            <i data-lucide="users" style="width:18px;height:18px;"></i>
-            Gestione Utenti
-        </a>
-        <?php endif; ?>
+	<!-- Footer utente -->
+	<div class="sidebar-footer">
 
-    </div>
+		<!-- Switch modalità demo -->
+		<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding:10px 12px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid var(--glass-border);">
+			<div style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted);">
+				<i data-lucide="database" style="width:15px;height:15px;"></i>
+				Dati demo
+			</div>
+			<div class="form-check form-switch mb-0">
+				<input class="form-check-input" type="checkbox" role="switch" id="mockDataSwitch"
+					   style="cursor:pointer; width:2.2em; height:1.1em;">
+			</div>
+		</div>
 
-    <!-- Footer utente -->
-    <div class="sidebar-footer">
-        <div class="sidebar-user-info">
-            <div class="sidebar-avatar"><?= $iniziale ?></div>
-            <div>
-                <div class="sidebar-user-name"><?= htmlspecialchars($utente_nome) ?></div>
-                <div class="sidebar-user-role"><?= htmlspecialchars($utente_ruolo) ?></div>
-            </div>
-        </div>
-        <a href="../logout.php" class="sidebar-logout">
-            <i data-lucide="log-out" style="width:15px;height:15px;"></i>
-            Esci
-        </a>
-    </div>
+		<div class="sidebar-user-info">
+			<div class="sidebar-avatar"><?= $iniziale ?></div>
+			<div>
+				<div class="sidebar-user-name"><?= htmlspecialchars($utente_nome) ?></div>
+				<div class="sidebar-user-role"><?= htmlspecialchars($utente_ruolo) ?></div>
+			</div>
+		</div>
+		<a href="../logout.php" class="sidebar-logout">
+			<i data-lucide="log-out" style="width:15px;height:15px;"></i>
+			Esci
+		</a>
+	</div>
 
 </nav>

@@ -1,8 +1,6 @@
 <?php
-// ============================================================
-// ACCOUNT DISABILITATI — decommentare quando si lavora a scuola
-// ============================================================
-// require_once '../auth.php';
+require_once '../auth.php';
+require_once '../db.php';
 
 // DATI MOCK
 $utente_nome = $utente_nome ?? 'Dev User';
@@ -142,6 +140,7 @@ $data_iscrizione = "12 Maggio 2024";
 <script>
     lucide.createIcons();
 </script>
+<script src="../js/navbar.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
