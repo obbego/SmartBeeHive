@@ -5,12 +5,12 @@
 #include <thread>
 #include <chrono> // library for time units
 
-#include <curl/curl.h>     // library to handle HTTP requests
-#include <spdlog/spdlog.h> // library to handle logging
+#include <curl/curl.h>                    // library to handle HTTP requests
+#include <spdlog/spdlog.h>                // library to handle logging
 #include <spdlog/sinks/daily_file_sink.h> // daily logger sink
-#include <spdlog/pattern_formatter.h> // pattern formatter
-#include <memory> // for shared_ptr
-#include "niagara.h"      // library to handle LoRa communication
+#include <spdlog/pattern_formatter.h>     // pattern formatter
+#include <memory>                         // for shared_ptr
+#include "niagara.h"                      // library to handle LoRa communication
 
 using namespace std;
 
@@ -60,11 +60,12 @@ public:
     }
 
     /**
-     * Getter of the identifier of the 
+     * Getter of the identifier of the
      * beehive device used in Niagara protocol
      * @return the identifier ot the device
      */
-    str getDeviceIdentifier() const{
+    str getDeviceIdentifier() const
+    {
         return this->identifier;
     }
 };
@@ -74,10 +75,10 @@ the execution of the program */
 const string DEVICES_FILE = "devices.txt";
 const string POST_FILE = "post_data.json";
 const string THINGSBOARD_HOST = "http://172.20.10.2:8080";
-const int PERIODIC_REQUEST_TELEMETRIES = 5; // hours 
+const int PERIODIC_REQUEST_TELEMETRIES = 5; // hours
 /* define global variables in order to be used all over the program */
 vector<DeviceInfo> devices;
-/* define logger to register device operation. 
+/* define logger to register device operation.
 Keep track of the last seven days of actions which will be stored. */
 std::shared_ptr<spdlog::logger> logger;
 
@@ -94,11 +95,15 @@ mutex niagaraMutex;
  * @param loggerFileName name of the single rotating file of the logger
  * @return void
  */
-void initLogger(string loggerName, string loggerFilename) {
-    try {
+void initLogger(string loggerName, string loggerFilename)
+{
+    try
+    {
         logger = spdlog::daily_logger_mt(loggerName, loggerFilename, 0, 0, true, 7);
         logger->set_level(spdlog::level::debug);
-    } catch (const spdlog::spdlog_ex &ex) {
+    }
+    catch (const spdlog::spdlog_ex &ex)
+    {
         std::cerr << "Log initialization failed: " << ex.what() << std::endl;
     }
 }
@@ -107,7 +112,8 @@ void initLogger(string loggerName, string loggerFilename) {
  * Trims an std::string of all trailing/preceding invisible
  * characters.
  */
-string trim(const string& s) {
+string trim(const string &s)
+{
     auto start = s.find_first_not_of(" \n\r\t");
     auto end = s.find_last_not_of(" \n\r\t");
     return (start == string::npos) ? "" : s.substr(start, end - start + 1);
@@ -116,7 +122,7 @@ string trim(const string& s) {
 /**
  * Function to recover the devices information from a specified
  * file. They're important to establish a well made communication
- * 
+ *
  * The file where to get the devices respect the following format:
  * DEVICE_NAME ACCESS_TOKEN
  *
@@ -125,22 +131,24 @@ string trim(const string& s) {
 bool recoverDevices()
 {
     ifstream file(DEVICES_FILE);
-    if (!file){
-        logger->error("Error in opening file "+DEVICES_FILE);
+    if (!file)
+    {
+        logger->error("Error in opening file " + DEVICES_FILE);
         return false;
     }
 
     string identifier, token;
-    /* operator reads every word and separated it from 
+    /* operator reads every word and separated it from
     every space or backspace */
     while (file >> identifier >> token)
     {
         devices.push_back(DeviceInfo(trim(identifier).c_str(), trim(token).c_str()));
     }
-    
+
     file.close();
 
-    if (devices.empty()){
+    if (devices.empty())
+    {
         logger->error("No devices registered.");
         return false;
     }
@@ -175,11 +183,11 @@ bool sendDataToThingsBoard(str payload, str source)
         /* configuration of all the parts of
         the request */
         string fullURL = THINGSBOARD_HOST + "/api/v1/" + string(it->getAccessToken().c_str()) + "/telemetry";
-        cout << "Full URL: '" << fullURL << "'" << endl; 
+        cout << "Full URL: '" << fullURL << "'" << endl;
         curl_easy_setopt(curl, CURLOPT_URL, fullURL.c_str());
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
-        
+
         cout << "Payload: " << payload.c_str() << endl;
 
         /* get the result of the request about the connection
@@ -187,7 +195,7 @@ bool sendDataToThingsBoard(str payload, str source)
         CURLcode res = curl_easy_perform(curl);
         if (res != CURLE_OK)
         {
-            logger->error("Error "+ string(curl_easy_strerror(res)) + " in curl sending data to ThingsBoard using device "+string(source.c_str()));
+            logger->error("Error " + string(curl_easy_strerror(res)) + " in curl sending data to ThingsBoard using device " + string(source.c_str()));
             cout << "Error " << string(curl_easy_strerror(res)) << " in curl sending data to ThingsBoard using device " << string(source.c_str()) << endl;
             check = false;
         }
@@ -196,13 +204,15 @@ bool sendDataToThingsBoard(str payload, str source)
             /* get the http code of the request */
             long httpCode = 0;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-            if (httpCode == 200){
-                logger->info("Successfully sent data to ThingsBoard from device "+string(source.c_str()));
+            if (httpCode == 200)
+            {
+                logger->info("Successfully sent data to ThingsBoard from device " + string(source.c_str()));
                 cout << "Successfully sent data to ThingsBoard from device " << string(source.c_str()) << endl;
                 check = true;
             }
-            else {
-                logger->error("Return code error "+to_string(httpCode)+" while sending data to ThingsBoard using device " + string(source.c_str()));
+            else
+            {
+                logger->error("Return code error " + to_string(httpCode) + " while sending data to ThingsBoard using device " + string(source.c_str()));
                 cout << "Return code error " << to_string(httpCode) << " while sending data to ThingsBoard using device " << string(source.c_str()) << endl;
                 check = false;
             }
@@ -227,34 +237,37 @@ bool sendDataToThingsBoard(str payload, str source)
  * from the beehives using the Niagara protocol
  * @return void
  */
-void askTelemetriesFromDevices(){
+void askTelemetriesFromDevices()
+{
     /* variable declaration */
     Niagara_Ret sendStatus;
     string message = "TELEMETRY_REQUEST";
 
-    /* cycle all the devices registered and 
+    /* cycle all the devices registered and
     send the request */
-    for(int i=0; i<devices.size(); i++){
+    for (int i = 0; i < devices.size(); i++)
+    {
         {
             lock_guard<mutex> lock(niagaraMutex); // lock the niagara instance
             sendStatus = niagara.send(devices[i].getDeviceIdentifier(), message.c_str());
         }
 
-        if(sendStatus != NIAGARA_OK)
+        if (sendStatus != NIAGARA_OK)
         {
-            logger->error("Error in sending telemetry request to device "+string(devices[i].getDeviceIdentifier().c_str()) + " with code: " + to_string(sendStatus));
+            logger->error("Error in sending telemetry request to device " + string(devices[i].getDeviceIdentifier().c_str()) + " with code: " + to_string(sendStatus));
             cout << "Error in sending telemetry request to device " << string(devices[i].getDeviceIdentifier().c_str()) << " with code: " << to_string(sendStatus) << endl;
         }
     }
 }
 
 /**
- * Function used in a thread to start a continuous receiver which 
+ * Function used in a thread to start a continuous receiver which
  * constantly checks for new updates and send them into
  * the ThingsBoard platform registered
  * @return return error code
  */
-int thread_continuousReceiver(){
+int thread_continuousReceiver()
+{
     /* create an infinite loop to receive data and
     send them to ThingsBoard server */
     while (true)
@@ -270,11 +283,11 @@ int thread_continuousReceiver(){
         }
         if (niagara_status != NIAGARA_OK)
         {
-            logger->error("Error in receiving data from "+string(source.c_str())+" with error code: "+to_string(niagara_status));
-            cout << "Error in receiving data from " << string(source.c_str()) << " with error code: " << to_string(niagara_status) <<endl;
+            logger->error("Error in receiving data from " + string(source.c_str()) + " with error code: " + to_string(niagara_status));
+            cout << "Error in receiving data from " << string(source.c_str()) << " with error code: " << to_string(niagara_status) << endl;
             continue;
         }
-        logger->info("Data received from "+string(source.c_str()));
+        logger->info("Data received from " + string(source.c_str()));
         cout << "Data received from " << string(source.c_str()) << endl;
 
         /* send the data to ThingsBoard server.
@@ -289,7 +302,6 @@ int thread_continuousReceiver(){
     return 1;
 }
 
-
 /**
  * Function to run periodic requests for telemetries
  * to all the devices registered in the receiver.
@@ -298,9 +310,11 @@ int thread_continuousReceiver(){
  * and reduce noise for the bees and electricity consume
  * @return return error code
  */
-int thread_periodTelemetryRequest(){
-    while(true){
-        askTelemetriesFromDevices(); // first ask for telemetries
+int thread_periodTelemetryRequest()
+{
+    while (true)
+    {
+        askTelemetriesFromDevices();                                         // first ask for telemetries
         this_thread::sleep_for(chrono::hours(PERIODIC_REQUEST_TELEMETRIES)); // then sleep for the amount of hours required
     }
 
@@ -313,7 +327,7 @@ int main(int argc, char *argv[])
 {
     /* initialize logger */
     initLogger("daily_logger", "logs/lora_receiver.log");
-    
+
     /* start of the program */
     cout << "Starting of the LoRA receiver..." << endl;
     logger->info("Starting of the LoRA receiver...");
@@ -321,20 +335,21 @@ int main(int argc, char *argv[])
     niagara.set_identifier("LoRaREC"); // set identifier
 
     /* setup the environment */
-    if (!recoverDevices()){
+    if (!recoverDevices())
+    {
         logger->error("Error in recovering devices from the file. LoRa receiver shuts down.");
         exit(1);
     }
 
-    /* create the threads and start them 
+    /* create the threads and start them
     right after the instantiaton */
     thread receiveng_thread(thread_continuousReceiver);
     thread request_thread(thread_periodTelemetryRequest);
 
     /* join the threads when they end */
-    if(receiveng_thread.joinable())
+    if (receiveng_thread.joinable())
         receiveng_thread.join();
-    if(request_thread.joinable())
+    if (request_thread.joinable())
         request_thread.join();
 
     return 0;
