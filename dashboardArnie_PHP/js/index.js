@@ -438,6 +438,20 @@ function aggregateSum(allSeries, roundMinutes = 15) {
 const overviewCharts = {};
 const HIVE_COLORS = ['#fbbf24', '#60a5fa', '#34d399', '#f87171', '#a78bfa'];
 
+function checkEmpty(dataArray, canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return true;
+    const container = canvas.closest('.chart-box');
+    if (!container) return true;
+    const isEmpty = !dataArray || dataArray.length === 0;
+    if (isEmpty) {
+        container.classList.add('no-data');
+    } else {
+        container.classList.remove('no-data');
+    }
+    return isEmpty;
+}
+
 function initOverviewCharts(allTelemetries) {
     const commonOptions = {
         responsive: true,
@@ -489,6 +503,7 @@ function initOverviewCharts(allTelemetries) {
                 }
             }
         });
+        checkEmpty(labels, 'tempChart');
     }
 
     // 2. Umidità media
@@ -510,6 +525,7 @@ function initOverviewCharts(allTelemetries) {
                 }
             }
         });
+        checkEmpty(avg.data, 'humidityChart');
     }
 
     // 3. Peso totale
@@ -531,6 +547,7 @@ function initOverviewCharts(allTelemetries) {
                 }
             }
         });
+        checkEmpty(total.data, 'honeyChart');
     }
 
     // 4. Frequenza picco media
@@ -556,6 +573,7 @@ function initOverviewCharts(allTelemetries) {
                 }
             }
         });
+        checkEmpty(avg.data, 'soundChart');
     }
 }
 
@@ -692,6 +710,7 @@ function initAnalysisCharts(allTelemetries) {
                 }
             }
         });
+        checkEmpty(pairs, 'correlationChart');
     }
 
     // ── 2. Derivata temperatura media (°C/h) ─────────────────────────────────
@@ -722,6 +741,7 @@ function initAnalysisCharts(allTelemetries) {
                 }
             }
         });
+        checkEmpty(avgDeriv.data, 'derivative1Chart');
     }
 
     // ── 3. Derivata peso totale (kg/h) ────────────────────────────────────────
@@ -753,6 +773,7 @@ function initAnalysisCharts(allTelemetries) {
                 }
             }
         });
+        checkEmpty(sumDeriv.data, 'weightDerivativeChart');
     }
 }
 
