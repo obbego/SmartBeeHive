@@ -1,7 +1,7 @@
 #include <iostream>
 #include <unistd.h> // Per usleep
-#include "niagara.h"
-#include "niagara_message.h"
+#include "niagara/niagara.h"
+#include "niagara/niagara_measure.h"
 
 // Istanza UNICA del protocollo hardware low-level su Linux
 Niagara lora_device;
@@ -17,17 +17,10 @@ void platform_send(const char* json_string) {
 int main() {
     std::cout << "--- Gateway Niagara Receiver Initialized ---" << std::endl;
     std::cout << "In ascolto di messaggi dai dispositivi IoT..." << std::endl;
-
-    int error_code = 0;
     
     // Inizializziamo il Receiver passando il riferimento all'unica istanza 'lora_device'
-    lora_device.set_initializer("Gateway0");
-    NiagaraReceiver receiver(lora_device, &error_code);
-
-    if (error_code != 0) {
-        std::cerr << "[CRITICAL] Errore inizializzazione hardware/protocollo: " << error_code << std::endl;
-        return 1;
-    }
+    lora_device.set_identifier("Gateway0");
+    NiagaraReceiver receiver(lora_device);
 
     while (true) {
         // Tenta la ricezione (il metodo chiama internamente device.recv())
