@@ -49,6 +49,10 @@
  * Decreasing this value increases responsiveness and possible lost packages but increases load.
  */
 #define RECEIVE_CHECK_MS 100
+/**
+ * Total maximum transmission size for a niagara message (22kb)
+ */
+#define NIAGARA_MTU 22000
 
 /**
  * @typedef NiagaraLogHandler
@@ -91,6 +95,9 @@ enum Niagara_Ret {
 		 * Returned by the underlaying send method when the binary data
 		 * which is to be sent over the radio exceedes the maximum size
 		 * which can be sent at a time.
+		 * Also returned when the message passed to the sending function is
+		 * larger than the absolute maximum transmission message size for the
+		 * niagara protocol of `NIAGARA_MTU`
 		*/
 		NIAGARA_TOO_LARGE,
 		/**
@@ -235,6 +242,31 @@ class Niagara {
 		 * @returns `true` if the identifier was set correctly, otherwise `false`.
 		 */
 		bool set_identifier(str identifier);
+
+		/**
+		 * Puts the chip in standby mode, to save power, in case of battery-operated
+		 * devices.
+		 * 
+		 * By default, the chip is continuously in `RX_WAIT` state waiting for data to
+		 * be received. Since this consumes power on it, this method is used to stop
+		 * the receive state.
+		 * 
+		 * Note that any data sent to the device after calling this method won't be
+		 * processed in any way and will essentially be lost.
+		 */
+		void stop_receive();
+
+		/**
+		 * @brief Puts the chip back in RX_WAIT state after standby from calling `stop_receive()`.
+		 * @returns `0` If the chip is succesfully put back in RX state, 
+		 *          otherwise an error code indicating failed operation.
+		 * 
+		 * This method resumes the RX state to set the LoRa chip back into receiving mode
+		 * to make it operate regularly.
+		 * 
+		 * This method doesn't need to be called unless `stop_receive()` has been called before.
+		 */
+		int start_receive();
 		
 	private:
 		/* Contacts the radio chip and sets in it RX receive mode, so that from this method's call

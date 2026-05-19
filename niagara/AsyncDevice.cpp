@@ -172,12 +172,13 @@ void AsyncDevice::stop()
 	SPI_UNLOCK();
 }
 
-void AsyncDevice::startRx()
+int AsyncDevice::startRx()
 {
 	SPI_LOCK();
 	int err = _radio->startReceive();
 	_rxArmed = (err == RADIOLIB_ERR_NONE);
 	SPI_UNLOCK();
+	return (err == RADIOLIB_ERR_NONE) ? 0 : err;
 }
 
 void AsyncDevice::onReceive()

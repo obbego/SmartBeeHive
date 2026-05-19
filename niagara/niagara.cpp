@@ -130,6 +130,9 @@ bool Niagara::set_identifier(str _identifier) {
 Niagara_Ret Niagara::send(str destination, str message) {
 	log_print("[SEND START]\n");
 
+	//Check for maximum message transmission size
+	if(message.length() > NIAGARA_MTU) return NIAGARA_TOO_LARGE;
+
 	/* Istance a new fragmenter with the message passed
 	 * The MTU is decreased due to the overhead of the layer 2 header.
 	 */
@@ -687,6 +690,14 @@ Niagara_Ret Niagara::send_raw(str destination, Niagara_Control control, str mess
 	}
 	log_print(LOG_TERMINAL, " OK.\n");
 	return NIAGARA_OK;
+}
+
+void Niagara::stop_receive() {
+	Niagara::lora->stop();
+}
+
+int Niagara::start_receive() {
+	return Niagara::lora->startRx();
 }
 
 str Niagara::format_message(str destination, Niagara_Control control, str message) {

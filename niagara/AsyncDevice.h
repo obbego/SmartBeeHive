@@ -143,10 +143,12 @@ class AsyncDevice {
 		void stop();
 		/**
 		 * @brief Starts the chip back up from standby.
+		 * @returns `0` If the chip is succesfully put in RX state, 
+		 *          otherwise an error code for failed operation
 		 * 
 		 * Used after a `stop()` call, it puts the chip back in receiving state.
 		 */
-		void startRx();
+		int startRx();
 		/**
 		 * @brief Getter for the chip's MTU (Maximum Transmission Unit)
 		 * @returns The chip's MTU
