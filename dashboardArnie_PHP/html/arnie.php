@@ -1,4 +1,7 @@
-<?php require_once '../auth.php'; ?>
+<?php
+require_once '../auth.php';
+require_once '../db.php';
+?>
 <!DOCTYPE html>
 <html lang="it" data-bs-theme="dark">
 
@@ -11,11 +14,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+	<script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <link rel="stylesheet" href="../css/style.css" />
-  <link rel="stylesheet" href="../css/arnie.css" />
+	<link rel="stylesheet" href="../css/style.css" />
+	<link rel="stylesheet" href="../css/arnie.css" />
+	<link rel="stylesheet" href="../css/navbar.css" />
 
   <style>
     h1, h2, h3, h4, h5, h6, p { margin-bottom: 0; }
@@ -25,6 +31,16 @@
 
 <body>
 <?php require_once '../includes/navbar.php'; ?>
+
+<div class="container d-flex justify-content-between align-items-center mt-1 mb-1" style="font-size:13px; color:var(--text-muted);">
+	<div class="d-flex align-items-center gap-3">
+		<a href="index.php" style="color:var(--text-muted); display:flex; align-items:center; transition:0.2s;"
+		   onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'">
+			<i data-lucide="arrow-left" style="width:20px;height:20px;"></i>
+		</a>
+		<h2 id="hiveName" style="font-size:20px; font-weight:700; color:white; margin:0;">Caricamento...</h2>
+	</div>
+</div>
 
 <div class="container">
   <div class="row g-4 mb-4 align-items-stretch">
@@ -83,29 +99,40 @@
         </div>
 
         <!-- Stato sensori -->
-        <div class="col-12">
-          <div class="glass-panel p-4">
-            <div class="chart-title mb-3">Stato Sensori</div>
-            <div id="statusSemaforo" class="status-alert mb-3"></div>
-            <div class="d-flex justify-content-between align-items-center pt-3">
-              <span style="font-size: 13px; color: var(--text-muted);">Affidabilità R² (In/Out):</span>
-              <strong id="valR2" class="text-white">0.82</strong>
-            </div>
+          <div class="col-3">
+              <div class="glass-panel stat-card h-100 text-center d-flex flex-column">
+                  <div class="stat-label justify-content-center mt-2">
+                      R² Pearson
+                  </div>
+
+                  <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+                      <div class="stat-value" id="valR2" style="font-size: 1.2rem;">
+                          --
+                      </div>
+                  </div>
+              </div>
           </div>
-        </div>
+
+          <div class="col-9">
+              <div class="glass-panel p-4 h-100 d-flex flex-column justify-content-center">
+                  <div class="chart-title mb-3">Attività Sensori</div>
+                  <div id="statusSemaforo" class="status-alert mb-0"></div>
+              </div>
+          </div>
 
       </div>
     </div>
 
     <!-- Storico allarmi -->
     <div class="col-lg-6 col-right-fix">
-      <div class="glass-panel p-0 flex-grow-1 d-flex flex-column margin-top-align">
-        <div class="p-3 border-bottom border-white border-opacity-10">
-          <div class="chart-title mb-0" style="color: var(--danger);">Storico Allarmi</div>
-        </div>
-        <div id="localHistory" class="history-list p-3"></div>
+          <div class="glass-panel p-0 d-flex flex-column alarm-history-container-arnie">
+              <div class="p-3 border-bottom border-white border-opacity-10">
+                  <div class="chart-title mb-0" style="color: var(--danger);">Storico Allarmi</div>
+              </div>
+              <div id="localHistory" class="history-list p-3 custom-scrollbar">
+              </div>
+          </div>
       </div>
-    </div>
   </div>
 
   <!-- Selettore temporale grafici -->
@@ -115,6 +142,7 @@
       <button class="tab-btn active" data-value="24h">24 Ore</button>
       <button class="tab-btn" data-value="7d">7 Giorni</button>
       <button class="tab-btn" data-value="30d">1 Mese</button>
+        <button class="tab-btn" data-value="1a">1 Anno</button>
     </nav>
   </div>
 
@@ -147,11 +175,6 @@
       </div>
     </div>
   </div>
-</div>
-
-<div class="container d-flex justify-content-between align-items-center py-3">
-  <h2 id="hiveName" style="font-size:20px; font-weight:700;">Caricamento...</h2>
-  <span id="lastUpdate" style="font-size:13px; color:var(--text-muted);">Ultimo dato: --:--</span>
 </div>
 
 <script src="../js/dati.js"></script>

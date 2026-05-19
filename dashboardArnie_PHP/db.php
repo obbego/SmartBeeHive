@@ -1,15 +1,36 @@
 <?php
-// Connessione al database — includi questo file dove serve
-$conn = mysqli_connect(
-    'iisvio-sxtzwa62.db.tb-hosting.com',
-    'iisvio_sxtzwa62',
-    'iX*Yyg68',
-    'iisvio_sxtzwa62'
-);
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-if (!$conn) {
-    http_response_code(500);
-    die(json_encode(['errore' => 'Connessione al database fallita.']));
+// DB LOCALE (scuola - rete interna)
+try {
+    $conn = @mysqli_connect(
+        '192.168.60.144',
+        'francesco_bego',
+        'accaduti.immaginosa.',
+        'francesco_bego_alveare'
+    );
+} catch (Exception $e) {
+    $conn = null;
 }
 
-mysqli_set_charset($conn, 'utf8mb4');
+// DB REMOTO (hosting scuola - sito online)
+// try {
+//     $conn = @mysqli_connect(
+//         'iisvio-sxtzwa62.db.tb-hosting.com',
+//         'iisvio_sxtzwa62',
+//         'PASSWORD',
+//         'iisvio_sxtzwa62'
+//     );
+// } catch (Exception $e) {
+//     $conn = null;
+// }
+
+// Se la connessione fallisce (es. da casa) → modalità offline
+if ($conn) {
+    mysqli_set_charset($conn, 'utf8mb4');
+    define('OFFLINE_MODE', false);
+} else {
+    $conn = null;
+    define('OFFLINE_MODE', true);
+}

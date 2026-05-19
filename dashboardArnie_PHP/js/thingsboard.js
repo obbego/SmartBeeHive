@@ -1,7 +1,19 @@
 // Percorso del tuo nuovo backend PHP
 const API_URL = "../api.php";
 
-async function tbGetTelemetry(hiveId, interval = '24') {
+/*
+async function tbGetTelemetry(hiveId, interval = '24h') {
+    try {
+        const res = await fetch(`${API_URL}?id=${hiveId}&interval=${interval}`);
+        const data = await res.json();
+        return data[hiveId] || {};
+    } catch (error) {
+        console.error("Errore chiamata API PHP:", error);
+        return {};
+    }
+}*/
+
+async function tbGetTelemetry(hiveId, interval = 'latest') {
     try {
         const res = await fetch(`${API_URL}?id=${hiveId}&interval=${interval}`);
         const data = await res.json();
@@ -25,7 +37,7 @@ async function tbLoadAllHives() {
 
             const temp = telemetry.tempIn ? telemetry.tempIn.slice(-1)[0].value : 0;
             const hum = telemetry.humidity ? telemetry.humidity.slice(-1)[0].value : 0;
-            const weight = telemetry.weight ? telemetry.weight.slice(-1)[0].value : 0;
+            const weight = telemetry.honeyWeightKg ? telemetry.honeyWeightKg.slice(-1)[0].value : 0;
             const pct = telemetry.honeyPct ? telemetry.honeyPct.slice(-1)[0].value : 0;
             const tOut = telemetry.tempOut ? telemetry.tempOut.slice(-1)[0].value : 0;
             const peakFreq = telemetry.peakFreq ? telemetry.peakFreq.slice(-1)[0].value : 0;
@@ -37,12 +49,25 @@ async function tbLoadAllHives() {
             hive.tOut = parseFloat(tOut).toFixed(1);
             hive.peakFreq = parseFloat(peakFreq).toFixed(0);
 
-            if (temp == 0 && hum == 0 && weight == 0) {
+            // 1. Controllo prioritario: i dati sono più vecchi di 24 ore?
+            if (telemetry.is_stale) {
                 hive.status = 'yellow';
-            } else if (temp > 40 || temp < -5) {
-                hive.status = 'red';
-            } else {
-                hive.status = 'green';
+                hive.lastUpdate = "Dati non aggiornati da oltre 24 ore";
+            }
+            // 2. Altrimenti, se i dati sono recenti, controlliamo se sono validi
+            else {
+                if (temp == 0 && hum == 0 && weight == 0) {
+                    hive.status = 'yellow';
+                    // In questo caso il semaforo è giallo, ma il messaggio sarà diverso
+                    hive.lastUpdate = "Dati mancanti";
+                } else if (temp > 40 || temp < -5) {
+                    hive.status = 'red';
+                    hive.lastUpdate = "Allarme Temp";
+                } else {
+                    // Dati recenti e corretti
+                    hive.status = 'green';
+                    hive.lastUpdate = "Aggiornato";
+                }
             }
         }
     } catch (err) {
@@ -60,21 +85,21 @@ async function tbLoadAlarms() {
         const alarms = allData.alarms || [];
 
         const alarmTypeLabels = {
-            'HoneyReady':                   'Miele pronto da raccogliere',
-            'ErrorDeviceTimeseries':         'Errore lettura telemetria',
-            'TelemetryInvalidKey':           'Chiave telemetria non valida',
-            'FailedAssetAttributes':         'Errore attributi asset',
+            'HoneyReady':                    'Miele pronto per la raccolta',
+            'ErrorDeviceTimeseries':         'Errore nella ricezione dei dati',
+            'TelemetryInvalidKey':           'Dato ricevuto non valido',
+            'FailedAssetAttributes':         'Errore nel caricamento dei dati del dispositivo',
             'DeviceOldTemperature':          'Temperatura non aggiornata',
             'DeviceOldHumidity':             'Umidità non aggiornata',
             'DeviceOldWeight':               'Peso non aggiornato',
-            'DeviceOldNoiseFrequency':       'Freq. rumore non aggiornata',
-            'DeviceOldNoiseIntensity':       'Intensità rumore non aggiornata',
+            'DeviceOldNoiseFrequency':       'Frequenza sonora non aggiornata',
+            'DeviceOldNoiseIntensity':       'Intensità sonora non aggiornata',
             'DeviceDifferentTemperature':    'Temperatura anomala rispetto alle altre arnie',
             'DeviceDifferentHumidity':       'Umidità anomala rispetto alle altre arnie',
             'DeviceDifferentWeight':         'Peso anomalo rispetto alle altre arnie',
-            'DeviceDifferentNoiseFrequency': 'Frequenza rumore anomala',
-            'DeviceDifferentNoiseIntensity': 'Intensità rumore anomala',
-            'ErrorTimeSeriesWeightDevice':   'Errore lettura peso'
+            'DeviceDifferentNoiseFrequency': 'Frequenza sonora anomala',
+            'DeviceDifferentNoiseIntensity': 'Intensità sonora anomala',
+            'ErrorTimeSeriesWeightDevice':   'Errore nella lettura del peso'
         };
 
         return alarms.map(alarm => {
@@ -90,16 +115,41 @@ async function tbLoadAlarms() {
                 : '--';
 
             return {
+                id: alarm.id?.id || alarm.id || (deviceName + '_' + ts),
                 hive: deviceName,
                 msg: alarmTypeLabels[alarm.type] || alarm.type,
                 time: ts,
-                status: alarm.status === 'CLEARED_ACK' || alarm.status === 'CLEARED_UNACK'
-                    ? 'closed' : 'open',
-                severity: alarm.severity || 'WARNING'
+                severity: alarm.severity || 'WARNING',
+                tbStatus: alarm.status || ''  // status grezzo TB — mappato da getEffectiveAlarmStatus()
             };
+
         });
     } catch (err) {
         console.error("Errore caricamento allarmi", err);
         return [];
     }
+}
+// ─── AZIONI ALLARMI SU THINGSBOARD ────────────────────────────────
+const ALARM_ACTION_URL = "../alarm_action.php";
+
+async function tbAckAlarm(alarmId) {
+    const res  = await fetch(ALARM_ACTION_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ action: 'ack', alarmId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+}
+
+async function tbClearAlarm(alarmId) {
+    const res  = await fetch(ALARM_ACTION_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ action: 'clear', alarmId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
 }

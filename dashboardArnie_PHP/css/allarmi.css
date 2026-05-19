@@ -1,0 +1,311 @@
+/* ═══════════════════════════════════════════
+   Stili specifici per la pagina Allarmi
+═══════════════════════════════════════════ */
+
+/* ── FILTRI ── */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.filter-btn:hover { color: white; border-color: rgba(255,255,255,0.2); }
+.filter-btn.active {
+    background: rgba(251,191,36,0.15);
+    border-color: var(--honey-glow);
+    color: var(--honey-glow);
+}
+.filter-btn.f-open.active {
+    background: rgba(245,158,11,0.15);
+    border-color: var(--warning);
+    color: var(--warning);
+}
+.filter-btn.f-system.active {
+    background: rgba(239,68,68,0.15);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+.filter-btn.f-closed.active {
+    background: rgba(16,185,129,0.15);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.filter-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 5px;
+    background: currentColor;
+}
+
+/* ── SEZIONE PER ARNIA ── */
+.hive-section {
+    margin-bottom: 28px;
+}
+
+.alarms-stat.stat-system { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.2); }
+.alarms-stat.stat-open   { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); }
+.alarms-stat.stat-closed { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); }
+
+.alarms-stat.stat-system .num { color: var(--danger); }
+.alarms-stat.stat-open   .num { color: var(--warning); }
+.alarms-stat.stat-closed .num { color: var(--success); }
+
+
+
+.hive-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-radius: 12px 12px 0 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    border-bottom: none;
+}
+
+.hive-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hive-alarm-count {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+}
+.count-open   { background: rgba(245,158,11,0.2); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+.count-system { background: rgba(239,68,68,0.2);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+.count-ok     { background: rgba(16,185,129,0.2); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+
+.hive-alarms-body {
+    border: 1px solid var(--glass-border);
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+}
+
+/* ── RIGA SINGOLO ALLARME ── */
+.alarm-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.2s;
+}
+.alarm-row:last-child { border-bottom: none; }
+.alarm-row:hover { background: rgba(255,255,255,0.03); }
+
+.alarm-severity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px currentColor;
+}
+.sev-CRITICAL, .sev-MAJOR  { background: var(--danger);  color: var(--danger); }
+.sev-MINOR,   .sev-WARNING { background: var(--warning); color: var(--warning); }
+.sev-INFO                  { background: #60a5fa;        color: #60a5fa; }
+
+.alarm-info { flex: 1; min-width: 0; }
+.alarm-msg  { font-size: 14px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alarm-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.dot-system { background: var(--danger);  color: var(--danger); }
+.dot-open   { background: var(--warning); color: var(--warning); }
+.dot-closed { background: var(--success); color: var(--success); }
+
+.alarm-severity-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 8px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+.badge-CRITICAL, .badge-MAJOR { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+.badge-MINOR, .badge-WARNING  { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+.badge-INFO                   { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+
+/* ── BOTTONE STATO ── */
+.status-btn {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.04em;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.status-btn.st-system {
+    background: rgba(239,68,68,0.2);
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.4);
+}
+.status-btn.st-open {
+    background: rgba(245,158,11,0.2);
+    color: var(--warning);
+    border: 1px solid rgba(245,158,11,0.4);
+}
+.status-btn.st-closed {
+    background: rgba(16,185,129,0.2);
+    color: var(--success);
+    border: 1px solid rgba(16,185,129,0.4);
+}
+.status-btn:hover { transform: scale(1.05); }
+
+/* ── POPUP MODALE ── */
+.alarm-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+.alarm-modal-overlay.show { display: flex; }
+
+.alarm-modal {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 28px;
+    max-width: 440px;
+    width: 90%;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    animation: modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(0.88) translateY(20px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+.modal-alarm-title { font-size: 17px; font-weight: 700; color: white; }
+.modal-alarm-meta  { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.modal-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin: 20px 0;
+}
+
+.modal-label { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 12px; }
+
+.modal-status-options { display: flex; gap: 10px; }
+
+.modal-status-opt {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    text-align: center;
+    background: rgba(255,255,255,0.05);
+    transition: all 0.2s;
+}
+.modal-status-opt:hover { background: rgba(255,255,255,0.1); }
+.modal-status-opt.selected-system { border-color: var(--warning); background: rgba(245,158,11,0.15); }
+.modal-status-opt.selected-open   { border-color: var(--danger);  background: rgba(239,68,68,0.15); }
+.modal-status-opt.selected-closed { border-color: var(--success); background: rgba(16,185,129,0.15); }
+
+.modal-opt-icon  { font-size: 22px; margin-bottom: 6px; }
+.modal-opt-label { font-size: 12px; font-weight: 600; }
+
+.modal-note {
+    width: 100%;
+    margin-top: 16px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    color: white;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 10px 14px;
+    resize: none;
+    outline: none;
+}
+.modal-note:focus { border-color: var(--honey-glow); }
+.modal-note::placeholder { color: rgba(255,255,255,0.3); }
+
+.modal-footer { display: flex; gap: 10px; margin-top: 20px; }
+
+.btn-modal-cancel {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-modal-cancel:hover { background: rgba(255,255,255,0.08); color: white; }
+
+.btn-modal-save {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-modal-save:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(251,191,36,0.4); }
+
+/* ── STATO VUOTO ── */
+.empty-hive {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* ── STATISTICHE IN CIMA ── */
+.alarms-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 24px;
+    border-radius: 14px;
+    gap: 4px;
+    min-width: 100px;
+    flex: 1;
+    max-width: 160px;
+    white-space: nowrap;
+}
+.alarms-stat .num { font-size: 28px; font-weight: 700; }
+.alarms-stat .lbl { font-size: 12px; color: var(--text-muted); font-weight: 500; }

@@ -95,9 +95,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('valWeight').innerText   = '0kg';
         document.getElementById('barMiele').style.height = '0%';
         document.getElementById('valMiele').innerText    = '0%';
-        document.getElementById('lastUpdate').innerText  = 'Ultimo dato: ND';
+        document.getElementById('valR2').innerText       = 'N/D';
+
+        //document.getElementById('lastUpdate').innerText  = 'Ultimo dato: ND';
         const semaforo = document.getElementById('statusSemaforo');
-        semaforo.className = 'status-alert instabile';
+        semaforo.className = 'status-alert allarme';
         semaforo.innerHTML = '<i data-lucide="help-circle"></i> Sensori non configurati o offline';
         historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme.</div>';
     };
@@ -109,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('valHum').innerText      = hive.h + '%';
         document.getElementById('barMiele').style.height = hive.pct + '%';
         document.getElementById('valMiele').innerText    = hive.pct + '%';
-        document.getElementById('lastUpdate').innerText  = 'Ultimo aggiornamento: ' + hive.lastUpdate;
+        //document.getElementById('lastUpdate').innerText  = 'Ultimo aggiornamento: ' + hive.lastUpdate;
 
         // Colora tutti e 4 i riquadri
         applyMetricColors(hive.t, hive.h, hive.w, hive.peakFreq);
@@ -117,13 +119,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const semaforo = document.getElementById('statusSemaforo');
         if (hive.status === 'green') {
             semaforo.className = 'status-alert ottimale';
-            semaforo.innerHTML = '<i data-lucide="check-circle"></i> Stato Ottimale: Tutto sotto controllo';
+            semaforo.innerHTML = '<i data-lucide="check-circle"></i> Dati ricevuti: tutto regolare (Ultimo aggiornamento dati: ' + hive.lastUpdate + ')';
         } else if (hive.status === 'yellow') {
             semaforo.className = 'status-alert instabile';
-            semaforo.innerHTML = '<i data-lucide="help-circle"></i> Stato Instabile: Monitorare variazioni';
-        } else if (hive.status === 'red') {
+            semaforo.innerHTML = '<i data-lucide="help-circle"></i> Attenzione: ultimo aggiornamento superiore a 24 ore (' + hive.lastUpdate + ')';
+        } else if (hive.status === 'red' || hive.status === 'offline') {
             semaforo.className = 'status-alert allarme';
-            semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Intervento richiesto';
+            semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Arnia non disponibile: uno o più dispositivi sono offline';
         }
 
         const ora = Date.now();
@@ -148,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { ts: ora - 2*unOra, value: hive.h - 1 },
                 { ts: ora,           value: hive.h }
             ],
-            weight:   [
+            honeyWeightKg:   [
                 { ts: ora - 4*unOra, value: hive.w - 0.3 },
                 { ts: ora - 3*unOra, value: hive.w - 0.2 },
                 { ts: ora - 2*unOra, value: hive.w - 0.1 },
@@ -165,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         initDetailCharts(mockTelemetry);
+        updateR2(mockTelemetry);
 
         historyDiv.innerHTML = "";
         mockAlerts.forEach(alert => {
@@ -182,11 +185,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- MODALITA' REALE ---
         let telemetry = null;
         try {
-            telemetry = await tbGetTelemetry(hiveId);
-            if (telemetry && Object.keys(telemetry).length > 0) {
+            telemetry = await tbGetTelemetry(hiveId, '24h');
+
+            // Verifica se esistono dati utili nelle ultime 24h
+            const hasData24h = telemetry && telemetry.tempIn && telemetry.tempIn.length > 0;
+
+            if (!hasData24h) {
+                // Nessun dato nelle ultime 24h, recuperiamo l'ultimo dato assoluto ('latest')
+                try {
+                    const latestTelemetry = await tbGetTelemetry(hiveId, 'latest');
+                    if (latestTelemetry && latestTelemetry.tempIn && latestTelemetry.tempIn.length > 0) {
+                        // Sostituiamo per far disegnare l'interfaccia (ed il puntatore nel grafico) usando quest'ultimo dato
+                        telemetry = latestTelemetry;
+                        telemetry.is_stale = true; // Triggera l'allarme giallo "dati vecchi"
+                    }
+                } catch (e) {
+                    console.error("Impossibile recuperare i dati assoluti (latest)", e);
+                }
+            }
+
+            if (telemetry && Object.keys(telemetry).length > 0 && telemetry.tempIn && telemetry.tempIn.length > 0) {
+                ['tempIn', 'tempOut', 'humidity', 'honeyWeightKg', 'honeyPct', 'peakFreq'].forEach(key => {
+                    if (telemetry[key] && telemetry[key].length > 0) {
+                        telemetry[key].sort((a, b) => a.ts - b.ts);
+                    }
+                });
+
                 const temInVal  = telemetry.tempIn   ? telemetry.tempIn.slice(-1)[0].value   : 0;
                 const humVal    = telemetry.humidity  ? telemetry.humidity.slice(-1)[0].value  : 0;
-                const weightVal = telemetry.weight    ? telemetry.weight.slice(-1)[0].value    : 0;
+                const weightVal = telemetry.honeyWeightKg ? telemetry.honeyWeightKg.slice(-1)[0].value : 0;
                 const pctVal    = telemetry.honeyPct  ? telemetry.honeyPct.slice(-1)[0].value  : 0;
                 const freqVal   = telemetry.peakFreq  ? telemetry.peakFreq.slice(-1)[0].value  : 0;
 
@@ -197,9 +224,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('barMiele').style.height = parseFloat(pctVal).toFixed(0)    + '%';
                 document.getElementById('valMiele').innerText    = parseFloat(pctVal).toFixed(0)    + '%';
 
-                // Colora tutti e 4 i riquadri
                 applyMetricColors(temInVal, humVal, weightVal, freqVal);
 
+                /*
                 if (telemetry.tempIn && telemetry.tempIn.length > 0) {
                     const date = new Date(telemetry.tempIn.slice(-1)[0].ts);
                     document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -220,13 +247,69 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 initDetailCharts(telemetry);
+                */
+
+                // --- AGGIORNAMENTO TESTO DATA ---
+                let dataFormattata = telemetry.last_ts_human || 'Data non disponibile';
+                if (dataFormattata === 'Errore' || dataFormattata === 'Mai') {
+                    dataFormattata = 'Nessun dato registrato';
+                }
+
+                // --- GESTIONE SEMAFORO E WARNING ---
+                const semaforo = document.getElementById('statusSemaforo');
+
+                if (telemetry.is_stale) {
+                    semaforo.className = 'status-alert instabile';
+                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 24 ore: ${dataFormattata}`;
+                }
+                else if (temInVal == 0 && weightVal == 0 && humVal == 0) {
+                    semaforo.className = 'status-alert allarme';
+                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Arnia non disponibile: <br> uno o più dispositivi sono offline`;
+                }
+                else {
+                    semaforo.className = 'status-alert ottimale';
+                    semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: Tutto regolare <br> Ultimo aggiornamento dati: ${dataFormattata}`;
+                }
+
+                // --- AGGIORNAMENTO R2 E GRAFICI ---
+                updateR2(telemetry);
+
+                if (window.lucide) lucide.createIcons();
+                initDetailCharts(telemetry);
             } else {
                 impostaZeri();
             }
         } catch (error) {
             impostaZeri();
         }
-        historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
+        try {
+            const allAlarms = await tbLoadAlarms();
+            const hiveName = hive ? hive.name : `Arnia 0${hiveId}`;
+            const hiveAlarms = allAlarms.filter(a => a.hive === hiveName);
+
+            if (hiveAlarms.length === 0) {
+                historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
+            } else {
+                historyDiv.innerHTML = hiveAlarms.map(alarm => {
+                    const statusMap = {
+                        system: { cls: 'tag-system', label: '⚙ DA GESTIRE' },
+                        open:   { cls: 'tag open',   label: '● APERTO'     },
+                        closed: { cls: 'tag closed', label: '✓ RISOLTO'    },
+                    };
+                    const s = statusMap[alarm.status] || statusMap.system;
+                    return `
+            <div class="history-item px-0">
+                <div>
+                    <div style="font-weight:600; color:white;">${alarm.msg}</div>
+                    <div style="font-size:12px; color:var(--text-muted);">${alarm.time}</div>
+                </div>
+                <span class="${s.cls}">${s.label}</span>
+            </div>`;
+                }).join('');
+            }
+        } catch (err) {
+            historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Errore caricamento allarmi.</div>';
+        }
     }
 
     lucide.createIcons();
@@ -239,7 +322,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             tab.classList.add('active');
             if (isMockMode) return;
 
-            const selectedInterval = tab.getAttribute('data-value');
+            let selectedInterval = tab.getAttribute('data-value');
+
+            // FIX: Se il pulsante è impostato su 'latest' o è vuoto, forziamo '24h'
+            // per garantire che i grafici ricevano lo storico temporale e non un solo punto.
+            if (!selectedInterval || selectedInterval === 'latest') {
+                selectedInterval = '24h';
+            }
+
             try {
                 ['tempInOutChart', 'humidityChart', 'weightFlowChart', 'peakFreqChart'].forEach(id => {
                     document.getElementById(id).style.opacity = '0.5';
@@ -257,47 +347,113 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     });
+
+    const defaultTab = document.querySelector('#timeRangeSelector .tab-btn.active');
+    if (defaultTab && !isMockMode) {
+        defaultTab.click();
+    }
 });
 
 let charts = {};
 
 function initDetailCharts(telemetry) {
-    const commonOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: true } },
+    /**
+     * Funzione interna per gestire lo stato visivo "Nessun Dato".
+     * Aggiunge o rimuove la classe CSS .no-data al contenitore del grafico.
+     */
+
+    const warningVisible = document.body.innerText.includes("Ultimo aggiornamento superiore a 24 ore");
+    const currentRange = document.querySelector('.tab-btn.active').dataset.value;
+
+    const checkEmpty = (dataArray, canvasId) => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return true;
+        const container = canvas.closest('.chart-box');
+
+        // Controlliamo se l'array esiste e ha elementi
+        const isEmpty = !dataArray || dataArray.length === 0;
+
+        if (isEmpty) {
+            container.classList.add('no-data');
+        } else {
+            container.classList.remove('no-data');
+        }
+        return isEmpty;
     };
 
-    // Temperatura In/Out
-    const tempIn  = parseTelemetrySeries(telemetry.tempIn);
+    // Configurazione del plugin per scorrimento e zoom
+    const zoomConfig = {
+        pan: {
+            enabled: true,
+            mode: 'x', // Permette di scorrere solo a destra e sinistra (asse temporale)
+        },
+        zoom: {
+            wheel: {
+                enabled: true, // Abilita lo zoom con la rotellina del mouse
+            },
+            pinch: {
+                enabled: true  // Abilita lo zoom "pizzicando" lo schermo su mobile
+            },
+            mode: 'x', // Zooma solo sull'asse X
+        }
+    };
+
+    // Configurazione comune per i grafici
+    const optionsWithLegend = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: true },
+            zoom: zoomConfig // <--- Aggiunto qui
+        }
+    };
+
+    const optionsNoLegend = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            zoom: zoomConfig // <--- Aggiunto qui
+        }
+    };
+
+
+    // 1. GRAFICO: Temperatura Interna vs Esterna
+    const tempIn = parseTelemetrySeries(telemetry.tempIn);
     const tempOut = parseTelemetrySeries(telemetry.tempOut);
+    checkEmpty(tempIn.data, 'tempInOutChart');
+
     if (charts.temp) charts.temp.destroy();
     charts.temp = new Chart(document.getElementById('tempInOutChart'), {
         type: 'line',
         data: {
             labels: tempIn.labels,
             datasets: [
-                { label: 'Temp In',  data: tempIn.data,  borderColor: '#fbbf24', fill: true },
+                { label: 'Temp In',  data: tempIn.data,  borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', fill: true },
                 { label: 'Temp Out', data: tempOut.data, borderColor: '#60a5fa', fill: false }
             ]
         },
-        options: commonOptions
+        options: optionsWithLegend
     });
 
-    // Umidità
+    // 2. GRAFICO: Umidità Interna
     const hum = parseTelemetrySeries(telemetry.humidity);
+    checkEmpty(hum.data, 'humidityChart');
+
     if (charts.hum) charts.hum.destroy();
     charts.hum = new Chart(document.getElementById('humidityChart'), {
         type: 'line',
         data: {
             labels: hum.labels,
-            datasets: [{ label: 'Umidità', data: hum.data, borderColor: '#3b82f6', fill: true }]
+            datasets: [{ label: 'Umidità', data: hum.data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true }]
         },
-        options: commonOptions
+        options: optionsNoLegend
     });
 
-    // Peso
-    const weight = parseTelemetrySeries(telemetry.weight);
+    // 3. GRAFICO: Variazione Peso (Barre)
+    const weight = parseTelemetrySeries(telemetry.honeyWeightKg);
+    checkEmpty(weight.data, 'weightFlowChart');
+
     if (charts.weight) charts.weight.destroy();
     charts.weight = new Chart(document.getElementById('weightFlowChart'), {
         type: 'bar',
@@ -305,11 +461,13 @@ function initDetailCharts(telemetry) {
             labels: weight.labels,
             datasets: [{ label: 'Peso', data: weight.data, backgroundColor: '#10b981' }]
         },
-        options: commonOptions
+        options: optionsNoLegend
     });
 
-    // Frequenza Picco
+    // 4. GRAFICO: Frequenza Picco
     const freq = parseTelemetrySeries(telemetry.peakFreq);
+    checkEmpty(freq.data, 'peakFreqChart');
+
     if (charts.freq) charts.freq.destroy();
     charts.freq = new Chart(document.getElementById('peakFreqChart'), {
         type: 'line',
@@ -325,7 +483,7 @@ function initDetailCharts(telemetry) {
             }]
         },
         options: {
-            ...commonOptions,
+            ...optionsNoLegend,
             scales: {
                 y: {
                     suggestedMin: 150,
@@ -340,10 +498,88 @@ function initDetailCharts(telemetry) {
 function parseTelemetrySeries(series) {
     if (!series || series.length === 0) return { labels: [], data: [] };
     series.sort((a, b) => a.ts - b.ts);
+
+    // Recuperiamo l'intervallo selezionato dal selettore temporale
+    const activeTab = document.querySelector('#timeRangeSelector .tab-btn.active');
+    const range = activeTab ? activeTab.getAttribute('data-value') : '24h';
+
     const labels = series.map(p => {
         const d = new Date(p.ts);
-        return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+        // Se l'intervallo è '1a' (un anno), usiamo il formato richiesto
+        if (range === '1a') {
+            return d.toLocaleString('it-IT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).replace(',', ''); // Rimuove la virgola tra data e ora se presente
+        }
+
+        // Formato predefinito per gli altri intervalli (già presente nel tuo script)
+        return d.toLocaleString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     });
+
     const data = series.map(p => p.value);
     return { labels, data };
+}
+
+// Funzione matematica per calcolare l'R² tra due array di dati appaiati
+function computeR2(xArr, yArr) {
+    const n = Math.min(xArr.length, yArr.length);
+    if (n < 3) return null;
+    const x = xArr.slice(0, n), y = yArr.slice(0, n);
+    const mx = x.reduce((a, b) => a + b, 0) / n;
+    const my = y.reduce((a, b) => a + b, 0) / n;
+    const num = x.reduce((s, xi, i) => s + (xi - mx) * (y[i] - my), 0);
+    const den = Math.sqrt(
+        x.reduce((s, xi) => s + (xi - mx) ** 2, 0) *
+        y.reduce((s, yi) => s + (yi - my) ** 2, 0)
+    );
+    if (den === 0) return null;
+    return (num / den) ** 2;
+}
+
+function updateR2(telemetry) {
+    const r2El = document.getElementById('valR2');
+    if (!r2El) return;
+
+    // Se non ci sono dati o c'è solo l'ultimo dato (arnia offline)
+    if (!telemetry || !telemetry.tempIn || telemetry.tempIn.length < 3) {
+        r2El.innerText = 'Dati insuff.'; // Invece di N/D, più chiaro
+        return;
+    }
+
+    const pairs = [];
+    const MAX_TIME_DIFF = 60 * 60 * 1000; // Alziamo a 1 ora per sicurezza
+
+    telemetry.tempIn.forEach(pin => {
+        let closestOut = null;
+        let minDiff = Infinity;
+
+        telemetry.tempOut.forEach(pout => {
+            const diff = Math.abs(pout.ts - pin.ts);
+            if (diff < minDiff && diff <= MAX_TIME_DIFF) {
+                minDiff = diff;
+                closestOut = pout;
+            }
+        });
+
+        if (closestOut) {
+            pairs.push({ x: parseFloat(closestOut.value), y: parseFloat(pin.value) });
+        }
+    });
+
+    if (pairs.length >= 3) {
+        const r2 = computeR2(pairs.map(p => p.x), pairs.map(p => p.y));
+        r2El.innerText = r2 !== null ? r2.toFixed(2) : 'N/D';
+    } else {
+        r2El.innerText = 'Sync in corso...';
+    }
 }

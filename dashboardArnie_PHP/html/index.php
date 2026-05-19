@@ -1,218 +1,268 @@
-<?php require_once '../auth.php'; ?>
+<?php
+require_once '../auth.php';
+require_once '../db.php';
+?>
+
 <!DOCTYPE html>
 <html lang="it" data-bs-theme="dark">
 
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Smart Hive</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Hive</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/allarmi.css" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
+    <link rel="stylesheet" href="../css/style.css">
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Rimuovo i margini di default di bootstrap per evitare interferenze con il layout*/
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p {
+            margin-bottom: 0;
+        }
 
-
-  <link rel="stylesheet" href="../css/style.css">
-
-
-  <style>
-    /* Rimuovo i margini di default di bootstrap per evitare interferenze con il layout*/
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    p {
-      margin-bottom: 0;
-    }
-
-
-    a {
-      text-decoration: none;
-    }
-  </style>
+        a {
+            text-decoration: none;
+        }
+    </style>
 </head>
 
-
 <body>
-
 
 <?php require_once '../includes/navbar.php'; ?>
 
 <div class="container pb-5">
-
-
-  <div class="row g-3 mb-4">
-    <!-- Miele Totale -->
-    <div class="col-12 col-sm-6 col-lg">
-      <div class="glass-panel stat-card h-100 text-center" style="border-color: var(--honey-glow);">
-        <div class="stat-label mb-2 justify-content-center" style="color: var(--honey-glow);"><i data-lucide="archive"></i> Miele Totale</div>
-        <div class="stat-value" id="statHoney" style="color: var(--honey-glow);">--</div>
-        <div class="stat-detail">Somma da tutte le arnie</div>
-      </div>
-    </div>
-
-    <!-- Allarmi Attivi -->
-    <div class="col-12 col-sm-6 col-lg">
-      <div class="glass-panel stat-card h-100 text-center" style="border-color: var(--danger);">
-        <div class="stat-label mb-2 justify-content-center" style="color: var(--danger);"><i data-lucide="alert-octagon" color="var(--danger)"></i> Allarmi</div>
-        <div class="stat-value" id="statAlarms" style="color: var(--danger);">--</div>
-        <div class="stat-detail" id="statAlarmsDetail">Attenzione richiesta</div>
-      </div>
-    </div>
-
-    <!-- Temperatura Interna Media -->
-    <div class="col-12 col-sm-6 col-lg">
-      <div class="glass-panel stat-card h-100 text-center">
-        <div class="stat-label mb-2 justify-content-center"><i data-lucide="thermometer"></i> Temp. Media Int.</div>
-        <div class="stat-value" id="statTemp">--</div>
-        <div class="stat-detail">Media arnie attive</div>
-      </div>
-    </div>
-
-    <!-- Umidità Media -->
-    <div class="col-12 col-sm-6 col-lg">
-      <div class="glass-panel stat-card h-100 text-center">
-        <div class="stat-label mb-2 justify-content-center"><i data-lucide="droplets"></i> Umidità Media</div>
-        <div class="stat-value" id="statHum">--</div>
-        <div class="stat-detail">Media arnie attive</div>
-      </div>
-    </div>
-
-    <!-- Temperatura Esterna Media -->
-    <div class="col-12 col-sm-6 col-lg">
-      <div class="glass-panel stat-card h-100 text-center" style="border-color: rgba(96, 165, 250, 0.5);">
-        <div class="stat-label mb-2 justify-content-center" style="color: #60a5fa;"><i data-lucide="cloud-sun"></i> Temp. Esterna</div>
-        <div class="stat-value" id="statTempOut" style="color: #60a5fa;">--</div>
-        <div class="stat-detail">Temperatura Esterna</div>
-      </div>
-    </div>
-  </div>
-
-
-
-
-  <div class="columns">
-    <!-- div arnie -->
-    <div class="left">
-      <div class="tabs-container mb-4 d-flex align-items-center">
-        <h3 class="fs-5 fw-bold mb-0 me-2">Stato Arnie</h3>
-      </div>
-
-
-      <div class="row g-4 mb-5 justify-content-center" id="hivesGrid">
-        <div class="col-12 text-center text-muted">Caricamento dati in corso...</div>
-      </div>
-    </div>
-
-
-    <!-- div storico, panoramica e analisi avanzata -->
-    <div class="right">
-      <div class="tabs-container mb-4 ">
-        <div class="row g-4 d-flex justify-content-center">
-          <div class="col-12 col-lg-11">
-            <nav class="tabs-nav d-inline-flex gap-1">
-              <button class="tab-btn active" onclick="switchTab('history', this)">Storico Allarmi</button>
-              <button class="tab-btn" onclick="switchTab('overview', this)">Panoramica</button>
-              <button class="tab-btn" onclick="switchTab('analysis', this)">Analisi Avanzata</button>
-            </nav>
-          </div>
+    <div class="row g-3 mb-4">
+        <!-- Miele Totale -->
+        <div class="col-12 col-sm-6 col-lg">
+            <div class="glass-panel stat-card h-100 text-center" style="border-color: var(--honey-glow);">
+                <div class="stat-label mb-2 justify-content-center" style="color: var(--honey-glow);"><i data-lucide="archive"></i> Miele Totale</div>
+                <div class="stat-value" id="statHoney" style="color: var(--honey-glow);">--</div>
+                <div class="stat-detail">Somma da tutte le arnie</div>
+            </div>
         </div>
-      </div>
 
-
-      <div id="tab-history" class="tab-content active">
-        <div class="row g-4 d-flex justify-content-center">
-          <div class="col-12 col-lg-11">
-            <div class="glass-panel chart-box" style="height: auto; min-height: 400px;">
-              <div class="p-3 border-bottom border-white border-opacity-10 ">
-                <div class="chart-title mb-0 ">Log Eventi e Allarmi</div>
-              </div>
-              <div id="historyList" class="history-list p-3">
-              </div>
+        <!-- Allarmi Attivi -->
+        <div class="col-12 col-sm-6 col-lg">
+            <div class="glass-panel stat-card h-100 text-center" style="border-color: var(--danger);">
+                <div class="stat-label mb-2 justify-content-center" style="color: var(--danger);"><i data-lucide="alert-octagon" color="var(--danger)"></i> Allarmi</div>
+                <div class="stat-value" id="statAlarms" style="color: var(--danger);">--</div>
+                <div class="stat-detail" id="statAlarmsDetail">Attenzione richiesta</div>
             </div>
-          </div>
         </div>
-      </div>
 
-
-      <div id="tab-overview" class="tab-content ">
-        <div class="row g-4 d-flex justify-content-center">
-          <div class="col-12 col-lg-11">
-            <div class="glass-panel chart-box">
-              <div class="chart-title">Andamento Temperature</div>
-              <div class="chart-area"><canvas id="tempChart"></canvas></div>
+        <!-- Temperatura Interna Media -->
+        <div class="col-12 col-sm-6 col-lg">
+            <div class="glass-panel stat-card h-100 text-center">
+                <div class="stat-label mb-2 justify-content-center"><i data-lucide="thermometer"></i> Temp. Media Int.</div>
+                <div class="stat-value" id="statTemp">--</div>
+                <div class="stat-detail">Media arnie attive</div>
             </div>
-          </div>
-          <div class="col-12 col-lg-11">
-            <div class="glass-panel chart-box">
-              <div class="chart-title">Livelli Umidità</div>
-              <div class="chart-area"><canvas id="humidityChart"></canvas></div>
-            </div>
-          </div>
-          <div class="col-12 col-lg-11">
-            <div class="glass-panel chart-box">
-              <div class="chart-title">Produzione Giornaliera</div>
-              <div class="chart-area"><canvas id="honeyChart"></canvas></div>
-            </div>
-          </div>
-          <div class="col-12 col-lg-11">
-            <div class="glass-panel chart-box">
-              <div class="chart-title">Frequenza Sonora (Hz)</div>
-              <div class="chart-area"><canvas id="soundChart"></canvas></div>
-            </div>
-          </div>
         </div>
-      </div>
 
-
-      <div id="tab-analysis" class="tab-content text-center" >
-        <div class="row g-4 d-flex justify-content-center">
-          <div class="col-12 col-lg-11">
-            <div class="glass-panel chart-box">
-              <div class="chart-title">Correlazione Temp. Int/Est</div>
-              <div
-                      style="font-size: 32px; font-weight: 700; color: var(--honey-glow); text-align:center; margin-bottom:10px;">
-                R² = 0.78</div>
-              <div class="chart-area"><canvas id="correlationChart"></canvas></div>
+        <!-- Umidità Media -->
+        <div class="col-12 col-sm-6 col-lg">
+            <div class="glass-panel stat-card h-100 text-center">
+                <div class="stat-label mb-2 justify-content-center"><i data-lucide="droplets"></i> Umidità Media</div>
+                <div class="stat-value" id="statHum">--</div>
+                <div class="stat-detail">Media arnie attive</div>
             </div>
-          </div>
-          <div class="col-12 col-lg-11">
-            <div class="glass-panel chart-box">
-              <div class="chart-title">Derivata Temp (Velocità)</div>
-              <div class="chart-area"><canvas id="derivative1Chart"></canvas></div>
-            </div>
-          </div>
-          <div class="col-12 col-lg-11">
-            <div class="glass-panel chart-box">
-              <div class="chart-title">Derivata Peso (Rateo)</div>
-              <div class="chart-area"><canvas id="weightDerivativeChart"></canvas></div>
-            </div>
-          </div>
         </div>
-      </div>
+
+        <!-- Temperatura Esterna Media -->
+        <div class="col-12 col-sm-6 col-lg">
+            <div class="glass-panel stat-card h-100 text-center" style="border-color: rgba(96, 165, 250, 0.5);">
+                <div class="stat-label mb-2 justify-content-center" style="color: #60a5fa;"><i data-lucide="cloud-sun"></i> Temp. Esterna</div>
+                <div class="stat-value" id="statTempOut" style="color: #60a5fa;">--</div>
+                <div class="stat-detail">Temperatura Esterna</div>
+            </div>
+        </div>
     </div>
 
+    <div class="columns">
+        <!-- div arnie -->
+        <div class="left">
+            <div class="tabs-container mb-4 d-flex align-items-center">
+                <h3 class="fs-5 fw-bold mb-0 me-2">Stato Arnie</h3>
+            </div>
+            <div class="row g-4 mb-5 justify-content-center" id="hivesGrid">
+                <div class="col-12 text-center text-muted">Caricamento dati in corso...</div>
+            </div>
+        </div>
 
-  </div>
+        <!-- div storico, panoramica e analisi avanzata -->
+        <div class="right">
+            <div class="tabs-container mb-4 d-flex justify-content-between align-items-center gap-2">
 
+                <!-- TAB PRINCIPALI -->
+                <nav class="tabs-nav d-inline-flex gap-1">
+                    <button class="tab-btn active" onclick="switchTab('history', this)">Storico Allarmi</button>
+                    <button class="tab-btn" onclick="switchTab('overview', this)">Panoramica</button>
+                    <button class="tab-btn" onclick="switchTab('analysis', this)">Analisi Avanzata</button>
+                </nav>
+
+                <!-- TIME SELECTOR (DINAMICO) -->
+                <div id="globalTimeSelector" class="tabs-nav d-inline-flex gap-1 d-none"></div>
+
+            </div>
+
+            <div id="tab-history" class="tab-content active">
+                <div class="row g-4 d-flex justify-content-center">
+                    <div class="col-12 col-lg-11">
+                        <div class="glass-panel chart-box alarm-history-container">
+                            <div class="p-3 border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center">
+                                <div class="chart-title mb-0">Log Eventi e Allarmi</div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <a href="archivio.php"
+                                       style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.05);
+                                              border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 12px;
+                                              color:var(--text-muted);font-size:12px;transition:0.2s;"
+                                       onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'">
+                                        <i data-lucide="archive" style="width:13px;height:13px;"></i>Archivio
+                                    </a>
+                                    <a href="allarmi.php" class="btn-manage-alarms">
+                                        <i data-lucide="bell-ring" style="width:14px;height:14px;"></i>
+                                        Gestisci Allarmi
+                                    </a>
+                                </div>
+                            </div>
+                            <div id="historyList" class="history-list p-3 custom-scrollbar">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-overview" class="tab-content ">
+                <div class="row g-4 d-flex justify-content-center">
+                    <div class="col-12 col-lg-11 d-flex justify-content-between align-items-center mt-2 mb-2">
+                    </div>
+                    <div class="col-12 col-lg-11">
+                        <div class="glass-panel chart-box">
+                            <div class="chart-title">Andamento Temperature</div>
+                            <div class="chart-area"><canvas id="tempChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-11">
+                        <div class="glass-panel chart-box">
+                            <div class="chart-title">Livelli Umidità</div>
+                            <div class="chart-area"><canvas id="humidityChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-11">
+                        <div class="glass-panel chart-box">
+                            <div class="chart-title">Produzione Giornaliera</div>
+                            <div class="chart-area"><canvas id="honeyChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-11">
+                        <div class="glass-panel chart-box">
+                            <div class="chart-title">Frequenza Sonora (Hz)</div>
+                            <div class="chart-area"><canvas id="soundChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-analysis" class="tab-content">
+                <div class="row g-4 d-flex justify-content-center">
+                    <div class="col-12 col-lg-11 d-flex justify-content-between align-items-center mt-2 mb-2"> </div>
+
+                    <!-- Scatter correlazione -->
+                    <div class="col-12 col-lg-11">
+                        <div class="glass-panel chart-box">
+                            <div class="chart-title">Correlazione Temp. Interna / Esterna</div>
+                            <div id="analysisR2"
+                                 style="font-size: 28px; font-weight: 700; color: var(--honey-glow); text-align:center; margin-bottom: 10px;">
+                                R² = ...
+                            </div>
+                            <div class="chart-area"><canvas id="correlationChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Derivata temperatura -->
+                    <div class="col-12 col-lg-11">
+                        <div class="glass-panel chart-box">
+                            <div class="chart-title">Velocità Variazione Temperatura (°C/h)</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+                                Media aggregata tra tutte le arnie &mdash;
+                                <span style="color: rgba(251,191,36,0.85);">▌</span> riscaldamento &nbsp;
+                                <span style="color: rgba(96,165,250,0.85);">▌</span> raffreddamento
+                            </div>
+                            <div class="chart-area"><canvas id="derivative1Chart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Derivata peso -->
+                    <div class="col-12 col-lg-11">
+                        <div class="glass-panel chart-box">
+                            <div class="chart-title">Rateo Variazione Peso Totale (kg/h)</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+                                Somma di tutte le arnie &mdash;
+                                <span style="color: rgba(16,185,129,0.85);">▌</span> produzione &nbsp;
+                                <span style="color: rgba(239,68,68,0.85);">▌</span> perdita
+                            </div>
+                            <div class="chart-area"><canvas id="weightDerivativeChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<div class="alarm-modal-overlay" id="alarmModalIndex" onclick="closeIndexModal(event)">
+    <div class="alarm-modal">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="modal-alarm-title" id="indexModalTitle">Titolo allarme</div>
+                <div class="modal-alarm-meta"  id="indexModalMeta">Arnia · Data</div>
+            </div>
+            <button onclick="closeIndexModalDirect()"
+                    style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+        <hr class="modal-divider">
+        <div class="modal-label">Imposta stato allarme:</div>
+        <div class="modal-status-options">
+            <div class="modal-status-opt" data-status="system" onclick="selectIndexModalStatus('system')">
+                <div class="modal-opt-label" style="color:var(--danger);">Da Gestire</div>
+            </div>
+            <div class="modal-status-opt" data-status="closed" onclick="selectIndexModalStatus('closed')">
+                <div class="modal-opt-label" style="color:var(--success);">Risolto</div>
+            </div>
+        </div>
+        <textarea class="modal-note" id="indexModalNote" rows="3"
+                  placeholder="Aggiungi una nota (opzionale)..."></textarea>
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" onclick="closeIndexModalDirect()">Annulla</button>
+            <button class="btn-modal-save"   onclick="saveIndexAlarmStatus()">Salva</button>
+        </div>
+    </div>
+</div>
 
 <script src="../js/dati.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/alarm_state.js"></script>
 <script src="../js/index.js"></script>
 <script src="../js/thingsboard.js"></script>
 <script src="../js/navbar.js"></script>
+
 </body>
-
-
 </html>

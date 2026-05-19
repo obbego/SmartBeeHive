@@ -255,6 +255,24 @@ h1 {
 /* TABS NAV */
 .tabs-container {
   margin-bottom: 20px;
+  /* Centra il contenitore e gestisce il mobile (come col-12) */
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* Allinea la larghezza a quella di col-lg-11 su schermi desktop */
+@media (min-width: 992px) {
+  .tabs-container {
+    width: 91.666667%; /* È l'esatta percentuale che Bootstrap usa per col-lg-11 */
+  }
+}
+
+/* Ripristina l'allineamento per il titolo "Stato Arnie" nella colonna di sinistra */
+.left .tabs-container {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .tabs-nav {
@@ -263,18 +281,21 @@ h1 {
   padding: 4px;
   border-radius: 10px;
   border: 1px solid var(--glass-border);
+  gap: 2px;
 }
 
 .tab-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: 10px 24px;
+  padding: 9px 16px;
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
   font-weight: 500;
+  font-size: 16px;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
@@ -378,6 +399,37 @@ h1 {
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
+.tag-system {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.btn-manage-alarms {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: var(--danger);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.btn-manage-alarms:hover {
+  background: rgba(239, 68, 68, 0.22);
+  color: var(--danger);
+  transform: translateY(-1px);
+}
+
 .btn-back {
   color: white;
   text-decoration: none;
@@ -448,6 +500,68 @@ h1 {
   grid-template-rows: auto;
 }
 
+/* ── Barra orizzontale miele ──────────────────────────────
+   Stili SEMPRE attivi — solo display cambia nel media query */
+.honey-bar-wrapper {
+  display: none; /* nascosta su desktop, flex su mobile */
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.honey-bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--honey-glow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.honey-bar-track {
+  flex: 1;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.honey-bar-fill {
+  height: 100%;
+  background: linear-gradient(to right, #d97706, #fbbf24);
+  border-radius: 20px;
+  box-shadow: 0 0 14px var(--honey-primary), 0 0 24px rgba(251, 191, 36, 0.25);
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+/* Lineetta bianca sul bordo destro = "superficie del liquido" */
+.honey-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 20px 20px 0;
+}
+
+.honey-bar-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--honey-glow);
+  min-width: 38px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+
+
 @media (max-width: 992px) {
   .columns{
     display: flex;
@@ -464,40 +578,127 @@ h1 {
 }
 
 
-@media (max-width: 576px) {
-  /* Ridurre il padding del corpo pagina e dell'header */
+@media (max-width: 768px) {
+  /* Corpo e header */
   body { padding-bottom: 20px; }
-  header { padding: 12px 0; margin-bottom: 15px; }
   h1 { font-size: 18px; }
 
-  /* Ridurre le card delle statistiche (quelle in alto) */
+  /* Stat card in alto */
   .stat-card { padding: 12px; }
   .stat-value { font-size: 22px; margin: 5px 0; }
   .stat-label { font-size: 14px; }
 
-  /* OTTIMIZZAZIONE CARD ARNIE */
+  /* ── Card arnia ── */
   .hive-card {
-    padding: 12px;
-    gap: 10px;
+    padding: 16px;
+    gap: 0;
   }
 
-  /* Rimpicciolire il serbatoio del miele per non rubare spazio */
-  .honey-tank-wrapper { width: 35px; }
-  .honey-tank { height: 60px; width: 12px; }
-  .honey-pct { font-size: 11px; margin-top: 5px; }
+  .hive-header {
+    margin-bottom: 12px;
+  }
 
-  /* Rendere le metriche (Peso, Temp, etc) più compatte */
+  .hive-name {
+    font-size: 16px;
+  }
+
+  /* Nasconde il tank verticale */
+  .honey-tank-wrapper {
+    display: none !important;
+  }
+
+  /* columns_arnie: colonna singola, le metriche prendono tutto lo spazio */
+  .columns_arnie {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  /* 4 metriche in griglia 2×2 */
   .hive-metrics {
-    grid-template-columns: 1fr 1fr; /* Mantiene 2 colonne ma riduce i testi */
-    gap: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
-  .metric-box { padding: 4px 8px; }
-  .metric-label { font-size: 9px; }
-  .metric-val { font-size: 13px; }
 
-  /* Grafici: ridurre l'altezza fissa per evitare che uno solo riempia lo schermo */
+  .metric-box {
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .metric-label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    margin-bottom: 3px;
+  }
+
+  .metric-val {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  /* Mostra la barra orizzontale del miele */
+  .honey-bar-wrapper {
+    display: flex;
+  }
+
+  /* Grafici */
   .chart-box { height: 280px; padding: 12px; }
-  
-  /* Tabs: pulsanti più piccoli */
-  .tab-btn { padding: 8px 12px; font-size: 13px; }
+
+  /* Tabs */
+  .tab-btn { padding: 8px 14px; font-size: 13px; }
+}
+
+/* Altezza fissa per il contenitore degli allarmi */
+.alarm-history-container {
+  max-height: 1232px; /* limite massimo */
+  height: auto;       /* segue il contenuto */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Rendiamo la lista interna scorrevole */
+#historyList {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 10px;
+  min-height: 0;
+}
+/* Personalizzazione della Scrollbar (più elegante per il tema dark) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+          180deg,
+          rgba(217, 170, 58, 0.7),
+          rgba(184, 134, 11, 0.7),
+          rgba(120, 80, 10, 0.7)
+  );
+  border-radius: 10px;
+  box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.15);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+          180deg,
+          rgba(230, 180, 70, 0.85),
+          rgba(200, 140, 20, 0.85),
+          rgba(130, 85, 10, 0.85)
+  );
+  box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+/* Responsive: su mobile l'altezza fissa potrebbe essere eccessiva,
+   quindi la riduciamo */
+@media (max-width: 992px) {
+  .alarm-history-container {
+    height: 500px;
+  }
 }
