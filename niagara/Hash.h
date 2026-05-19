@@ -8,7 +8,12 @@
 // Define the CRC32 polynomial used for the hash calculation
 #define CRC32_POLYNOMIAL 0xEDB88320
 
-// Function to compute CRC32 for a given data buffer
+/** 
+ * @brief Function to compute CRC32 for a given data buffer
+ * @param data The data buffer to compile the CRC on
+ * @param length Optional length of the CRC to compute, defaults to `32`
+ * @returns The CRC32 of the given data
+ */
 static uint32_t crc32(const str data, unsigned int length = 32) {
 	uint32_t crc = 0xFFFFFFFF;  // Initial value of CRC is all 1's (0xFFFFFFFF)
 
@@ -30,7 +35,11 @@ static uint32_t crc32(const str data, unsigned int length = 32) {
 	return crc;
 }
 
-// Function to serialize a crc32 integer to a string of characters to send or receive through radio or compare multiple crc values
+/** 
+ * @brief Function to serialize a crc32 integer to a string of characters to send or receive through radio or compare multiple CRC values
+ * @param crc The CRC32 integer
+ * @returns The `str` representation of the passed CRC
+ */
 static str crc32_to_str(uint32_t crc) {
 	char buf[11]; // max 10 cifre + '\0'
 	snprintf(buf, sizeof(buf), "%u", crc);

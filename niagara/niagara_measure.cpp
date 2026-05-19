@@ -30,26 +30,31 @@
 #endif
 
 // ==========================================
-// IMPLEMENTAZIONE SENDER
+// SENDER IMPLEMENATATION
 // ==========================================
 NiagaraSender::NiagaraSender(Niagara& lora_device) 
     : device(lora_device) 
 {}
 
 void NiagaraSender::add_measure(const NiagaraMeasure& measure) {
+    // Search if the current measure is already in the array
     for(size_t i = 0; i < measures.size(); i++) {
         if(measures[i].key == measure.key) {
-            measures[i] = measure; // Aggiorna interamente la struttura (incluso il timestamp)
+            measures[i] = measure; // Update the measure with the new parameter
             return;
         }
     }
+    // If the measure wasn't already present, add it as new
     measures.push_back(measure);
 }
 
 void NiagaraSender::remove_measure(const char* key) {
-    str targetKey(key);
+    str targetKey(key); //Convert the key to look for in string format
+    // Iterate through all measures
     for (auto it = measures.begin(); it != measures.end(); ++it) {
+        //Found the correct one
         if (it->key == targetKey) {
+            //Erase this measure and exit
             measures.erase(it);
             break;
         }
@@ -57,85 +62,115 @@ void NiagaraSender::remove_measure(const char* key) {
 }
 
 int NiagaraSender::send(const char* destination) {
+    //Get the current timestamp
     unsigned long current_ts = get_system_millis();
 
-    // Nuovo formato compatto: "current_ts;key1:val1:ts1;key2:val2:ts2;"
-    str payload = str(current_ts) + str(";");
+    // Message format: "current_ts;key1:val1:ts1;key2:val2:ts2;..."
+    str payload = str(current_ts) + str(";"); //Add the current timestamp as the first element
 
     for (size_t i = 0; i < measures.size(); i++) {
-        // Se il timestamp della misura è 0, assegna il timestamp corrente di invio
+        //If the measure's timestamp is zero, assign current timestamp
         unsigned long m_ts = (measures[i].timestamp == 0) ? current_ts : measures[i].timestamp;
-        
+        //Include all structure elements to the message payload
         payload += measures[i].key + str(":") + float_to_str(measures[i].value) + str(":") + str(m_ts) + str(";");
     }
 
+    //Send the message through niagara
     Niagara_Ret ret = device.send(destination, payload.c_str());
+    //Return the error code
     return static_cast<int>(ret);
 }
 
 // ==========================================
-// IMPLEMENTAZIONE RECEIVER
+// RECEIVER IMPLEMENTATION
 // ==========================================
 NiagaraReceiver::NiagaraReceiver(Niagara& lora_device) 
     : device(lora_device) 
 {}
 
-int NiagaraReceiver::receive() {
+str NiagaraReceiver::receive(int* error, str* ext_remote_device) {
+    //Initialise the error as 0
+    *error = 0;
+
+    //Try to receive data through niagara
     str remote_device, payload;
     Niagara_Ret ret = device.receive(&remote_device, &payload);
     
-    if(ret != NIAGARA_OK) return static_cast<int>(ret);
+    if(ret != NIAGARA_OK) {
+        *error = static_cast<int>(ret);
+        return "";
+    }
 
-    // Estrae il primo blocco (il timestamp di sincronizzazione del nodo)
+    if(ext_remote_device != nullptr) *ext_remote_device = remote_device;
+
+    //Extract the measure's timestamp
     int first_semi = payload.indexOf(';');
-    if (first_semi == -1) return -1;
-
+    if (first_semi == -1) { //If not present, error out
+        *error = -1; 
+        return "";
+    }
+    //Convert the measure's timestamp to a long value
     str current_ts_str = payload.substring(0, first_semi);
-    unsigned long current_ts_node = static_cast<unsigned long>(current_ts_str.toInt());
+    long long current_ts_str_converted = current_ts_str.toLong();
+    if(current_ts_str_converted < 0) {
+        *error = -2;
+        return "";
+    }
+    unsigned long current_ts_node = (unsigned long)current_ts_str_converted;
 
+    //Get the actual current time
     unsigned long long gateway_unix_now = get_unix_time_ms();
 
-    // Inizializza l'array JSON per ThingsBoard: [{"ts":..., "values":{...}}, ...]
+    // Initialise JSON array for the IoT platform: [{"ts":..., "values":{...}}, ...]
     str json = str("[");
     int index = first_semi + 1;
     bool first_item = true;
-
+    //Iterate through all measures
     while (index < payload.length()) {
         int next_semi = payload.indexOf(';', index);
         if (next_semi == -1) break;
 
-        // Estrae la stringa del tipo "key:value:measure_ts"
+        //Extract the string of type "key:value:timestamp"
         str pair = payload.substring(index, next_semi);
         int first_colon = pair.indexOf(':');
         
-        if (first_colon != -1) {
+        if (first_colon != -1) { //If a first colon is present
             int second_colon = pair.indexOf(':', first_colon + 1);
             
-            if (second_colon != -1) {
+            if (second_colon != -1) { //If a second colon is also present
+                //Extract all values
                 str key = pair.substring(0, first_colon);
                 str val = pair.substring(first_colon + 1, second_colon);
                 str ts_str = pair.substring(second_colon + 1);
 
-                unsigned long node_measure_ts = static_cast<unsigned long>(ts_str.toInt());
+                //Convert the timestamp
+                long long ts_str_converted = ts_str.toLong();
+                if(ts_str_converted < 0) {
+                    *error = -3;
+                    return "";
+                }
+                unsigned long node_measure_ts = (unsigned long)ts_str_converted;
                 
-                // Calcolo differenziale del timestamp reale
-                long elapsed_on_node = current_ts_node - node_measure_ts;
-                if (elapsed_on_node < 0) elapsed_on_node = 0; // Protezione anti-underflow
-                
+                //Compute the real timestamp avoiding underflow
+                unsigned long elapsed_on_node;
+                if(node_measure_ts > current_ts_node)
+                    elapsed_on_node = 0;
+                else elapsed_on_node = current_ts_node - node_measure_ts;
+                //Compute the corrected timestamp
                 unsigned long long absolute_measure_ts = gateway_unix_now - elapsed_on_node;
 
                 if (!first_item) {
                     json += str(", ");
                 }
 
-                // Generazione della stringa del timestamp assoluto a 64 bit
+                //Generate the absolute timestamped string
                 #ifdef ARDUINO
                     str ts_abs_str = str(String((unsigned long)absolute_measure_ts).c_str());
                 #else
                     str ts_abs_str = str(std::to_string(absolute_measure_ts).c_str());
                 #endif
 
-                // Costruisce l'oggetto dell'array
+                //Construct the JSON object
                 json += str("{\"ts\":") + ts_abs_str + str(", \"values\":{\"") + key + str("\":") + val + str("}}");
                 first_item = false;
             }
@@ -143,12 +178,7 @@ int NiagaraReceiver::receive() {
         index = next_semi + 1;
     }
 
+    //Close the JSON array
     json += str("]");
-    last_json = json;
-
-    return 0; 
-}
-
-str NiagaraReceiver::getJSON() const {
-    return last_json;
+    return json;
 }

@@ -1,13 +1,35 @@
 /**
  * @file niagara.h
- * @brief Libreria di gestione comunicazione via LoRa per Raspberry Pi o Arduino con sottosistema RadioLib
+ * @brief Library for communication between Arduino and Raspberry Pi (linux) devices through LoRa
+ * 
+ * The library handles all necessary operations needed for reliable communication of light IoT
+ * messages through a simple LoRa network, which can be broken down into layers on a stack:
+ * 
+ * - *Asynchronous receive* [physical layer]: The chip is initialised and always set in asynchronous
+ *   receive mode, unless data is transmitted, in that case the operation is handled synchronously.
+ * 
+ * - *Device addressing* [raw layer]: Each device has its own identifier, defined with specific rules, 
+ *   which allows for unicast communication, the only kind of communication supported in this protocol.
+ * 
+ * - *Handshaking and retransmissions* [transport layer]: The transmission of each packet consists in a
+ *   three-way SYN/ACK handshake which is kept track of using addressing and control messages contained
+ *   in the raw layer's header. In the SYN's payload, the packet's data is sent, the SIN-ACK from the remote
+ *   device confirms the packet's contents through a CRC32 and the device replies with a final ACK if the
+ *   CRC matches.
+ * 
+ * - *Fragmentation handling* [fragmentation layer]: The protocol supports fragmentation which is handled
+ *   over the transport layer. This effectively causes a three-way handshake for each fragment, making the protocol
+ *   less-ideal for transmission of large messages.
+ * 
+ * - *Measure management* [application layer]: The protocol provides classes for the direct transmission of
+ *   measurements, alongside timestamp handling in case the measuring device doesn't make use of an RTC but
+ *   can only retain timestamped data using an internal timer.
  */
 
 #ifndef NIAGARA_H
 #define NIAGARA_H
 
 #if defined(ARDUINO)
-//Used for printf
 #include <stdarg.h>
 #else
 #include <string>
@@ -17,12 +39,8 @@
 #include "AsyncDevice.h"
 #include <stdarg.h>
 #include "str.h"
+#include "niagara_measure.h"
 
-/**
- * Callsign for broadcast communications.
- * This callsign can only be set as a destination
- */
-#define BROADCAST "BROAD"
 /** Maximum amount of retransmissions to be sent before the send method throws an error */
 #define NIAGARA_RETRANSMISSIONS 10
 /** Amount of time that the handshake waits for the other device to reply before trying a retransmission */
@@ -55,7 +73,7 @@ enum Niagara_Ret {
 		NIAGARA_OK,    
 		/**
 		 * Returned by a method when it's called when no identifier
-		 * has yet been set for this device using set_identifier(str)
+		 * has yet been set for this device using `set_identifier(str)`
 		 */
 		NIAGARA_NO_IDENTIFIER,
 		/**
@@ -113,7 +131,7 @@ enum Niagara_Ret {
  * 
  * The elements of this enumerator represent the possible values
  * which can be present in the second parameter after the pipe separator
- * in the protocol's raw (lowest) layer.
+ * in the protocol's raw layer.
  */
 enum Niagara_Control {
 		SYN,
@@ -126,7 +144,6 @@ enum Niagara_Control {
 /**
  * @enum Niagara_LogLevel
  * @brief Defines the log level which the library should use to output logs to the callback
- * 
  */
 enum Niagara_LogLevel {
 		/** Used when the log should be concise because it's being output to a display */
@@ -143,7 +160,11 @@ enum Niagara_LogLevel {
  * 
  * This class implements sending and receiving packets using handshakes
  * and retransmissions for redundancies, and fragmentation for a robust
- * communication using RadioLib as a backend.
+ * communication using RadioLib as a backend for asynchronous read operations.
+ * 
+ * Given the physical layer's asynchronous handling of the LoRa chip, no more than
+ * one instance of this class should be created per program, as multiple instance 
+ * creation results in undefined behaviour.
  */
 class Niagara {
 	public:    
@@ -151,7 +172,7 @@ class Niagara {
 		 * @brief Initialization of the logged communication
 		 * 
 		 * Initialises this device with the log handler, which
-		 * is a callback function which contains the method used
+		 * is a callback function that contains the method used
 		 * to print the protocol's logs.
 		 * 
 		 * @param _log_handler Callback function for external logging
@@ -190,7 +211,7 @@ class Niagara {
 		 * Sends a message to a remote device, fragmenting it if
 		 * needed.
 		 * 
-		 * @param destination Callsign to message's destination, can also be `BROADCAST`.
+		 * @param destination Callsign to message's destination.
 		 * @param message The message to send, which, if exceedes the chip's MTU, will be fragmented into multiple packets.
 		 * @returns A `Niagara_Ret` object representing any error which might've happened 
 		 *          while transmitting or fragmenting the packet.
@@ -202,8 +223,9 @@ class Niagara {
 		 *        be called before calling any send or receive method.
 		 * 
 		 * The identifier, or *callsign* of the device should follow these formatting rules:
+		 * 
 		 *     - Must be between `4` and `12` characters long
-		 *     - Mustn't be `BROADCAST`
+		 * 
 		 *     - Must be alphanumeric, no special characters allowed
 		 * 
 		 * Not setting an identifier before calling `receive(str*, str*)` or `send(str, str)`
@@ -285,15 +307,9 @@ class Niagara {
 		bool valid_destination(str destination);
 
 		/**
-		 * Method used to check the validity of the identifier
-		 * given to the constructor.
-		 * 
-		 * The second parameter defines whether the method is being used
-		 * to check an identifier being sent. If this value is false, 
-		 * the method will return invalid identifier if the identifier passed is
-		 * broadcast.
+		 * Method used to check the validity of an identifier passed.
 		 */
-		bool check_identifier(str identifier, bool sending);
+		bool check_identifier(str identifier);
 
 		/**
 		 * Function which cleans the received crc and checks

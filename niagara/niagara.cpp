@@ -120,7 +120,7 @@ Niagara::~Niagara() {
 bool Niagara::set_identifier(str _identifier) {
 	if(Niagara::lora == nullptr) return false;
 
-	if(!check_identifier(_identifier, false))
+	if(!check_identifier(_identifier))
 		return false;
 
 	Niagara::identifier = _identifier;
@@ -437,7 +437,7 @@ Niagara_Ret Niagara::send_fragment(str destination, str message) {
 	}
 
 	// If the destination is not a valid identifier then return with an error
-	if(!check_identifier(destination, true)) {
+	if(!check_identifier(destination)) {
 		log_print("Cannot start receive - invalid destination.\n", "[SEND] Invalid Destination!\n");
 		return NIAGARA_NOT_DESTINATION;
 	}
@@ -599,6 +599,9 @@ Niagara_Ret Niagara::receive_raw(str* source, Niagara_Control* control_output, s
 
 	log_printf(LOG_TERMINAL, "Done! -> src[%s], ctrl[%d], msg[%s]\n", processed_output[0].c_str(), control_value, processed_output[2].c_str());
 
+	//Check if the control value is negative, which is illegal
+	if(control_value < 0) return NIAGARA_INVALID_DATA;
+
 	*source = processed_output[0];
 	*control_output = static_cast<Niagara_Control>(control_value);
 	*message_output = processed_output[2];
@@ -721,10 +724,6 @@ str Niagara::format_message(str destination, Niagara_Control control, str messag
 }
 
 bool Niagara::valid_destination(str destination) {
-	//Check for broadcast destination
-	if(destination == BROADCAST)
-		return true;
-
 	//Check if the two strings match in size, if they don't then skip
 	if(Niagara::identifier.length() != destination.length()) return false;
 
@@ -744,7 +743,7 @@ bool Niagara::valid_destination(str destination) {
 	return true;
 }
 
-bool Niagara::check_identifier(str identifier, bool sending) {
+bool Niagara::check_identifier(str identifier) {
 	//Print to the log the check for the identifier
 	if(log_level == LOG_TERMINAL) log_printf("Checking identifier: '%s'.. ", identifier.c_str());
 	else log_print("Checking callsign.\n");
@@ -752,10 +751,6 @@ bool Niagara::check_identifier(str identifier, bool sending) {
 	size_t len = identifier.length();
 	if (len < 4 || len > 12) {
 		log_print("Invalid size (must be between 4 and 12 characters).\n", "Invalid size.\n");
-		return false;
-	}
-	if(!sending && identifier == BROADCAST) {
-		log_print("Invalid, it's broadcast.\n", "Can't be broadcast.\n");
 		return false;
 	}
 
