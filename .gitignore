@@ -9,6 +9,7 @@
 
 # remove data files from device attributes populator
 thingsboard/configuration/post_data.json
+thingsboard/configuration/scheduler/rpc-data.json
 
 # remove zip files
 *.zip

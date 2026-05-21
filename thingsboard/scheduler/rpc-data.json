@@ -1,0 +1,6 @@
+{
+    "method": "check-device-status",
+    "params": {
+        "timeseriesAverage": []
+    }
+}
