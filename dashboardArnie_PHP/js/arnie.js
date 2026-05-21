@@ -248,47 +248,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 applyMetricColors(temInVal, humVal, weightVal, freqVal);
 
-                /*
-                if (telemetry.tempIn && telemetry.tempIn.length > 0) {
-                    const date = new Date(telemetry.tempIn.slice(-1)[0].ts);
-                    document.getElementById('lastUpdate').innerText = 'Ultimo dato: ' + date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-                } else {
-                    document.getElementById('lastUpdate').innerText = 'Ultimo dato: Non disponibile';
-                }
-
-                const semaforo = document.getElementById('statusSemaforo');
-                if (temInVal == 0 && weightVal == 0 && humVal == 0) {
-                    semaforo.className = 'status-alert instabile';
-                    semaforo.innerHTML = '<i data-lucide="help-circle"></i> Valori a zero - Verificare sensori';
-                } else if (temInVal > 40 || temInVal < -5) {
-                    semaforo.className = 'status-alert allarme';
-                    semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Allarme: Temperatura fuori soglia';
-                } else {
-                    semaforo.className = 'status-alert ottimale';
-                    semaforo.innerHTML = '<i data-lucide="check-circle"></i> Dati Ricevuti: Tutto regolare';
-                }
-
-                initDetailCharts(telemetry);
-                */
-
                 // --- AGGIORNAMENTO TESTO DATA ---
                 let dataFormattata = telemetry.last_ts_human || 'Data non disponibile';
                 if (dataFormattata === 'Errore' || dataFormattata === 'Mai') {
                     dataFormattata = 'Nessun dato registrato';
                 }
 
-                // --- GESTIONE SEMAFORO E WARNING ---
+                // --- CALCOLO ORE TRASCORSE DALL'ULTIMO DATO ---
+                const lastTs = telemetry.tempIn.slice(-1)[0].ts;
+                const hoursSinceUpdate = (Date.now() - lastTs) / (1000 * 60 * 60);
+
+                // --- GESTIONE SEMAFORO E WARNING (AGGIORNATA) ---
                 const semaforo = document.getElementById('statusSemaforo');
 
-                if (telemetry.is_stale) {
+                if (hoursSinceUpdate > 24) {
+                    // Superiore a 24 ore -> ROSSO (allarme)
+                    semaforo.className = 'status-alert allarme';
+                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 24 ore: ${dataFormattata}`;
+                }
+                else if (hoursSinceUpdate > 12) {
+                    // Superiore a 12 ore (ma inferiore a 24) -> GIALLO (instabile)
                     semaforo.className = 'status-alert instabile';
-                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 24 ore: ${dataFormattata}`;
+                    semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 12 ore: ${dataFormattata}`;
                 }
                 else if (temInVal == 0 && weightVal == 0 && humVal == 0) {
+                    // Dati recenti ma tutti a zero -> ROSSO (offline)
                     semaforo.className = 'status-alert allarme';
                     semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Arnia non disponibile: <br> uno o più dispositivi sono offline`;
                 }
                 else {
+                    // Dati freschi e validi -> VERDE (ottimale)
                     semaforo.className = 'status-alert ottimale';
                     semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: Tutto regolare <br> Ultimo aggiornamento dati: ${dataFormattata}`;
                 }

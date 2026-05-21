@@ -120,7 +120,8 @@ foreach ($handles as $hiveId => $ch) {
         }
 
         if ($latestTs > 0) {
-            $data['is_stale'] = ((time() * 1000) - $latestTs) > 86400000; // 24 ore
+            $data['is_stale'] = ((time() * 1000) - $latestTs) > 43200000;      // 12 ore
+            $data['is_very_stale'] = ((time() * 1000) - $latestTs) > 86400000; // 24 ore
             $data['last_ts_human'] = date("d/m H:i", (int)($latestTs / 1000));
         } else {
             // Se non c'è nessun timestamp valido, i dati mancano del tutto

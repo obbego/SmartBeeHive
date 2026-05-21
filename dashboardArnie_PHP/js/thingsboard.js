@@ -50,9 +50,14 @@ async function tbLoadAllHives() {
             hive.peakFreq = parseFloat(peakFreq).toFixed(0);
 
             // 1. Controllo prioritario: i dati sono più vecchi di 24 ore?
-            if (telemetry.is_stale) {
-                hive.status = 'yellow';
+            if (telemetry.is_very_stale) {
+                hive.status = 'red';
                 hive.lastUpdate = "Dati non aggiornati da oltre 24 ore";
+            }
+            // 2. Dati tra 12 e 24 ore: warning
+            else if (telemetry.is_stale) {
+                hive.status = 'yellow';
+                hive.lastUpdate = "Dati non aggiornati da oltre 12 ore";
             }
             // 2. Altrimenti, se i dati sono recenti, controlliamo se sono validi
             else {
