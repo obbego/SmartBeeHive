@@ -23,9 +23,9 @@ necessary to send telemetries */
 
 /* declare hour conter to understand whether it's time to
 send measures */
-int hour_counter = 0;
+RTC_DATA_ATTR hour_counter = 0;
 
-bool log_initialised = false;
+RTC_DATA_ATTR log_initialised = false;
 
 /* global variables */
 str destination = str(DESTINATION_IDENTIFIER);
@@ -165,12 +165,12 @@ void loop() {
     // function to save into file
   }
   if(hour_counter == 1 || hour_counter % NOISEINTENSITY_INTERVAL == 0){
-    Serial.println("Start recording humidity"); 
+    Serial.println("Start recording noise intensity"); 
     // function to get the noise intensity
     // function to save into file
   }
   if(hour_counter == 1 || hour_counter % NOISEFREQUENCY_INTERVAL == 0){
-    Serial.println("Start recording humidity"); 
+    Serial.println("Start recording noise frequency"); 
     // function to get the noise frequency
     // function to save into file
   }
