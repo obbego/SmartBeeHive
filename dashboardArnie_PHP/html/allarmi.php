@@ -32,7 +32,7 @@ require_once '../db.php';
 <div class="container pb-5">
 
     <!-- STATISTICHE HEADER -->
-    <div class="glass-panel p-4 mb-4 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+    <div class="glass-panel p-4 mb-4 d-flex flex-column flex-md-row gap-3 align-items-center justify-content-between">
         <div>
             <div style="font-size: 18px; font-weight: 700; color: white;">Riepilogo Allarmi</div>
             <div style="font-size: 13px; color: var(--text-muted);">Aggiornato in tempo reale da ThingsBoard</div>
@@ -54,36 +54,43 @@ require_once '../db.php';
     </div>
 
     <!-- BARRA FILTRI -->
-    <div class="filter-bar mb-4">
-        <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Filtra:</span>
-        <button class="filter-btn active"   data-filter="all"    onclick="applyFilter('all', this)">Tutti</button>
-        <button class="filter-btn f-system" data-filter="system" onclick="applyFilter('system', this)">
-            Da gestire
-        </button>
-        <button class="filter-btn f-open"   data-filter="open"   onclick="applyFilter('open', this)">
-            Aperti
-        </button>
+    <div class="filter-toolbar mb-4">
+        <div class="filter-group">
+            <span class="filter-label">Filtri</span>
+            <button class="filter-btn active"
+                    data-filter="all"
+                    onclick="applyFilter('all', this)">
+                Tutti
+            </button>
+            <button class="filter-btn f-system"
+                    data-filter="system"
+                    onclick="applyFilter('system', this)">
+                Da gestire
+            </button>
+            <button class="filter-btn f-open"
+                    data-filter="open"
+                    onclick="applyFilter('open', this)">
+                Aperti
+            </button>
+        </div>
 
-        <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
-            <div class="form-check form-switch d-flex align-items-center mb-0">
-                <input class="form-check-input me-2" type="checkbox" role="switch" id="mockDataSwitch"
-                       style="cursor: pointer; width: 2.5em; height: 1.25em; border-color: rgba(255,255,255,0.5);">
-                <label class="form-check-label" for="mockDataSwitch"
-                       style="font-size: 13px; cursor: pointer; color: var(--text-muted);">Demo</label>
+        <div class="toolbar-actions">
+            <div class="demo-switch">
+                <span>Demo</span>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           role="switch"
+                           id="mockDataSwitch">
+                </div>
             </div>
-            <a href="archivio.php"
-               style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);
-                      border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 14px;
-                      color:var(--text-muted);font-size:13px;font-family:inherit;transition:0.2s;"
-               onmouseover="this.style.color='white';this.style.borderColor='rgba(255,255,255,0.3)'"
-               onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='rgba(255,255,255,0.12)'">
-                <i data-lucide="archive" style="width:13px;height:13px;"></i>Archivio
+            <a href="archivio.php" class="toolbar-btn">
+                <i data-lucide="archive"></i>
+                Archivio
             </a>
-            <button onclick="refreshAlarms()"
-                    style="background: rgba(255,255,255,0.07); border: 1px solid var(--glass-border); color: var(--text-muted);
-                     padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; transition: 0.2s;"
-                    onmouseover="this.style.color='white'" onmouseout="this.style.color='var(--text-muted)'">
-                <i data-lucide="refresh-cw" style="width: 13px; height: 13px; margin-right: 5px;"></i>Aggiorna
+            <button onclick="refreshAlarms()" class="toolbar-btn">
+                <i data-lucide="refresh-cw"></i>
+                Aggiorna
             </button>
         </div>
     </div>
