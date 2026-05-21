@@ -56,13 +56,13 @@ public:
     str(const str& other) : internalString(other.internalString) {}
 
     /**
-     * @param input An integer value to create the string with
+     * @param input An long integer value to create the string with
      * Given an integer value, it creates an `str` object with the string representation of it.
      */
 	#ifdef ARDUINO
-	str(int input) : internalString(input) {}
+	str(long long input) : internalString(input) {}
 	#else
-	str(int input) : internalString(std::to_string(input)) {}
+	str(long long input) : internalString(std::to_string(input)) {}
 	#endif
 
     str& operator=(const str& other) {
@@ -211,17 +211,16 @@ public:
 
     /**
      * Finds the index of the passed string
-     * @param other String to search inside this string
+     * @param other Character to search inside this string
      * @param fromIndex Index to start the search at, by default set to `0` (string start)
      * @returns The index of the first found occurrence of the passed string
      *          inside this string, starting from the start index
      */
-    int indexOf(const str& other, size_t fromIndex = 0) const {
+    int indexOf(char search, size_t fromIndex) const {
     #ifdef ARDUINO
-        return internalString.indexOf(other.internalString, fromIndex);
+        return internalString.indexOf(search, fromIndex);
     #else
-        if (fromIndex >= internalString.size()) return -1;
-        size_t pos = internalString.find(other.internalString, fromIndex);
+        size_t pos = internalString.find(search, fromIndex);
         return (pos == std::string::npos) ? -1 : static_cast<int>(pos);
     #endif
     }

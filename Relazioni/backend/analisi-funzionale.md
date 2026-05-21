@@ -21,13 +21,6 @@ Inoltre la scheda deve occuparsi dell'invio dati secondo una scansione oraria pr
 
 Ne consegue che l'alveare debba poter archiviare i dati misurati tra un invio e l'altro in modo univoco e possibilmente ripetere l'invio della stessa misurazione più volte in più momenti della giornata. Tale soluzione contribuirebbe ad una maggiore tolleranza agli errori di trasmissione, specialmente con una comunicazione via onde radio. 
 
-### Gateway
-Il gateway ha il compito di raccogliere i dati dalle varie schede e inviarli verso il ricevitore posto nell'edificio più limitrofo. 
-Visto lo schema di funzionamento, sarà il gateway a inviare periodicamente alle schede degli alveari la richiesta di invio dati. 
-Una volta effettuata la raccolta i dati verranno inviati immediatamente al ricevitore, senza alcuna manipolazione.
-
-Il gateway dovrebbe implementare anche uno storico delle azioni mediante dei log, in modo tale da verificarne il funzionamento inziale e dare informazioni in caso di eventuali guasti, errori o manutenzioni del sistema.
-
 ### Ricevitore
 Il ricevitore sarà posto nella parte dell'edifico più vicina in linea d'aria all'alveare e libera da eventuali ostacoli intermeedi (alberi, forte vento ecc.).
 Il dispositivo effettuerà la ricezione dei dati dal gateway e farà una manipolazione dei dati in modo da ricostruire eventuali pacchetti frammentati e suddividerli per dispositivo. 
@@ -68,3 +61,9 @@ Per la realizzazione di tale sistema occorre una conoscenza del funzionamento de
 Durante la fase di ricerca sono state redatte documentazioni riguardo questi due argomenti contenenti le nozioni di base e gli aspetti di interesse per il progetto. 
 
 Per ulteriori approfondimenti visitare quindi [ThingsBoard](./ThingsBoard.md) e [Protocollo Lora](./protocollo-LoRa.md).
+
+## Aggiornamento conclusivo
+Per motivi di semplicità, si è pensato che la scheda ESP32 possa inviare i dati senza ricevere una richiesta del ricevitore. 
+Non sarà inoltre necessario effettuare l'invio della stessa misurazione più volte, dal momento che il protocollo implementa l'Acknowledgement per i pacchetti ricevuti e il CRC per il controllo dei dati. 
+
+**Queste modifiche saranno effettive e varranno per le varie documentazioni realizzate.**
