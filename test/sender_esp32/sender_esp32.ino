@@ -21,6 +21,31 @@ necessary to send telemetries */
 #define SENDING_INTERVAL 8
 #define ACTIVITY_INTERVAL 1 
 
+/* ===== PIN ===== */
+#define DHTPIN   7
+#define DHTTYPE  DHT11
+
+#define HX_DT    5
+#define HX_SCK   4
+#define MIC_PIN  6   // ADC1 ESP32
+
+/* ===== FFT ===== */
+#define SAMPLES 512
+#define SAMPLING_FREQUENCY 8000
+
+/* ===== OGGETTI ===== */
+DHT dht(DHTPIN, DHTTYPE);
+HX711 scale;
+
+double vReal[SAMPLES];
+double vImag[SAMPLES];
+ArduinoFFT<double> FFT(vReal, vImag, SAMPLES, SAMPLING_FREQUENCY);
+
+unsigned long samplingPeriodUs;
+
+/* ===== CALIBRAZIONE BILANCIA ===== */
+float calibration_factor = -7050.0;
+
 /* declare hour conter to understand whether it's time to
 send measures */
 RTC_DATA_ATTR hour_counter = 0;
