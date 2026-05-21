@@ -344,13 +344,13 @@ int main(int argc, char *argv[])
     /* create the threads and start them
     right after the instantiaton */
     thread receiveng_thread(thread_continuousReceiver);
-    thread request_thread(thread_periodTelemetryRequest);
+    //thread request_thread(thread_periodTelemetryRequest);
 
     /* join the threads when they end */
     if (receiveng_thread.joinable())
         receiveng_thread.join();
-    if (request_thread.joinable())
-        request_thread.join();
+    /* if (request_thread.joinable())
+        request_thread.join(); */
 
     return 0;
 }
