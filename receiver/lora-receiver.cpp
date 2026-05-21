@@ -18,6 +18,7 @@ using namespace std;
  * Class to define info of the devices that will be listened
  * with the LoRa receiver and then send their data
  * to the ThingsBoard platform
+ * @author Daniele Chiarion
  */
 class DeviceInfo
 {
@@ -32,6 +33,7 @@ public:
      * used in Thingsboard communication
      * @param deviceName the identifier use in LoRa communication
      * @param token access token used in ThingsBoard communication
+     * @author Daniele Chiarion
      */
     DeviceInfo(str deviceName, str token)
     {
@@ -44,6 +46,7 @@ public:
      * in order to avoid duplicates or find elements inside a list
      * @param other other DeviceInfo to make the comparison
      * @return true if the identifiers are the same, false otherwise
+     * @author Daniele Chiarion
      */
     bool operator==(const DeviceInfo &other) const
     {
@@ -53,6 +56,7 @@ public:
     /**
      * Getter for access token
      * @return the access token of the device
+     * @author Daniele Chiarion
      */
     str getAccessToken() const
     {
@@ -63,6 +67,7 @@ public:
      * Getter of the identifier of the
      * beehive device used in Niagara protocol
      * @return the identifier ot the device
+     * @author Daniele Chiarion
      */
     str getDeviceIdentifier() const
     {
@@ -94,6 +99,7 @@ mutex niagaraMutex;
  * @param loggerName name of the instance of the logger
  * @param loggerFileName name of the single rotating file of the logger
  * @return void
+ * @author Daniele Chiarion
  */
 void initLogger(string loggerName, string loggerFilename)
 {
@@ -127,6 +133,7 @@ string trim(const string &s)
  * DEVICE_NAME ACCESS_TOKEN
  *
  * @return true if there are some devices registered, false otherwise
+ * @author Daniele Chiarion
  */
 bool recoverDevices()
 {
@@ -161,6 +168,7 @@ bool recoverDevices()
  * @param payload data received from LoRa communicatiom
  * @param source identifier for the source device
  * @return true if the data has been sent correctly, false otherwise
+ * @author Daniele Chiarion
  */
 bool sendDataToThingsBoard(str payload, str source)
 {
@@ -236,6 +244,7 @@ bool sendDataToThingsBoard(str payload, str source)
  * Function to ask for telemetries to the current device
  * from the beehives using the Niagara protocol
  * @return void
+ * @author Daniele Chiarion
  */
 void askTelemetriesFromDevices()
 {
@@ -265,6 +274,7 @@ void askTelemetriesFromDevices()
  * constantly checks for new updates and send them into
  * the ThingsBoard platform registered
  * @return return error code
+ * @author Daniele Chiarion
  */
 int thread_continuousReceiver()
 {
@@ -309,6 +319,7 @@ int thread_continuousReceiver()
  * are pushed, in order to select the specific time to send them
  * and reduce noise for the bees and electricity consume
  * @return return error code
+ * @author Daniele Chiarion
  */
 int thread_periodTelemetryRequest()
 {
