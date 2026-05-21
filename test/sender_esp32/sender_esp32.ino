@@ -1,8 +1,14 @@
 #include <stdlib.h>
 #include <heltec_unofficial.h>
-#include <niagara.h>
-#include <measure.h>
 #include "esp_sleep.h"
+#include <HX711.h>
+#include <arduinoFFT.h>
+/* libraries for saving into file */
+#include <FS.h>
+#include <LittleFS.h>
+
+#include <niagara.h> // library to handle transmission
+#include <niagara_measure.h> // library to handle measures 
 
 /* constants declaration for 
 customized parameters of the code */
@@ -14,14 +20,13 @@ The intervals are expressed in hours */
 #define TEMPERATURE_INTERVAL 1
 #define HUMIDITY_INTERVAL 1
 #define WEIGHT_INTERVAL 1
-#define NOISEINTENSITY_INTERVAL 1
-#define NOISEFREQUENCY_INTERVAL 1
+#define NOISE_INTERVAL 1
 /* define after how many hours is 
 necessary to send telemetries */
 #define SENDING_INTERVAL 8
 #define ACTIVITY_INTERVAL 1 
 
-/* ===== PIN ===== */
+/* ===== PINOUT ===== */
 #define DHTPIN   7
 #define DHTTYPE  DHT11
 
@@ -29,11 +34,11 @@ necessary to send telemetries */
 #define HX_SCK   4
 #define MIC_PIN  6   // ADC1 ESP32
 
-/* ===== FFT ===== */
+/* ===== FFT (Frequency)===== */
 #define SAMPLES 512
 #define SAMPLING_FREQUENCY 8000
 
-/* ===== OGGETTI ===== */
+/* ===== Objects for the sensors ===== */
 DHT dht(DHTPIN, DHTTYPE);
 HX711 scale;
 
@@ -43,7 +48,7 @@ ArduinoFFT<double> FFT(vReal, vImag, SAMPLES, SAMPLING_FREQUENCY);
 
 unsigned long samplingPeriodUs;
 
-/* ===== CALIBRAZIONE BILANCIA ===== */
+/* ===== Scale calibration ===== */
 float calibration_factor = -7050.0;
 
 /* declare hour conter to understand whether it's time to
@@ -54,6 +59,7 @@ RTC_DATA_ATTR log_initialised = false;
 
 /* global variables */
 str destination = str(DESTINATION_IDENTIFIER);
+Niagara *device;
 
 /* define the measures available 
 on the board */
@@ -65,6 +71,10 @@ char TELEMETRYTYPE[][30] = {
   {"noise_frequency"}
 };
 int size = sizeof(TELEMETRYTYPE)/sizeof(TELEMETRYTYPE[0]);
+
+/* local file management */
+#define FILE_PATH "./telemetries.csv"
+
 
 void log_handler_display(const char* text) {
 	if(!log_initialised) {
@@ -84,56 +94,42 @@ void log_handler_serial(const char* text) {
     Serial.print(text);
 }
 
-/* function to generate the measure
-and return the corresponding string to send */
-Measure get_instant_telemetry(){
-  int number = random(0, size); // pick a random telemetry type
-  float value = 0.0;
+/**
+ * Function which is accounted to send telemetries
+ * to the receiver in order to get eventually the
+ * IOT Platform established. 
+ * The connection is based on LoRa protocol.
+ * @return void
+ * @author Daniele Chiarion
+ */
+void send_telemetries_to_gateway(){
+  /* instantiate objects of the library
+  niagara defined to handle measures */
+  NiagaraSender niagara = NiagaraSender(device);
 
-  /* based on the number, 
-  select the random interval to generate the telemetry */
-  switch(number){
-    case 0:
-      value = random(0,80) - 20;
-      break;
-    case 1:
-      value = random(0,100);
-      break;
-    case 2:
-      value = random(0,20);
-      break;
-    case 3:
-      value = random(0,120);
-      break;
-    case 4:
-      value = random(0,500);
-      break;
-    default:
-      value = random(0,100);
+  /* instantiate file and specify
+  mode and controls */
+  File file = LittleFS.open(FILE_PATH, FILE_APPEND);
+  
+  if (!file) {
+    Serial.println("Impossibile aprire il file in scrittura");
+    return;
   }
 
-  Measure telemetry = Measure(TELEMETRYTYPE[number], value);
-  return telemetry;
-}
+  /* declare variables and cycle
+  every row to get the data */
+  char telemetry_type[30];
+  float telemetry_value;
+  unsigned long ms;
+  
+  while(file.available()){
+    String row = file.readStringUntil('\n'); // read row
+    row.trim(); // trim row
 
-Niagara *device;
-
-void send_telemetries_to_gateway(){
-  /* START TRANSMISSION MODE 
-    The code will send different measures
-    generated randmoly just to test fragments,
-    the telemetry sent and the whole environment
-    connected to ThingsBoard  
-  */
-
-  /* this section will be replaced with the 
-  manager of multiple telemetries which will be 
-  converted into the JSON format */
-  Measure telemetry = get_instant_telemetry(); 
-  str input_str_converted = telemetry.toJSON();
+    int fields = sscanf(row.c_str(), "%[^,],%f,%f", telemetry_type, &telemetry_value, &ms);
+  }
 
   Serial.println("=== AVVIO TRASMISSIONE ===");
-  Niagara_Ret error = device->send(destination, input_str_converted);
   
   if (error == NIAGARA_OK) {
       Serial.println("-> Trasmissione completata con successo.");
@@ -143,8 +139,13 @@ void send_telemetries_to_gateway(){
   }
 }
 
-/* function to put the ESP32 device
-into deep sleep for the hours put in input */
+/**
+ * Function to put the ESP32 board in
+ * deep sleep mode in order to save energy. 
+ * This function is recommended only for this specific type of board.
+ * @param hours amount of hours to make the board sleep
+ * @return void
+ */
 void deep_sleep_hours(int hours) {
   esp_sleep_enable_timer_wakeup(
       (uint64_t)hours * 3600ULL * 1000000ULL
@@ -152,6 +153,126 @@ void deep_sleep_hours(int hours) {
 
   esp_deep_sleep_start();
 }
+
+
+/* === SENSORS FUNCTIONS === */
+/**
+ * Function to get the temperature from 
+ * the sensor of the beehive
+ * @return temperature in °C
+ */
+float get_temperature(){
+  return dht.readTemperature();
+}
+
+/**
+ * Function to get the humidity from 
+ * the sensor of the beehive
+ * @return humidity in %C
+ */
+float get_humidity(){
+  return dht.readHumidity();
+}
+
+/**
+ * Function to get the weight of the beehive
+ * inside portion that is over the scale. 
+ * @return weight in kg
+ */
+float get_weight(){
+  float peso = -1000; // initialize to possible error value
+  if (scale.is_ready()) {
+    peso = scale.get_units(10);
+    if (abs(peso) < 0.02) peso = 0;
+  }
+
+  return peso;
+}
+
+/**
+ * Function to get data from the microphone inside 
+ * of the beehive. 
+ * In this version is provided the noise frequency peak and
+ * the noise intensity based on the range provided by the
+ * scale of the ESP32 values.
+ * @param *rms pointer to the noise intensity
+ * @param *peak pointer to the noise frequency
+ * @return void
+ */
+void get_microphone_data(double *rms, double *peak){
+  for (int i = 0; i < SAMPLES; i++) {
+    unsigned long t0 = micros();
+    vReal[i] = analogRead(MIC_PIN);
+    vImag[i] = 0;
+    while (micros() - t0 < samplingPeriodUs);
+  }
+
+  /* Remove DC offset */
+  double mean = 0;
+  for (int i = 0; i < SAMPLES; i++) mean += vReal[i];
+  mean /= SAMPLES;
+  for (int i = 0; i < SAMPLES; i++) vReal[i] -= mean;
+
+  /* RMS */
+  double sum = 0;
+  for (int i = 0; i < SAMPLES; i++) sum += vReal[i] * vReal[i];
+  *rms = sqrt(sum / SAMPLES);
+
+  /* FFT */
+  FFT.windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
+  FFT.compute(FFT_FORWARD);
+  FFT.complexToMagnitude();
+  *peak = FFT.majorPeak();
+}
+
+
+/* === FILE SAVING FUNCTIONS === */
+/**
+ * Function to save a single telemetry inside the
+ * file provided in the ESP32 following CSV notation.
+ * The telemetry will be appended with the rest of the 
+ * telemetries recorded before. 
+ * @param telemetry_name name of the telemetry
+ * @param telemetry_value value of the telemetry
+ * @param ms millis recorded from the board when the telemetry was gathered
+ * @return void
+ * @author Daniele Chiarion
+ */
+void save_telemetry_into_file(char telemetry_name[], float telemetry_value, unsigned long ms){
+  /* open file and specify the mode */
+  File file = LittleFS.open(FILE_PATH, FILE_APPEND);
+  
+  if (!file) {
+    Serial.println("Impossibile aprire il file in scrittura");
+    return;
+  }
+
+  file.println(telemetry_name, telemetry_value, ms);
+  file.close();
+
+  Serial.printf("Telemetria %s %.2f %ul salvata su file!\n", telemetry_name, telemetry_value, ms);
+}
+
+/**
+ * Function to clear the file inside the ESP32 board.
+ * @return void
+ * @author Daniele Chiarion
+ */
+void clear_file(){
+  /* open file and specify the mode */
+  File file = LittleFS.open(FILE_PATH, FILE_WRITE);
+  
+  if (!file) {
+    Serial.println("Impossibile aprire il file in scrittura");
+    return;
+  }
+
+  /* there is no need to post something on the file,
+  because the write mode has already cleared the content 
+  of the file, so just close it. */
+  file.close();
+}
+
 
 void setup() {
     // Inizializza la seriale (chiamando l'handler o direttamente)
@@ -164,7 +285,27 @@ void setup() {
         while(true); 
     }
 
-    randomSeed(esp_random()); // initialize the random generator from casual values
+    /* Setup DHT sensor */
+    dht.begin();
+  
+    /* HX711 scale setup and calibration */
+    scale.begin(HX_DT, HX_SCK);
+    scale.set_scale(calibration_factor);
+    scale.tare();
+  
+    /* ADC noise sensor setup */
+    analogReadResolution(12);
+    analogSetPinAttenuation(MIC_PIN, ADC_11db);
+  
+    samplingPeriodUs = 1000000 / SAMPLING_FREQUENCY;
+
+    /* setup of the file where to save 
+    the data inside the ESP32 waiting for transmission */
+    if (!LittleFS.begin(true)) {
+      Serial.println("Errore durante l'avvio di LittleFS");
+      return;
+    }
+    Serial.println("LittleFS avviato correttamente!");
     
     Serial.println("\n--- ESP32 NIAGARA TEST READY ---");
 }
@@ -176,28 +317,28 @@ void loop() {
   to the time of getting telemetries */
   if(hour_counter == 1 || hour_counter % TEMPERATURE_INTERVAL == 0){
     Serial.println("Start recording temperature"); 
-    // function to get the temperature
-    // function to save into file
+    float temperature = get_temperature();
+    save_telemetry_into_file(TELEMETRYTYPE[0], temperature, millis());
   }
   if(hour_counter == 1 || hour_counter % HUMIDITY_INTERVAL == 0){
     Serial.println("Start recording humidity"); 
-    // function to get the humidity
-    // function to save into file
+    float humidity = get_humidity();
+    save_telemetry_into_file(TELEMETRYTYPE[1], humidity, millis());
   }
   if(hour_counter == 1 || hour_counter % WEIGHT_INTERVAL == 0){
     Serial.println("Start recording weight"); 
-    // function to get the weight
-    // function to save into file
+    float weight = get_weight();
+    save_telemetry_into_file(TELEMETRYTYPE[2], weight, millis());
   }
-  if(hour_counter == 1 || hour_counter % NOISEINTENSITY_INTERVAL == 0){
-    Serial.println("Start recording noise intensity"); 
-    // function to get the noise intensity
-    // function to save into file
-  }
-  if(hour_counter == 1 || hour_counter % NOISEFREQUENCY_INTERVAL == 0){
-    Serial.println("Start recording noise frequency"); 
-    // function to get the noise frequency
-    // function to save into file
+  if(hour_counter == 1 || hour_counter % NOISE_INTERVAL == 0){
+    Serial.println("Start recording noise"); 
+    /* every operation has to be doubled here,
+    because the telemetries gathered are both of 
+    noise intensity and noise frequenct */
+    double noise_intensity, noise_frequency;
+    get_microphone_data(&noise_intensity, &noise_frequency);
+    save_telemetry_into_file(TELEMETRYTYPE[3], noise_intensity, millis());
+    save_telemetry_into_file(TELEMETRYTYPE[4], noise_frequency, millis());
   }
 
   /* if it's time to send data send all
@@ -205,7 +346,7 @@ void loop() {
   if(hour_counter % SENDING_INTERVAL == 0){
     Serial.println("Start sending data to the receiver");
     send_telemetries_to_gateway(); // send telemetries
-    // function to erase file memory
+    clear_file(); // clear memory before restarting
     hour_counter = 0;
   }
 
