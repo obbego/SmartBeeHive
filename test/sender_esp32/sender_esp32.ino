@@ -2,6 +2,7 @@
 #include <heltec_unofficial.h>
 #include <niagara.h>
 #include <measure.h>
+#include "esp_sleep.h"
 
 /* constants declaration for 
 customized parameters of the code */
@@ -12,31 +13,31 @@ to gather telemetries.
 The intervals are expressed in hours */
 #define TEMPERATURE_INTERVAL 1
 #define HUMIDITY_INTERVAL 1
-#define WEIGHT_INTERVAL 3
-#define NOISEINTENSITY_INTERVAL 2
-#define NOISEFREQUENCY_INTERVAL 2
+#define WEIGHT_INTERVAL 1
+#define NOISEINTENSITY_INTERVAL 1
+#define NOISEFREQUENCY_INTERVAL 1
+/* define after how many hours is 
+necessary to send telemetries */
+#define SENDING_INTERVAL 8
+#define ACTIVITY_INTERVAL 1 
+
+/* declare hour conter to understand whether it's time to
+send measures */
+int hour_counter = 0;
 
 bool log_initialised = false;
 
 /* global variables */
 str destination = str(DESTINATION_IDENTIFIER);
 
-/* define a struct for each measure and 
-it's last time to be recorded, 
-using the board clock */
-typedef struct{
-  char telemetry_name[30];
-  unsigned long last_record;
-}telemetrytype_t;
-
 /* define the measures available 
 on the board */
-telemetrytype_t TELEMETRYTYPE[] = {
-  {"temperature", 0},
-  {"humidity", 0},
-  {"weight", 0},
-  {"noise_intensity", 0},
-  {"noise_frequency", 0}
+char TELEMETRYTYPE[][30] = {
+  {"temperature"},
+  {"humidity"},
+  {"weight"},
+  {"noise_intensity"},
+  {"noise_frequency"}
 };
 int size = sizeof(TELEMETRYTYPE)/sizeof(TELEMETRYTYPE[0]);
 
@@ -86,7 +87,7 @@ Measure get_instant_telemetry(){
       value = random(0,100);
   }
 
-  Measure telemetry = Measure(TELEMETRYTYPE[number].telemetry_name, value);
+  Measure telemetry = Measure(TELEMETRYTYPE[number], value);
   return telemetry;
 }
 
@@ -117,6 +118,16 @@ void send_telemetries_to_gateway(){
   }
 }
 
+/* function to put the ESP32 device
+into deep sleep for the hours put in input */
+void deep_sleep_hours(int hours) {
+  esp_sleep_enable_timer_wakeup(
+      (uint64_t)hours * 3600ULL * 1000000ULL
+  );
+
+  esp_deep_sleep_start();
+}
+
 void setup() {
     // Inizializza la seriale (chiamando l'handler o direttamente)
     Serial.begin(115200);
@@ -134,57 +145,44 @@ void setup() {
 }
 
 void loop() {
-  /* variable declaration */
-  str payload;
+  hour_counter++; // start updating the hour counter
 
-  /* receive the message and evaluate
-  whether data has to been sent or not. 
-  N.B. This operation is a blocking function which ends 
-  after a timeout of few seconds, so it won't block the entire system
-  till it gets a valid value. */
-  Niagara_Ret receive_output = device->receive(&payload, &destination); // the device to listen is the gateway, so the normal destination
-
-  /* detect the payload and select the
-  different requests from the device */
-  if(receive_output == NIAGARA_OK){
-    if(payload.c_str() == "TELEMETRY_REQUEST"){
-      /* normal response to request of the gateway
-      to ge the telemetries */
-      send_telemetries_to_gateway();
-    }else{
-      /* report unusual request from the device */
-      Serial.printf("Unknown request '%s' coming from device '%s'\n", payload.c_str(), destination.c_str());
-    }
-  }
-  else{
-   unsigned long current_time = millis();
-   /* control if it's time to gather 
-   some telemetries */
-   if(TELEMETRYTYPE[0].last_record == 0 || (current_time-TELEMETRYTYPE[0].last_record)/3600000 > TEMPERATURE_INTERVAL){
-    Serial.println("Started recording temperature");
+  /* control if the hour counter corresponds
+  to the time of getting telemetries */
+  if(hour_counter == 1 || hour_counter % TEMPERATURE_INTERVAL == 0){
+    Serial.println("Start recording temperature"); 
     // function to get the temperature
-    TELEMETRYTYPE[0].last_record = millis(); // update last record
-   } 
-   if(TELEMETRYTYPE[1].last_record == 0 || (current_time-TELEMETRYTYPE[1].last_record)/3600000 > HUMIDITY_INTERVAL){
-    Serial.println("Started recording humidity");
-    // function to get the humidity
-    TELEMETRYTYPE[1].last_record = millis(); // update last record
-    
-   }
-   if(TELEMETRYTYPE[2].last_record == 0 || (current_time-TELEMETRYTYPE[2].last_record)/3600000 > WEIGHT_INTERVAL){
-    Serial.println("Started recording weight");
-    // function to get the weight
-    TELEMETRYTYPE[2].last_record = millis(); // update last record
-   }
-   if(TELEMETRYTYPE[3].last_record == 0 || (current_time-TELEMETRYTYPE[3].last_record)/3600000 > NOISEINTENSITY_INTERVAL){
-    Serial.println("Started recording noise intensity");
-    // function to get the noise intensity
-    TELEMETRYTYPE[3].last_record = millis(); // update last record
-   }
-   if(TELEMETRYTYPE[4].last_record == 0 || (current_time-TELEMETRYTYPE[4].last_record)/3600000 > NOISEFREQUENCY_INTERVAL){
-    Serial.println("Started recording noise frequency");
-    // function to get the noise frequency
-    TELEMETRYTYPE[4].last_record = millis(); // update last record
-   }
+    // function to save into file
   }
+  if(hour_counter == 1 || hour_counter % HUMIDITY_INTERVAL == 0){
+    Serial.println("Start recording humidity"); 
+    // function to get the humidity
+    // function to save into file
+  }
+  if(hour_counter == 1 || hour_counter % WEIGHT_INTERVAL == 0){
+    Serial.println("Start recording weight"); 
+    // function to get the weight
+    // function to save into file
+  }
+  if(hour_counter == 1 || hour_counter % NOISEINTENSITY_INTERVAL == 0){
+    Serial.println("Start recording humidity"); 
+    // function to get the noise intensity
+    // function to save into file
+  }
+  if(hour_counter == 1 || hour_counter % NOISEFREQUENCY_INTERVAL == 0){
+    Serial.println("Start recording humidity"); 
+    // function to get the noise frequency
+    // function to save into file
+  }
+
+  /* if it's time to send data send all
+  and reset file memory */
+  if(hour_counter % SENDING_INTERVAL == 0){
+    Serial.println("Start sending data to the receiver");
+    send_telemetries_to_gateway(); // send telemetries
+    // function to erase file memory
+    hour_counter = 0;
+  }
+
+  deep_sleep_hours(ACTIVITY_INTERVAL); // put the device into deep sleep  
 }
