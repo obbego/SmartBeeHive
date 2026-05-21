@@ -131,11 +131,14 @@ function renderHives() {
                </span>
                <div class="status-dot status-${hive.status === 'offline' ? 'red' : hive.status}"></div>
              </div>
-             ${hive.status === 'yellow' && hive.lastUpdate === 'Dati non aggiornati da oltre 24 ore'
+${hive.status === 'red' && hive.lastUpdate === 'Dati non aggiornati da oltre 24 ore'
+            ? `<div style="font-size: 11px; color: var(--danger); font-style: italic; margin-top: 2px;">
+        i dati risalgono a più di 24h fa
+   </div>` : ''}
+${hive.status === 'yellow' && hive.lastUpdate === 'Dati non aggiornati da oltre 12 ore'
             ? `<div style="font-size: 11px; color: var(--warning); font-style: italic; margin-top: 2px;">
-                    i dati risalgono a più di 24h fa
-                  </div>`
-            : ''}
+        i dati risalgono a più di 12h fa
+   </div>` : ''}
            </div>
          </div>
 
