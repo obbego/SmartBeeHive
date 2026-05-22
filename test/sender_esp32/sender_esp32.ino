@@ -53,9 +53,9 @@ float calibration_factor = -7050.0;
 
 /* declare hour conter to understand whether it's time to
 send measures */
-RTC_DATA_ATTR hour_counter = 0;
+RTC_DATA_ATTR int hour_counter = 0;
 
-RTC_DATA_ATTR log_initialised = false;
+RTC_DATA_ATTR bool log_initialised = false;
 
 /* global variables */
 str destination = str(DESTINATION_IDENTIFIER);
@@ -105,11 +105,11 @@ void log_handler_serial(const char* text) {
 void send_telemetries_to_gateway(){
   /* instantiate objects of the library
   niagara defined to handle measures */
-  NiagaraSender niagara = NiagaraSender(device);
+  NiagaraSender niagaraSender = NiagaraSender(device);
 
   /* instantiate file and specify
   mode and controls */
-  File file = LittleFS.open(FILE_PATH, FILE_APPEND);
+  File file = LittleFS.open(FILE_PATH, FILE_READ);
   
   if (!file) {
     Serial.println("Impossibile aprire il file in scrittura");
@@ -126,16 +126,19 @@ void send_telemetries_to_gateway(){
     String row = file.readStringUntil('\n'); // read row
     row.trim(); // trim row
 
-    int fields = sscanf(row.c_str(), "%[^,],%f,%f", telemetry_type, &telemetry_value, &ms);
+    int fields = sscanf(row.c_str(), "%[^,],%f,%lu", telemetry_type, &telemetry_value, &ms);
+    NiagaraMeasure measure(telemetry_type, telemetry_value, ms); // create measure
+    niagaraSender.add_measure(measure); // add measure ti the niagara sender
   }
 
   Serial.println("=== AVVIO TRASMISSIONE ===");
+  int error = niagaraSender.send(DESTINATION_IDENTIFIER); // function that converts in json and sends to the destination
   
-  if (error == NIAGARA_OK) {
+  if (error == 0) { // it menas NIAGARA_OK code
       Serial.println("-> Trasmissione completata con successo.");
   } else {
       Serial.print("-> Errore durante la trasmissione. Codice: ");
-      Serial.println(static_cast<int>(error));
+      Serial.println(error);
   }
 }
 
@@ -247,10 +250,10 @@ void save_telemetry_into_file(char telemetry_name[], float telemetry_value, unsi
     return;
   }
 
-  file.println(telemetry_name, telemetry_value, ms);
+  file.printf("%s,%f,%lu\n", telemetry_name, telemetry_value, ms);
   file.close();
 
-  Serial.printf("Telemetria %s %.2f %ul salvata su file!\n", telemetry_name, telemetry_value, ms);
+  Serial.printf("Telemetria %s %.2f %lu salvata su file!\n", telemetry_name, telemetry_value, ms);
 }
 
 /**
@@ -287,11 +290,18 @@ void setup() {
 
     /* Setup DHT sensor */
     dht.begin();
+    Serial.println("Sensore DHT correttanmente impostato");
   
     /* HX711 scale setup and calibration */
     scale.begin(HX_DT, HX_SCK);
     scale.set_scale(calibration_factor);
-    scale.tare();
+    /* tare the scale only at the first setup of the code, 
+    otherwise the telemetry will be compromise
+    after the first deep sleep of the ESP32 */
+    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
+      scale.tare();
+    }
+    Serial.println("Bilancia correttamente impostata");
   
     /* ADC noise sensor setup */
     analogReadResolution(12);
