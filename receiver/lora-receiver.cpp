@@ -4,13 +4,16 @@
 #include <mutex>
 #include <thread>
 #include <chrono> // library for time units
+#include <algorithm>
 
 #include <curl/curl.h>                    // library to handle HTTP requests
 #include <spdlog/spdlog.h>                // library to handle logging
 #include <spdlog/sinks/daily_file_sink.h> // daily logger sink
 #include <spdlog/pattern_formatter.h>     // pattern formatter
 #include <memory>                         // for shared_ptr
+
 #include "niagara.h"                      // library to handle LoRa communication
+#include "niagara_measure.h"              // library to handle measures in Niagara protocol
 
 using namespace std;
 
@@ -258,7 +261,7 @@ void askTelemetriesFromDevices()
     {
         {
             lock_guard<mutex> lock(niagaraMutex); // lock the niagara instance
-            sendStatus = niagara.send(devices[i].getDeviceIdentifier(), message.c_str());
+            sendStatus = niagara.send(devices[i].getDeviceIdentifier().c_str(), message.c_str());
         }
 
         if (sendStatus != NIAGARA_OK)
@@ -273,30 +276,30 @@ void askTelemetriesFromDevices()
  * Function used in a thread to start a continuous receiver which
  * constantly checks for new updates and send them into
  * the ThingsBoard platform registered
+ * @param receiver the NiagaraReceiver object used to receive data from the LoRa communication and process it
  * @return return error code
  * @author Daniele Chiarion
  */
-int thread_continuousReceiver()
+int thread_continuousReceiver(NiagaraReceiver &receiver)
 {
     /* create an infinite loop to receive data and
     send them to ThingsBoard server */
     while (true)
     {
         str payload, source;
+        int error; // error code return by the receiving method
 
-        /* receive data from LoRa receiver and control
-        the return code */
-        Niagara_Ret niagara_status = NIAGARA_NO_DATA;
+        /* receive theS JSON data from the LoRa device */
         {
-            lock_guard<mutex> lock(niagaraMutex); // lock the resource
-            niagara_status = niagara.receive(&payload, &source);
+            lock_guard<mutex> lock(niagaraMutex);
+            payload = receiver.receive(&error, &source);
         }
-        if (niagara_status != NIAGARA_OK)
-        {
-            logger->error("Error in receiving data from " + string(source.c_str()) + " with error code: " + to_string(niagara_status));
-            cout << "Error in receiving data from " << string(source.c_str()) << " with error code: " << to_string(niagara_status) << endl;
-            continue;
+        if(error != 0){
+            logger->error("Error in receiving data from LoRa communication with code: " + to_string(error));
+            cout << "Error in receiving data from LoRa communication with code: " << to_string(error) << endl;
+            continue; // skip the rest of the loop and try to receive again 
         }
+
         logger->info("Data received from " + string(source.c_str()));
         cout << "Data received from " << string(source.c_str()) << endl;
 
@@ -307,7 +310,7 @@ int thread_continuousReceiver()
             send_thingsboard_check = sendDataToThingsBoard(payload, source);
     }
 
-    logger->error("Generic error occured in the pcontinous receiver thread");
+    logger->error("Generic error occured in the continuous receiver thread");
 
     return 1;
 }
@@ -345,6 +348,11 @@ int main(int argc, char *argv[])
 
     niagara.set_identifier("LoRaREC"); // set identifier
 
+    /* create Niagara receiver to handle 
+    connection with the DC, milliseconds and data to 
+    be sent to the IOT Platform */
+    NiagaraReceiver receiver(niagara);
+
     /* setup the environment */
     if (!recoverDevices())
     {
@@ -354,12 +362,12 @@ int main(int argc, char *argv[])
 
     /* create the threads and start them
     right after the instantiaton */
-    thread receiveng_thread(thread_continuousReceiver);
+    thread receiving_thread(thread_continuousReceiver, ref(receiver));
     //thread request_thread(thread_periodTelemetryRequest);
 
     /* join the threads when they end */
-    if (receiveng_thread.joinable())
-        receiveng_thread.join();
+    if (receiving_thread.joinable())
+        receiving_thread.join();
     /* if (request_thread.joinable())
         request_thread.join(); */
 
