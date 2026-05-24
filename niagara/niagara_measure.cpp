@@ -61,9 +61,13 @@ void NiagaraSender::remove_measure(const char* key) {
     }
 }
 
-int NiagaraSender::send(const char* destination) {
-    //Get the current timestamp
-    unsigned long current_ts = get_system_millis();
+int NiagaraSender::send(const char* destination, unsigned long timestamp) {
+    /* if the timestamp is not provided, use the system's current timestamp. 
+    Some IoT device might use a calculated timestamp instead of the
+    function to get millis because possible telemetries could encounter problems
+    in calculating the corresponding epoch timestamp due to continuous reset of the millis() function
+    after a deep sleep time. */
+    unsigned long current_ts = (timestamp == 0) ? get_system_millis() : timestamp;
 
     // Message format: "current_ts;key1:val1:ts1;key2:val2:ts2;..."
     str payload = str(current_ts) + str(";"); //Add the current timestamp as the first element

@@ -103,9 +103,10 @@ public:
     /**
      * Constructs the payload and sends the message
      * @param destination The destination identifier to send the message to
+     * @param timestamp An optional timestamp to be included in the message, to avoid the problem of continuous reset of the function to get millis
      * @returns Any error code given in the message transmission, `0` if the message is sent succesfully
      */
-    int send(const char* destination);
+    int send(const char* destination, unsigned long timestamp = 0);
 };
 
 /**
