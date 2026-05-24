@@ -54,6 +54,9 @@ float calibration_factor = -7050.0;
 /* declare hour conter to understand whether it's time to
 send measures */
 RTC_DATA_ATTR int hour_counter = 0;
+/* variable to save the last timestamp after 
+the reset of millis() counter due to board deep sleep */
+RTC_DATA_ATTR unsigned long saved_timestamp = 0;
 
 RTC_DATA_ATTR bool log_initialised = false;
 
@@ -132,7 +135,7 @@ void send_telemetries_to_gateway(){
   }
 
   Serial.println("=== AVVIO TRASMISSIONE ===");
-  int error = niagaraSender.send(DESTINATION_IDENTIFIER); // function that converts in json and sends to the destination
+  int error = niagaraSender.send(DESTINATION_IDENTIFIER, saved_timestamp + millis()); // function that converts in json and sends to the destination
   
   if (error == 0) { // it menas NIAGARA_OK code
       Serial.println("-> Trasmissione completata con successo.");
@@ -150,6 +153,10 @@ void send_telemetries_to_gateway(){
  * @return void
  */
 void deep_sleep_hours(int hours) {
+  /* before putting the ESP32 into deep sleep 
+  saved the last timestamp in addition to the 
+  time provided to sleep in hours */
+  saved_timestamp += millis() + hours * 3600000;
   esp_sleep_enable_timer_wakeup(
       (uint64_t)hours * 3600ULL * 1000000ULL
   );
@@ -328,17 +335,17 @@ void loop() {
   if(hour_counter == 1 || hour_counter % TEMPERATURE_INTERVAL == 0){
     Serial.println("Start recording temperature"); 
     float temperature = get_temperature();
-    save_telemetry_into_file(TELEMETRYTYPE[0], temperature, millis());
+    save_telemetry_into_file(TELEMETRYTYPE[0], temperature, saved_timestamp + millis());
   }
   if(hour_counter == 1 || hour_counter % HUMIDITY_INTERVAL == 0){
     Serial.println("Start recording humidity"); 
     float humidity = get_humidity();
-    save_telemetry_into_file(TELEMETRYTYPE[1], humidity, millis());
+    save_telemetry_into_file(TELEMETRYTYPE[1], humidity, saved_timestamp + millis());
   }
   if(hour_counter == 1 || hour_counter % WEIGHT_INTERVAL == 0){
     Serial.println("Start recording weight"); 
     float weight = get_weight();
-    save_telemetry_into_file(TELEMETRYTYPE[2], weight, millis());
+    save_telemetry_into_file(TELEMETRYTYPE[2], weight, saved_timestamp + millis());
   }
   if(hour_counter == 1 || hour_counter % NOISE_INTERVAL == 0){
     Serial.println("Start recording noise"); 
@@ -347,8 +354,8 @@ void loop() {
     noise intensity and noise frequenct */
     double noise_intensity, noise_frequency;
     get_microphone_data(&noise_intensity, &noise_frequency);
-    save_telemetry_into_file(TELEMETRYTYPE[3], noise_intensity, millis());
-    save_telemetry_into_file(TELEMETRYTYPE[4], noise_frequency, millis());
+    save_telemetry_into_file(TELEMETRYTYPE[3], noise_intensity, saved_timestamp + millis());
+    save_telemetry_into_file(TELEMETRYTYPE[4], noise_frequency, saved_timestamp + millis());
   }
 
   /* if it's time to send data send all
