@@ -143,6 +143,7 @@ require_once '../db.php';
     </div>
 </div>
 
+<script>const USER_ROLE = '<?= htmlspecialchars($utente_ruolo) ?>';</script>
 <script src="../js/dati.js"></script>
 <script src="../js/alarm_state.js"></script>
 <script src="../js/thingsboard.js"></script>

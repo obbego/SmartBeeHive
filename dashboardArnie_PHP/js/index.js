@@ -230,9 +230,10 @@ function renderHistory() {
         <div style="font-weight:600; color:white;">${alert.hive} - ${alert.msg}</div>
         <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
       </div>
-      <button class="${s.cls}" onclick="openIndexModal('${alarmId}')" title="Gestisci allarme">
-        ${s.label}
-      </button>
+      ${USER_ROLE === 'viewer'
+            ? `<span class="${s.cls}" style="opacity:0.4; cursor:default;" title="Permessi insufficienti">${s.label}</span>`
+            : `<button class="${s.cls}" onclick="openIndexModal('${alarmId}')" title="Gestisci allarme">${s.label}</button>`
+        }
     </div>`;
     }).join('');
 
@@ -246,6 +247,7 @@ let indexModalAlarmId       = null;
 let indexModalSelectedStatus = null;
 
 function openIndexModal(alarmId) {
+    if (USER_ROLE === 'viewer') return;
     const alert = alertsHistory.find(a => (a.id || (a.hive + '_' + a.time)) === alarmId);
     if (!alert) return;
 

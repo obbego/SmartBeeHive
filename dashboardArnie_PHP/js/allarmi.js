@@ -118,6 +118,11 @@ function renderAlarmRow(alarm) {
     const s = statusMap[status] || statusMap.system;
     const dotClass = { system: 'dot-system', open: 'dot-open', closed: 'dot-closed' }[status] || 'dot-system';
 
+    const canEdit = (typeof USER_ROLE !== 'undefined') && USER_ROLE !== 'viewer';
+    const actionEl = canEdit
+        ? `<button class="status-btn ${s.cls}" onclick="openModal('${escHtml(alarm.id)}')">${s.label}</button>`
+        : `<span class="status-btn ${s.cls}" style="cursor:default; opacity:0.65; pointer-events:none;">${s.label}</span>`;
+
     return `
     <div class="alarm-row" data-alarm-id="${escHtml(alarm.id)}">
       <div class="alarm-severity-dot ${dotClass}"></div>
@@ -125,7 +130,7 @@ function renderAlarmRow(alarm) {
         <div class="alarm-msg">${escHtml(alarm.msg)}</div>
         <div class="alarm-meta">${escHtml(alarm.hive)} · ${escHtml(alarm.time)}</div>
       </div>
-      <button class="status-btn ${s.cls}" onclick="openModal('${escHtml(alarm.id)}')">${s.label}</button>
+      ${actionEl}
     </div>`;
 }
 

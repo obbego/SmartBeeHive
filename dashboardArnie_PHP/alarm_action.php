@@ -1,6 +1,12 @@
 <?php
 header('Content-Type: application/json');
 session_start();
+// Blocca i viewer — non possono modificare gli allarmi
+if (!isset($_SESSION['utente_ruolo']) || $_SESSION['utente_ruolo'] === 'viewer') {
+    http_response_code(403);
+    echo json_encode(['error' => 'Permessi insufficienti.']);
+    exit;
+}
 require 'config.php';
 
 $input   = json_decode(file_get_contents('php://input'), true) ?: [];

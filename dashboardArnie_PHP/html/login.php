@@ -8,10 +8,6 @@ if (isset($_SESSION['utente_id'])) {
 
 require_once '../db.php';
 
-// Credenziali offline hardcodate
-define('OFFLINE_USER', 'adminOffline');
-define('OFFLINE_PASS', 'offline1234');
-
 $errore = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -22,16 +18,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		$errore = 'Inserisci username e password.';
 
 	} elseif (OFFLINE_MODE) {
-		// ── Modalità offline: solo credenziali hardcodate ──
-		if ($nome === OFFLINE_USER && $pass === OFFLINE_PASS) {
-			$_SESSION['utente_id']    = 0;
-			$_SESSION['utente_nome']  = 'adminOffline';
-			$_SESSION['utente_ruolo'] = 'admin';
-			header('Location: index.php');
-			exit;
-		} else {
-			$errore = 'Credenziali non valide. In modalità offline usa le credenziali offline.';
-		}
+    $offlineUsers = [
+            'adminOffline'    => ['pass' => 'offline1234',    'ruolo' => 'admin'],
+            'operatorOffline' => ['pass' => 'offline1234',  'ruolo' => 'operator'],
+            'viewerOffline'   => ['pass' => 'offline1234','ruolo' => 'viewer'],
+    ];
+
+    if (isset($offlineUsers[$nome]) && $offlineUsers[$nome]['pass'] === $pass) {
+        $_SESSION['utente_id']    = 0;
+        $_SESSION['utente_nome']  = $nome;
+        $_SESSION['utente_ruolo'] = $offlineUsers[$nome]['ruolo'];
+        header('Location: index.php');
+        exit;
+    } else {
+        $errore = 'Credenziali non valide. In modalità offline usa le credenziali offline.';
+    }
 
 	} else {
 		// ── Modalità normale: query al DB ──
@@ -110,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			<div class="mb-3">
 				<label class="form-label">Username</label>
 				<input type="text" name="nome" class="form-control"
-					   placeholder="<?= OFFLINE_MODE ? OFFLINE_USER : 'Il tuo username' ?>"
+                       placeholder="Il tuo username"
 					   value=""
 					   required autocomplete="username">
 			</div>

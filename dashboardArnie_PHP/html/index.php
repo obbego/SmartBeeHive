@@ -257,6 +257,7 @@ require_once '../db.php';
     </div>
 </div>
 
+<script>const USER_ROLE = '<?= htmlspecialchars($utente_ruolo) ?>';</script>
 <script src="../js/dati.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../js/alarm_state.js"></script>
