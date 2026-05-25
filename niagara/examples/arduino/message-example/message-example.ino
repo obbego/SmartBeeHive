@@ -3,13 +3,14 @@
 #include "niagara_message.h"
 
 // Istanza UNICA del protocollo hardware/low-level LoRa
-Niagara lora_device;
+Niagara *lora_device;
 
 void setup() {
     Serial.begin(115200);
     while (!Serial) { delay(10); }
     Serial.println("--- IoT Device Niagara Sender Initialized ---");
-    lora_device.set_initializer("IoTDevice0");
+    lora_device = new Niagara();
+    lora_device->set_identifier("IoTDevice0");
 }
 
 void loop() {
@@ -22,18 +23,9 @@ void loop() {
     unsigned long tempo_misura_passata = millis() - 5000;
     NiagaraMeasure press("pressure", 1012.4, tempo_misura_passata);
 
-    int error_code = 0;
-
     // Inizializziamo il Sender passando il riferimento all'unica istanza 'lora_device'
     // Usiamo il costruttore variadico per inserire subito le prime due misure
-    NiagaraSender sender(lora_device, &error_code, temp, hum);
-    
-    if (error_code != 0) {
-        Serial.print("[ERRORE] Errore inizializzazione Sender: ");
-        Serial.println(error_code);
-        delay(5000);
-        return;
-    }
+    NiagaraSender sender(lora_device, temp, hum);
     sender.add_measure(press);
 
     Serial.println("[LORA] Invio dati al Gateway...");

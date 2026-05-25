@@ -39,7 +39,6 @@
 #include "AsyncDevice.h"
 #include <stdarg.h>
 #include "str.h"
-#include "niagara_measure.h"
 
 /** Maximum amount of retransmissions to be sent before the send method throws an error */
 #define NIAGARA_RETRANSMISSIONS 10

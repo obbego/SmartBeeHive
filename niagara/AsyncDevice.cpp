@@ -160,7 +160,7 @@ bool AsyncDevice::recv(str& out)
 	AsyncPacket pkt;
 	if (!queuePop(pkt)) return false;
 
-	out = str(reinterpret_cast<const char*>(pkt.data)).substring(0, pkt.len);
+	out = str((char*)pkt.data).substring(0, pkt.len);
 	return true;
 }
 
