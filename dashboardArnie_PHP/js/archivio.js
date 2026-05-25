@@ -91,10 +91,10 @@ function renderArchiveRow(alarm) {
           ${note ? `<span style="margin-left:8px;color:var(--text-muted);font-style:italic;">· ${escHtml(note)}</span>` : ''}
         </div>
       </div>
-      <button class="status-btn st-closed" onclick="reopenAlarm('${escHtml(alarm.id)}')"
-              title="Riapri allarme">
-        ✓ Risolto
-      </button>
+      ${USER_ROLE === 'viewer'
+        ? `<span class="status-btn st-closed" style="opacity:0.4; cursor:default;" title="Permessi insufficienti">✓ Risolto</span>`
+        : `<button class="status-btn st-closed" onclick="reopenAlarm('${escHtml(alarm.id)}')" title="Riapri allarme">✓ Risolto</button>`
+    }
     </div>`;
 }
 
@@ -102,6 +102,7 @@ function renderArchiveRow(alarm) {
 // RIAPERTURA
 // ─────────────────────────────────────────────
 window.reopenAlarm = async function(alarmId) {
+    if (USER_ROLE === 'viewer') return;
     const isMock = localStorage.getItem('mockMode') === 'true';
     try {
         if (!isMock) await tbAckAlarm(alarmId); // rimanda in ACTIVE_ACK su TB
