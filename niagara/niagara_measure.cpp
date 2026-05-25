@@ -92,13 +92,13 @@ NiagaraReceiver::NiagaraReceiver(Niagara& lora_device)
     : device(lora_device) 
 {}
 
-str NiagaraReceiver::receive(int* error, str* ext_remote_device) {
+str NiagaraReceiver::receive(int* , str* ext_remote_device) {
     //Initialise the error as 0
     *error = 0;
 
     //Try to receive data through niagara
     str remote_device, payload;
-    Niagara_Ret ret = device.receive(&remote_device, &payload);
+    Niagara_Ret ret = device.receive(&payload, &remote_device);
     
     if(ret != NIAGARA_OK) {
         *error = static_cast<int>(ret);
