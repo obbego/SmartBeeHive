@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <heltec_unofficial.h>
 #include "esp_sleep.h"
+#include <DHT.h>
 #include <HX711.h>
 #include <arduinoFFT.h>
+#include <DHT.h>
 /* libraries for saving into file */
 #include <FS.h>
 #include <LittleFS.h>
@@ -49,7 +51,7 @@ ArduinoFFT<double> FFT(vReal, vImag, SAMPLES, SAMPLING_FREQUENCY);
 unsigned long samplingPeriodUs;
 
 /* ===== Scale calibration ===== */
-float calibration_factor = -7050.0;
+float calibration_factor = 18500.0;
 
 /* declare hour conter to understand whether it's time to
 send measures */
@@ -108,7 +110,7 @@ void log_handler_serial(const char* text) {
 void send_telemetries_to_gateway(){
   /* instantiate objects of the library
   niagara defined to handle measures */
-  NiagaraSender niagaraSender = NiagaraSender(device);
+  NiagaraSender niagaraSender = NiagaraSender(*device);
 
   /* instantiate file and specify
   mode and controls */
@@ -193,7 +195,7 @@ float get_weight(){
   float peso = -1000; // initialize to possible error value
   if (scale.is_ready()) {
     peso = scale.get_units(10);
-    if (abs(peso) < 0.02) peso = 0;
+    if (abs(peso) < 0.1) peso = 0.0;
   }
 
   return peso;
@@ -283,6 +285,36 @@ void clear_file(){
   file.close();
 }
 
+/**
+ * Function to calibrate the scale of the ESP32 
+ * at the beginning
+ * @return void
+ */
+void calibrateScale() {
+  Serial.println("\n=== CALIBRAZIONE ===");
+  Serial.println("Togli tutto e scrivi 'tara' per azzerare");
+  Serial.println("Poi metti 10 kg (o peso noto)");
+  Serial.print("Scrivi quanto pesa realmente → ");
+
+  while (!Serial.available()) delay(100);
+  float peso_reale = Serial.parseFloat();
+
+  if (peso_reale > 0) {
+    float lettura = scale.get_units(25);
+    
+    Serial.print("Lettura attuale: ");
+    Serial.print(lettura, 3);
+    Serial.println(" kg");
+
+    calibration_factor = calibration_factor * (peso_reale / lettura);
+
+    Serial.print("→ Nuovo CF = ");
+    Serial.println(calibration_factor, 2);
+
+    scale.set_scale(calibration_factor);
+    Serial.println("✅ Calibrazione completata!\n");
+  }
+}
 
 void setup() {
     // Inizializza la seriale (chiamando l'handler o direttamente)
@@ -302,11 +334,12 @@ void setup() {
     /* HX711 scale setup and calibration */
     scale.begin(HX_DT, HX_SCK);
     scale.set_scale(calibration_factor);
+    scale.set_gain(128);
     /* tare the scale only at the first setup of the code, 
     otherwise the telemetry will be compromise
     after the first deep sleep of the ESP32 */
     if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
-      scale.tare();
+      scale.tare(30);
     }
     Serial.println("Bilancia correttamente impostata");
   
