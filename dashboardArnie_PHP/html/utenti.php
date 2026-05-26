@@ -236,6 +236,53 @@ mysqli_close($conn);
             backdrop-filter:blur(12px); max-width:360px;
             transition:opacity 0.4s; display:none;
         }
+
+        /* ── Bottone immedesimati (viola) ─────────────────────────── */
+        .btn-icon.impersonate:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            color: #818cf8;
+        }
+
+        /* ── Mobile: riga utente su due righe ─────────────────────── */
+        @media (max-width: 600px) {
+
+            .user-row {
+                flex-wrap: wrap;
+                gap: 10px 8px;
+                padding: 12px 14px;
+                align-items: center;
+            }
+
+            /* Prima riga: avatar + nome + data — larghezza piena */
+            .user-info {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+
+            /* Seconda riga: select + bottoni — allineata a destra */
+            .user-actions {
+                flex: 1 1 100%;
+                justify-content: flex-end;
+                flex-wrap: nowrap;
+                gap: 6px;
+            }
+
+            /* Select un po' più compatto, si allarga per usare lo spazio */
+            .role-select {
+                font-size: 12px;
+                padding: 5px 6px;
+                flex: 1;
+                max-width: 130px;
+            }
+
+            /* Bottoni icona leggermente ridotti */
+            .btn-icon {
+                width: 32px;
+                height: 32px;
+                flex-shrink: 0;
+            }
+        }
 	</style>
 </head>
 <body>
@@ -302,6 +349,16 @@ mysqli_close($conn);
 											<option value="operator" <?= $u['ruolo']==='operator' ? 'selected':'' ?>>Operator</option>
 											<option value="admin"    <?= $u['ruolo']==='admin'    ? 'selected':'' ?>>Admin</option>
 										</select>
+									</form>
+
+									<!-- Immedesimati nell'utente -->
+									<form method="POST" action="../impersonate.php" style="margin:0;"
+										  onsubmit="return confirm('Vuoi navigare come \'<?= htmlspecialchars($u['nome'], ENT_QUOTES) ?>\'?\nVerrai reindirizzato alla sua dashboard.')">
+										<input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+										<button type="submit" class="btn-icon impersonate"
+												title="Immedesimati: naviga come questo utente">
+											<i data-lucide="user-check" style="width:15px;height:15px;"></i>
+										</button>
 									</form>
 
 									<!-- Reset password (apre modale AJAX) -->

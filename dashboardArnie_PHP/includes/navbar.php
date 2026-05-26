@@ -1,10 +1,124 @@
 <?php
-// auth.php deve essere già stato incluso dalla pagina chiamante
+// ── Variabili helper ─────────────────────────────────────────
+$just_reconnected = false;
+if (!empty($_SESSION['db_just_reconnected'])) {
+	$just_reconnected = true;
+	unset($_SESSION['db_just_reconnected']);
+}
+
 $arnie    = [1, 2, 3, 4, 5];
 $iniziale = strtoupper(substr($utente_nome, 0, 1));
+
+// Rileva se siamo in modalità impersonazione
+$is_impersonating    = isset($_SESSION['original_admin']);
+$original_admin_nome = $is_impersonating ? $_SESSION['original_admin']['nome'] : '';
 ?>
 
 <link rel="stylesheet" href="../css/navbar.css">
+
+<?php if ($is_impersonating): ?>
+	<!-- ─── BANNER IMPERSONAZIONE ─────────────────────────────── -->
+	<style>
+        .imp-banner {
+            position: relative; /* mobile default: scorre via con la pagina */
+            z-index: 400;
+            background: linear-gradient(90deg, rgba(245,158,11,0.18), rgba(251,191,36,0.12));
+            border-bottom: 1px solid rgba(251,191,36,0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 9px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Solo su desktop diventa sticky */
+        @media (min-width: 601px) {
+            .imp-banner {
+                position: sticky;
+                top: 0;
+            }
+        }
+        .imp-banner-text {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--honey-glow);
+            flex: 1;
+            min-width: 0;
+        }
+        .imp-banner-text span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .imp-banner-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(251,191,36,0.15);
+            border: 1px solid rgba(251,191,36,0.5);
+            color: var(--honey-glow);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        .imp-banner-btn:hover {
+            background: rgba(251,191,36,0.28);
+        }
+
+        /* Mobile: impila verticalmente e scorre via con la pagina */
+        @media (max-width: 600px) {
+            .imp-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 16px;
+                gap: 8px;
+            }
+            .imp-banner-text span {
+                white-space: normal;
+                overflow: visible;
+                text-overflow: unset;
+                font-size: 12px;
+                line-height: 1.4;
+            }
+            .imp-banner-text i[data-lucide] {
+                flex-shrink: 0;
+            }
+            .imp-banner-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 8px 14px;
+            }
+        }
+	</style>
+
+	<div class="imp-banner">
+		<div class="imp-banner-text">
+			<i data-lucide="user-check" style="width:16px;height:16px; flex-shrink:0;"></i>
+			<span>
+            Stai navigando come
+            <strong style="color:white;"><?= htmlspecialchars($utente_nome) ?></strong>
+            &mdash; questa è la sua vista
+        </span>
+		</div>
+		<form method="POST" action="../stop_impersonate.php" style="margin:0; width:100%; display:contents;">
+			<button type="submit" class="imp-banner-btn">
+				<i data-lucide="arrow-left-circle" style="width:14px;height:14px;"></i>
+				Torna a <?= htmlspecialchars($original_admin_nome) ?>
+			</button>
+		</form>
+	</div>
+<?php endif; ?>
 
 <!-- ─── TOP BAR ───────────────────────────────────────────── -->
 <div class="topbar">
@@ -20,9 +134,15 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
 
 	<div class="topbar-right">
 		<?php if (OFFLINE_MODE): ?>
-			<span style="font-size:11px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:var(--warning); padding:3px 10px; border-radius:20px;">
-            ⚠ Offline
-        </span>
+			<span style="font-size:11px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:var(--warning); padding:3px 10px; border-radius:20px; display:flex; align-items:center; gap:6px;">
+				⚠ Offline
+				<a href="../force_reconnect.php"
+				   title="Riprova connessione"
+				   style="color:var(--warning); display:flex; align-items:center;"
+				   id="reconnectBtn">
+					<i data-lucide="refresh-cw" style="width:12px;height:12px;"></i>
+				</a>
+    		</span>
 		<?php endif; ?>
 		<div class="topbar-user">
 			Ciao, <strong><?= htmlspecialchars($utente_nome) ?></strong>
@@ -115,10 +235,49 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
 				<div class="sidebar-user-role"><?= htmlspecialchars($utente_ruolo) ?></div>
 			</div>
 		</div>
-		<a href="../logout.php" class="sidebar-logout">
-			<i data-lucide="log-out" style="width:15px;height:15px;"></i>
-			Esci
-		</a>
+
+		<?php if ($is_impersonating): ?>
+			<!-- In impersonazione: mostra "Torna a admin" invece del logout -->
+			<form method="POST" action="../stop_impersonate.php" style="margin:0;">
+				<button type="submit" class="sidebar-logout" style="
+                    background: rgba(251,191,36,0.1);
+                    border-color: rgba(251,191,36,0.3);
+                    color: var(--honey-glow);
+                    width: 100%;
+                ">
+					<i data-lucide="arrow-left-circle" style="width:15px;height:15px;"></i>
+					Esci da <?= htmlspecialchars($utente_nome) ?>
+				</button>
+			</form>
+		<?php else: ?>
+			<a href="../logout.php" class="sidebar-logout">
+				<i data-lucide="log-out" style="width:15px;height:15px;"></i>
+				Esci
+			</a>
+		<?php endif; ?>
+
 	</div>
+
+	<?php if ($just_reconnected): ?>
+		<script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const t = document.createElement('div');
+                t.style.cssText = `
+                    position:fixed;bottom:28px;right:28px;z-index:99999;
+                    background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);
+                    color:var(--success);padding:14px 20px;border-radius:12px;
+                    font-size:14px;font-weight:600;font-family:'Inter',sans-serif;
+                    box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(12px);
+                `;
+                t.innerText = '✓ Database raggiunto — effettua il login con il tuo account reale';
+                document.body.appendChild(t);
+                setTimeout(() => {
+                    t.style.transition = 'opacity 0.4s';
+                    t.style.opacity = '0';
+                    setTimeout(() => t.remove(), 400);
+                }, 6000);
+            });
+		</script>
+	<?php endif; ?>
 
 </nav>

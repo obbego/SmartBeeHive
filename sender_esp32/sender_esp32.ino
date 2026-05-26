@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <heltec_unofficial.h>
 #include "esp_sleep.h"
+#include <DHT.h>
 #include <HX711.h>
 #include <arduinoFFT.h>
 #include <DHT.h>
