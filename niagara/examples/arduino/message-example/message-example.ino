@@ -31,7 +31,7 @@ void loop() {
 
     Serial.println("[LORA] Invio dati al Gateway...");
     
-    int send_res = sender.send("Gateway0");
+    int send_res = sender.send("LoRaREC");
 
     if (send_res == 0) { // Assumiamo 0 = NIAGARA_OK
         Serial.println("[SUCCESS] Pacchetto LoRa inviato correttamente!");
