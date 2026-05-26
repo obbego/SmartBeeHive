@@ -1,5 +1,9 @@
 <?php
-// auth.php deve essere già stato incluso dalla pagina chiamante
+$just_reconnected = false;
+if (!empty($_SESSION['db_just_reconnected'])) {
+	$just_reconnected = true;
+	unset($_SESSION['db_just_reconnected']);
+}
 $arnie    = [1, 2, 3, 4, 5];
 $iniziale = strtoupper(substr($utente_nome, 0, 1));
 ?>
@@ -20,9 +24,15 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
 
 	<div class="topbar-right">
 		<?php if (OFFLINE_MODE): ?>
-			<span style="font-size:11px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:var(--warning); padding:3px 10px; border-radius:20px;">
-            ⚠ Offline
-        </span>
+			<span style="font-size:11px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:var(--warning); padding:3px 10px; border-radius:20px; display:flex; align-items:center; gap:6px;">
+				⚠ Offline
+				<a href="../force_reconnect.php"
+				   title="Riprova connessione"
+				   style="color:var(--warning); display:flex; align-items:center;"
+				   id="reconnectBtn">
+					<i data-lucide="refresh-cw" style="width:12px;height:12px;"></i>
+				</a>
+    		</span>
 		<?php endif; ?>
 		<div class="topbar-user">
 			Ciao, <strong><?= htmlspecialchars($utente_nome) ?></strong>
@@ -120,5 +130,25 @@ $iniziale = strtoupper(substr($utente_nome, 0, 1));
 			Esci
 		</a>
 	</div>
-
+	<?php if ($just_reconnected): ?>
+		<script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const t = document.createElement('div');
+                t.style.cssText = `
+        position:fixed;bottom:28px;right:28px;z-index:99999;
+        background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);
+        color:var(--success);padding:14px 20px;border-radius:12px;
+        font-size:14px;font-weight:600;font-family:'Inter',sans-serif;
+        box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(12px);
+    `;
+                t.innerText = '✓ Database raggiunto — effettua il login con il tuo account reale';
+                document.body.appendChild(t);
+                setTimeout(() => {
+                    t.style.transition = 'opacity 0.4s';
+                    t.style.opacity = '0';
+                    setTimeout(() => t.remove(), 400);
+                }, 6000);
+            });
+		</script>
+	<?php endif; ?>
 </nav>
