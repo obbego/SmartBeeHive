@@ -105,7 +105,7 @@ function renderHives() {
         let statusColor = 'var(--danger)';
         if (hive.status === 'green')  { statusText = 'ONLINE';     statusColor = 'var(--success)'; }
         if (hive.status === 'yellow') { statusText = 'ATTENZIONE'; statusColor = 'var(--warning)'; }
-        if (hive.status === 'red')    { statusText = 'ALLARME';    statusColor = 'var(--danger)';  }
+        if (hive.status === 'red')    { statusText = 'OFFLINE';    statusColor = 'var(--danger)';  }
 
         const freqVal = parseFloat(hive.peakFreq);
         const freqDisplay = (!isNaN(freqVal) && freqVal > 0) ? freqVal + ' Hz' : '--';

@@ -264,17 +264,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (hoursSinceUpdate > 24) {
                     // Superiore a 24 ore -> ROSSO (allarme)
                     semaforo.className = 'status-alert allarme';
-                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 24 ore: ${dataFormattata}`;
+                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Attenzione: Arnia offline! <br> Ultimo aggiornamento superiore a 24 ore: ${dataFormattata}`;
                 }
                 else if (hoursSinceUpdate > 12) {
                     // Superiore a 12 ore (ma inferiore a 24) -> GIALLO (instabile)
                     semaforo.className = 'status-alert instabile';
                     semaforo.innerHTML = `<i data-lucide="help-circle"></i> Attenzione: <br> Ultimo aggiornamento superiore a 12 ore: ${dataFormattata}`;
-                }
-                else if (temInVal == 0 && weightVal == 0 && humVal == 0) {
-                    // Dati recenti ma tutti a zero -> ROSSO (offline)
-                    semaforo.className = 'status-alert allarme';
-                    semaforo.innerHTML = `<i data-lucide="alert-triangle"></i> Arnia non disponibile: <br> uno o più dispositivi sono offline`;
                 }
                 else {
                     // Dati freschi e validi -> VERDE (ottimale)
