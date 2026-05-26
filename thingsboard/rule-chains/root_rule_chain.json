@@ -9,7 +9,7 @@
     "additionalInfo": null
   },
   "metadata": {
-    "version": 50,
+    "version": 8,
     "firstNodeIndex": 4,
     "nodes": [
       {
@@ -156,7 +156,7 @@
         "configurationVersion": 1,
         "configuration": {
           "forwardMsgToDefaultRuleChain": false,
-          "ruleChainId": "27aebb00-b355-11f0-86b8-4d4474c0a366"
+          "ruleChainId": "935b2bb0-5290-11f1-bbec-f5f0e6fddb85"
         },
         "additionalInfo": {
           "description": "function that checks the weight of beehive and understands if it's time to gather some honey",
@@ -191,7 +191,7 @@
         "configurationVersion": 1,
         "configuration": {
           "forwardMsgToDefaultRuleChain": false,
-          "ruleChainId": "13b832d0-b5a7-11f0-86b8-4d4474c0a366"
+          "ruleChainId": "8c0593a0-5290-11f1-bbec-f5f0e6fddb85"
         },
         "additionalInfo": {
           "description": "rule chain to check to calculate the average for each telemetry in the last period",
@@ -208,29 +208,12 @@
         "configurationVersion": 1,
         "configuration": {
           "forwardMsgToDefaultRuleChain": false,
-          "ruleChainId": "5e6aad60-b7f7-11f0-86b8-4d4474c0a366"
+          "ruleChainId": "299b5510-5290-11f1-bbec-f5f0e6fddb85"
         },
         "additionalInfo": {
           "description": "node to check the status of the device",
           "layoutX": 1421,
           "layoutY": 201
-        }
-      },
-      {
-        "type": "org.thingsboard.rule.engine.flow.TbRuleChainInputNode",
-        "name": "check_telemetry_data",
-        "debugSettings": null,
-        "singletonMode": false,
-        "queueName": null,
-        "configurationVersion": 1,
-        "configuration": {
-          "forwardMsgToDefaultRuleChain": false,
-          "ruleChainId": "10c2dc20-c393-11f0-9dac-f14aa7f7559f"
-        },
-        "additionalInfo": {
-          "description": "node to check if the data is correct",
-          "layoutX": 984,
-          "layoutY": 154
         }
       },
       {
@@ -251,6 +234,23 @@
           "description": "",
           "layoutX": 1249,
           "layoutY": 145
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.flow.TbRuleChainInputNode",
+        "name": "check_telemetry_value",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "forwardMsgToDefaultRuleChain": false,
+          "ruleChainId": "2f7ee690-5290-11f1-bbec-f5f0e6fddb85"
+        },
+        "additionalInfo": {
+          "description": "check the telemetry in input",
+          "layoutX": 920,
+          "layoutY": 146
         }
       }
     ],
@@ -277,7 +277,7 @@
       },
       {
         "fromIndex": 1,
-        "toIndex": 11,
+        "toIndex": 12,
         "type": "Post telemetry"
       },
       {
@@ -311,8 +311,8 @@
         "type": "check-device-status"
       },
       {
-        "fromIndex": 11,
-        "toIndex": 12,
+        "fromIndex": 12,
+        "toIndex": 11,
         "type": "output"
       }
     ],
