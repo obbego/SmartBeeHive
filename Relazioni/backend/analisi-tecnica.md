@@ -97,6 +97,8 @@ Tale script leggerà le telemetrie accettate da un file `allowed_keys.json` e de
 ```
 Come è possibile notare il file può gestire anche più liste di telemetrie diverse associate a dispositivi diversi. 
 
+**N.B.** Questa funzionalità non è più obbligatoria da implementare dal momento che la il protocollo sviluppato effettua un Acknowledgement e supporta la CRC per la tolleranza agli errori. 
+
 #### Rule node di controllo
 All'interno della rule chain che sarà amputata al controllo della telemetria in ingresso che dovrà controllare la lista di telemetrie valide (se presente) e, se in tal caso non c'è corrispondenza, generare un allarme senza salvare la telemetria.
 
