@@ -2,6 +2,7 @@ Chart.defaults.color = '#94a3b8';
 Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
 Chart.defaults.font.family = "'Inter', sans-serif";
 
+
 const mockAlerts = [
     { id: 'mock-a1', hive: 'Arnia 01', msg: 'Temperatura anomala rispetto alle altre arnie', time: '10 min fa',           severity: 'CRITICAL', tbStatus: 'ACTIVE_UNACK'  },
     { id: 'mock-a2', hive: 'Arnia 01', msg: 'Variazione peso anomala',                        time: '02/03/2026 14:32',   severity: 'MAJOR',    tbStatus: 'ACTIVE_ACK'    },
@@ -9,10 +10,12 @@ const mockAlerts = [
     { id: 'mock-a4', hive: 'Arnia 01', msg: 'Miele pronto per la raccolta',                   time: '04/03/2026 11:20',   severity: 'WARNING',  tbStatus: 'CLEARED_UNACK' },
 ];
 
+
 // ─────────────────────────────────────────────
 // LOGICA COLORI PER I 4 RIQUADRI METRICHE
 // Grigio = ok, Arancio = attenzione, Rosso = allarme
 // ─────────────────────────────────────────────
+
 
 function applyMetricColors(tempIn, hum, weight, peakFreq) {
     setMetricColor('valTempIn',   getTempInColor(tempIn));
@@ -21,12 +24,14 @@ function applyMetricColors(tempIn, hum, weight, peakFreq) {
     setMetricColor('valPeakFreq', getFreqColor(peakFreq));
 }
 
+
 function setMetricColor(elementId, color) {
     const el = document.getElementById(elementId);
     if (!el) return;
     el.style.color = color;
     el.style.fontWeight = color ? '700' : '';
 }
+
 
 // Temperatura interna (°C)
 // Ottimale api: 33–38 °C
@@ -38,6 +43,7 @@ function getTempInColor(t) {
     return '';                                           // ok → grigio default
 }
 
+
 // Umidità interna (%)
 // Ottimale: 40–65%
 function getHumColor(h) {
@@ -47,6 +53,7 @@ function getHumColor(h) {
     if (v > 65 || v < 35) return 'var(--warning)';
     return '';
 }
+
 
 // Peso (kg) — segnala solo valori anomali bassi (colonia in calo)
 // Soglie orientative; un'arnia sana pesa 20–60 kg
@@ -58,6 +65,7 @@ function getWeightColor(w) {
     return '';
 }
 
+
 // Frequenza di picco (Hz)
 // Normale: 220–270 Hz
 function getFreqColor(f) {
@@ -68,7 +76,9 @@ function getFreqColor(f) {
     return '';
 }
 
+
 // ─────────────────────────────────────────────
+
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mockSwitch = document.getElementById('mockDataSwitch');
@@ -81,12 +91,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+
     const params = new URLSearchParams(window.location.search);
     const hiveId = parseInt(params.get('id')) || 1;
     const hive = typeof hivesData !== 'undefined' ? (hivesData.find(h => h.id === hiveId) || hivesData[0]) : null;
     document.getElementById('hiveName').innerText = hive ? hive.name : `Arnia 0${hiveId}`;
 
+
     const historyDiv = document.getElementById('localHistory');
+
 
     const impostaZeri = () => {
         document.getElementById('valTempIn').innerText   = '0°C';
@@ -97,12 +110,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('valMiele').innerText    = '0%';
         document.getElementById('valR2').innerText       = 'N/D';
 
+
         //document.getElementById('lastUpdate').innerText  = 'Ultimo dato: ND';
         const semaforo = document.getElementById('statusSemaforo');
         semaforo.className = 'status-alert allarme';
         semaforo.innerHTML = '<i data-lucide="help-circle"></i> Sensori non configurati o offline';
         historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme.</div>';
     };
+
 
     if (isMockMode) {
         document.getElementById('valTempIn').innerText   = hive.t + '°C';
@@ -113,8 +128,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('valMiele').innerText    = hive.pct + '%';
         //document.getElementById('lastUpdate').innerText  = 'Ultimo aggiornamento: ' + hive.lastUpdate;
 
+
         // Colora tutti e 4 i riquadri
         applyMetricColors(hive.t, hive.h, hive.w, hive.peakFreq);
+
 
         const semaforo = document.getElementById('statusSemaforo');
         if (hive.status === 'green') {
@@ -127,6 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             semaforo.className = 'status-alert allarme';
             semaforo.innerHTML = '<i data-lucide="alert-triangle"></i> Arnia non disponibile: uno o più dispositivi sono offline';
         }
+
 
         const ora = Date.now();
         const unOra = 3600000;
@@ -166,8 +184,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             ]
         };
 
+
         initDetailCharts(mockTelemetry);
         updateR2(mockTelemetry);
+
 
         const statusMap = {
             system: { cls: 'tag-system', label: '⚙ DA GESTIRE' },
@@ -176,25 +196,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         const statusOrder = { system: 0, open: 1, closed: 2 };
 
+
         const resolvedMock = mockAlerts.map(alert => ({
             ...alert,
             _status: typeof tbStatusToUI === 'function' ? tbStatusToUI(alert.tbStatus) : 'system'
         })).sort((a, b) => (statusOrder[a._status] ?? 9) - (statusOrder[b._status] ?? 9));
 
+
         const activeAlerts  = resolvedMock.filter(a => a._status !== 'closed');
         const closedAlerts  = resolvedMock.filter(a => a._status === 'closed');
+
 
         const renderAlertRow = (alert, extraClass = '') => {
             const s = statusMap[alert._status] || statusMap.system;
             return `
-            <div class="history-item px-0${extraClass}">
-                <div>
-                    <div style="font-weight:600; color:white;">${alert.msg}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
-                </div>
-                <span class="${s.cls}">${s.label}</span>
-            </div>`;
+           <div class="history-item px-0${extraClass}">
+               <div>
+                   <div style="font-weight:600; color:white;">${alert.msg}</div>
+                   <div style="font-size:12px; color:var(--text-muted);">${alert.time}</div>
+               </div>
+               <span class="${s.cls}">${s.label}</span>
+           </div>`;
         };
+
 
         historyDiv.innerHTML = "";
         activeAlerts.forEach(alert => { historyDiv.innerHTML += renderAlertRow(alert); });
@@ -203,14 +227,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         closedAlerts.forEach(alert => { historyDiv.innerHTML += renderAlertRow(alert, ' opacity-50'); });
 
+
     } else {
         // --- MODALITA' REALE ---
         let telemetry = null;
         try {
             telemetry = await tbGetTelemetry(hiveId, '24h');
 
+
             // Verifica se esistono dati utili nelle ultime 24h
             const hasData24h = telemetry && telemetry.tempIn && telemetry.tempIn.length > 0;
+
 
             if (!hasData24h) {
                 // Nessun dato nelle ultime 24h, recuperiamo l'ultimo dato assoluto ('latest')
@@ -226,6 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
+
             if (telemetry && Object.keys(telemetry).length > 0 && telemetry.tempIn && telemetry.tempIn.length > 0) {
                 ['tempIn', 'tempOut', 'humidity', 'honeyWeightKg', 'honeyPct', 'peakFreq'].forEach(key => {
                     if (telemetry[key] && telemetry[key].length > 0) {
@@ -233,11 +261,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
 
+
                 const temInVal  = telemetry.tempIn   ? telemetry.tempIn.slice(-1)[0].value   : 0;
                 const humVal    = telemetry.humidity  ? telemetry.humidity.slice(-1)[0].value  : 0;
                 const weightVal = telemetry.honeyWeightKg ? telemetry.honeyWeightKg.slice(-1)[0].value : 0;
                 const pctVal    = telemetry.honeyPct  ? telemetry.honeyPct.slice(-1)[0].value  : 0;
                 const freqVal   = telemetry.peakFreq  ? telemetry.peakFreq.slice(-1)[0].value  : 0;
+
 
                 document.getElementById('valTempIn').innerText   = parseFloat(temInVal).toFixed(1)  + '°C';
                 document.getElementById('valHum').innerText      = parseFloat(humVal).toFixed(1)    + '%';
@@ -246,7 +276,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('barMiele').style.height = parseFloat(pctVal).toFixed(0)    + '%';
                 document.getElementById('valMiele').innerText    = parseFloat(pctVal).toFixed(0)    + '%';
 
+
                 applyMetricColors(temInVal, humVal, weightVal, freqVal);
+
 
                 // --- AGGIORNAMENTO TESTO DATA ---
                 let dataFormattata = telemetry.last_ts_human || 'Data non disponibile';
@@ -254,12 +286,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     dataFormattata = 'Nessun dato registrato';
                 }
 
+
                 // --- CALCOLO ORE TRASCORSE DALL'ULTIMO DATO ---
                 const lastTs = telemetry.tempIn.slice(-1)[0].ts;
                 const hoursSinceUpdate = (Date.now() - lastTs) / (1000 * 60 * 60);
 
+
                 // --- GESTIONE SEMAFORO E WARNING (AGGIORNATA) ---
                 const semaforo = document.getElementById('statusSemaforo');
+
 
                 if (hoursSinceUpdate > 24) {
                     // Superiore a 24 ore -> ROSSO (allarme)
@@ -277,8 +312,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     semaforo.innerHTML = `<i data-lucide="check-circle"></i> Dati ricevuti: Tutto regolare <br> Ultimo aggiornamento dati: ${dataFormattata}`;
                 }
 
+
                 // --- AGGIORNAMENTO R2 E GRAFICI ---
                 updateR2(telemetry);
+
 
                 if (window.lucide) lucide.createIcons();
                 initDetailCharts(telemetry);
@@ -299,12 +336,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 normalizeHiveName(hiveName).includes(normalizeHiveName(a.hive))
             );
 
+
             const statusMap = {
                 system: { cls: 'tag-system', label: '⚙ DA GESTIRE' },
                 open:   { cls: 'tag open',   label: '● APERTO'     },
                 closed: { cls: 'tag closed', label: '✓ RISOLTO'    },
             };
             const statusOrder = { system: 0, open: 1, closed: 2 };
+
 
             if (hiveAlarms.length === 0) {
                 historyDiv.innerHTML = '<div class="text-center text-muted py-4" style="font-size: 14px;">Nessun allarme registrato.</div>';
@@ -317,20 +356,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                         : tbStatusToUI(alarm.tbStatus)
                 })).sort((a, b) => (statusOrder[a._status] ?? 9) - (statusOrder[b._status] ?? 9));
 
+
                 const active = resolved.filter(a => a._status !== 'closed');
                 const closed = resolved.filter(a => a._status === 'closed');
+
 
                 const renderRow = (alarm, extraClass = '') => {
                     const s = statusMap[alarm._status] || statusMap.system;
                     return `
-            <div class="history-item px-0${extraClass}">
-                <div>
-                    <div style="font-weight:600; color:white;">${alarm.msg}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">${alarm.time}</div>
-                </div>
-                <span class="${s.cls}">${s.label}</span>
-            </div>`;
+           <div class="history-item px-0${extraClass}">
+               <div>
+                   <div style="font-weight:600; color:white;">${alarm.msg}</div>
+                   <div style="font-size:12px; color:var(--text-muted);">${alarm.time}</div>
+               </div>
+               <span class="${s.cls}">${s.label}</span>
+           </div>`;
                 };
+
 
                 let html = active.map(a => renderRow(a)).join('');
                 if (active.length > 0 && closed.length > 0) {
@@ -344,7 +386,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+
     lucide.createIcons();
+
 
     // --- SELETTORE TEMPORALE ---
     const timeTabs = document.querySelectorAll('#timeRangeSelector .tab-btn');
@@ -354,13 +398,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             tab.classList.add('active');
             if (isMockMode) return;
 
+
             let selectedInterval = tab.getAttribute('data-value');
+
 
             // FIX: Se il pulsante è impostato su 'latest' o è vuoto, forziamo '24h'
             // per garantire che i grafici ricevano lo storico temporale e non un solo punto.
             if (!selectedInterval || selectedInterval === 'latest') {
                 selectedInterval = '24h';
             }
+
 
             try {
                 ['tempInOutChart', 'humidityChart', 'weightFlowChart', 'peakFreqChart'].forEach(id => {
@@ -369,6 +416,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const storicTelemetry = await tbGetTelemetry(hiveId, selectedInterval);
                 if (storicTelemetry && Object.keys(storicTelemetry).length > 0) {
                     initDetailCharts(storicTelemetry);
+
+
+                    // Aggiorna anche i riquadri con l'ultimo valore dei dati storici
+                    ['tempIn', 'tempOut', 'humidity', 'honeyWeightKg', 'honeyPct', 'peakFreq'].forEach(key => {
+                        if (storicTelemetry[key]) storicTelemetry[key].sort((a, b) => a.ts - b.ts);
+                    });
+                    const temInVal  = storicTelemetry.tempIn?.[storicTelemetry.tempIn.length - 1]?.value ?? 0;
+                    const humVal    = storicTelemetry.humidity?.[storicTelemetry.humidity.length - 1]?.value ?? 0;
+                    const weightVal = storicTelemetry.honeyWeightKg?.[storicTelemetry.honeyWeightKg.length - 1]?.value ?? 0;
+                    const pctVal    = storicTelemetry.honeyPct?.[storicTelemetry.honeyPct.length - 1]?.value ?? 0;
+                    const freqVal   = storicTelemetry.peakFreq?.[storicTelemetry.peakFreq.length - 1]?.value ?? 0;
+
+
+                    if (parseFloat(temInVal) > 0 || parseFloat(humVal) > 0) {
+                        document.getElementById('valTempIn').innerText   = parseFloat(temInVal).toFixed(1)  + '°C';
+                        document.getElementById('valHum').innerText      = parseFloat(humVal).toFixed(1)    + '%';
+                        document.getElementById('valWeight').innerText   = parseFloat(weightVal).toFixed(1) + 'kg';
+                        document.getElementById('valPeakFreq').innerText = parseFloat(freqVal).toFixed(0)   + ' Hz';
+                        document.getElementById('barMiele').style.height = parseFloat(pctVal).toFixed(0)    + '%';
+                        document.getElementById('valMiele').innerText    = parseFloat(pctVal).toFixed(0)    + '%';
+                        applyMetricColors(temInVal, humVal, weightVal, freqVal);
+                    }
                 }
             } catch (error) {
                 console.error("Errore nel recupero dei dati storici:", error);
@@ -380,13 +449,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+
     const defaultTab = document.querySelector('#timeRangeSelector .tab-btn.active');
     if (defaultTab && !isMockMode) {
         defaultTab.click();
     }
 });
 
+
 let charts = {};
+
 
 function initDetailCharts(telemetry) {
     /**
@@ -394,16 +466,20 @@ function initDetailCharts(telemetry) {
      * Aggiunge o rimuove la classe CSS .no-data al contenitore del grafico.
      */
 
+
     const warningVisible = document.body.innerText.includes("Ultimo aggiornamento superiore a 24 ore");
     const currentRange = document.querySelector('.tab-btn.active').dataset.value;
+
 
     const checkEmpty = (dataArray, canvasId) => {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return true;
         const container = canvas.closest('.chart-box');
 
+
         // Controlliamo se l'array esiste e ha elementi
         const isEmpty = !dataArray || dataArray.length === 0;
+
 
         if (isEmpty) {
             container.classList.add('no-data');
@@ -412,6 +488,7 @@ function initDetailCharts(telemetry) {
         }
         return isEmpty;
     };
+
 
     // Configurazione del plugin per scorrimento e zoom
     const zoomConfig = {
@@ -430,6 +507,7 @@ function initDetailCharts(telemetry) {
         }
     };
 
+
     // Configurazione comune per i grafici
     const optionsWithLegend = {
         responsive: true,
@@ -439,6 +517,7 @@ function initDetailCharts(telemetry) {
             zoom: zoomConfig // <--- Aggiunto qui
         }
     };
+
 
     const optionsNoLegend = {
         responsive: true,
@@ -450,10 +529,13 @@ function initDetailCharts(telemetry) {
     };
 
 
+
+
     // 1. GRAFICO: Temperatura Interna vs Esterna
     const tempIn = parseTelemetrySeries(telemetry.tempIn);
     const tempOut = parseTelemetrySeries(telemetry.tempOut);
     checkEmpty(tempIn.data, 'tempInOutChart');
+
 
     if (charts.temp) charts.temp.destroy();
     charts.temp = new Chart(document.getElementById('tempInOutChart'), {
@@ -468,9 +550,11 @@ function initDetailCharts(telemetry) {
         options: optionsWithLegend
     });
 
+
     // 2. GRAFICO: Umidità Interna
     const hum = parseTelemetrySeries(telemetry.humidity);
     checkEmpty(hum.data, 'humidityChart');
+
 
     if (charts.hum) charts.hum.destroy();
     charts.hum = new Chart(document.getElementById('humidityChart'), {
@@ -482,9 +566,11 @@ function initDetailCharts(telemetry) {
         options: optionsNoLegend
     });
 
+
     // 3. GRAFICO: Variazione Peso (Barre)
     const weight = parseTelemetrySeries(telemetry.honeyWeightKg);
     checkEmpty(weight.data, 'weightFlowChart');
+
 
     if (charts.weight) charts.weight.destroy();
     charts.weight = new Chart(document.getElementById('weightFlowChart'), {
@@ -496,9 +582,11 @@ function initDetailCharts(telemetry) {
         options: optionsNoLegend
     });
 
+
     // 4. GRAFICO: Frequenza Picco
     const freq = parseTelemetrySeries(telemetry.peakFreq);
     checkEmpty(freq.data, 'peakFreqChart');
+
 
     if (charts.freq) charts.freq.destroy();
     charts.freq = new Chart(document.getElementById('peakFreqChart'), {
@@ -527,16 +615,20 @@ function initDetailCharts(telemetry) {
     });
 }
 
+
 function parseTelemetrySeries(series) {
     if (!series || series.length === 0) return { labels: [], data: [] };
     series.sort((a, b) => a.ts - b.ts);
+
 
     // Recuperiamo l'intervallo selezionato dal selettore temporale
     const activeTab = document.querySelector('#timeRangeSelector .tab-btn.active');
     const range = activeTab ? activeTab.getAttribute('data-value') : '24h';
 
+
     const labels = series.map(p => {
         const d = new Date(p.ts);
+
 
         // Se l'intervallo è '1a' (un anno), usiamo il formato richiesto
         if (range === '1a') {
@@ -549,6 +641,7 @@ function parseTelemetrySeries(series) {
             }).replace(',', ''); // Rimuove la virgola tra data e ora se presente
         }
 
+
         // Formato predefinito per gli altri intervalli (già presente nel tuo script)
         return d.toLocaleString('it-IT', {
             day: '2-digit',
@@ -558,9 +651,11 @@ function parseTelemetrySeries(series) {
         });
     });
 
+
     const data = series.map(p => p.value);
     return { labels, data };
 }
+
 
 // Funzione matematica per calcolare l'R² tra due array di dati appaiati
 function computeR2(xArr, yArr) {
@@ -578,9 +673,11 @@ function computeR2(xArr, yArr) {
     return (num / den) ** 2;
 }
 
+
 function updateR2(telemetry) {
     const r2El = document.getElementById('valR2');
     if (!r2El) return;
+
 
     // Se non ci sono dati o c'è solo l'ultimo dato (arnia offline)
     if (!telemetry || !telemetry.tempIn || telemetry.tempIn.length < 3) {
@@ -588,12 +685,15 @@ function updateR2(telemetry) {
         return;
     }
 
+
     const pairs = [];
     const MAX_TIME_DIFF = 60 * 60 * 1000; // Alziamo a 1 ora per sicurezza
+
 
     telemetry.tempIn.forEach(pin => {
         let closestOut = null;
         let minDiff = Infinity;
+
 
         telemetry.tempOut.forEach(pout => {
             const diff = Math.abs(pout.ts - pin.ts);
@@ -603,10 +703,12 @@ function updateR2(telemetry) {
             }
         });
 
+
         if (closestOut) {
             pairs.push({ x: parseFloat(closestOut.value), y: parseFloat(pin.value) });
         }
     });
+
 
     if (pairs.length >= 3) {
         const r2 = computeR2(pairs.map(p => p.x), pairs.map(p => p.y));
@@ -615,3 +717,6 @@ function updateR2(telemetry) {
         r2El.innerText = 'Sync in corso...';
     }
 }
+
+
+
