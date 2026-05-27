@@ -9,6 +9,100 @@ Per la misura dei parametri all'interno dell'alveare si fa uso di un sistema sen
 
 Nel sistema si trova inoltre un microcontrollore con lo scopo di misurare questi parametri. Questo è basato su *ESP32* con supporto per *LoRa* tramite chip *SX1262*.
 
+### Librerie utilizzate
+Di seguito vengono riportate le librerie utilizzate da installare in seguito nell'ambiente Arduino in fase di configurazione della scheda:
+- `DHT.h` libreria per la rilevazione del sensore DHT
+- `HX711.h` libreria indicata per la cella di carico utilizzata per il sistema. 
+- `arduinoFFT.h` libreria per l'utilizzo del sensore di campionamento del rumore.
+- `FS.h` e `littleFS.h` librerie utilizzate per il salvataggio di dati su file locali all'ESP32.
+- `esp_sleep.h` libreria dell'ESP32 per gestire la modalità di deep sleep. 
+- `niagara.h` e `niagara_measure.h` librerie di progetto per la gestione del protocollo LoRa e delle sue misurazioni.
+
+### Gestione dei file
+Per il salvataggio delle telemetrie è stato pensato di utilizzare il file system interno all'ESP32. Ciò consente di salvare i dati previsti e di inviarli senza gestire allocazioni dinamiche o allocazioni fisse ma pesanti nella memoria RAM. 
+
+Il codice si compone principalmente di due funzioni legati ai file:
+- **save_telemetries_into_file** per poter salvare una singola telemetria nel file in modalità append.
+- **clear_file** per pulire il file dopo ogni invio. Non è più richiesto infatti di inviare una stessa telemetria più olte, quindi questa funzione evita la saturazione della memoria di massa e possibili crash futuri del dispositivo.
+
+Il file verrà poi letto in fase di invio. 
+La codifica dei file scelta per il salvataggio delle telemetrie è il CSV, in quanto standard facilmente comprensibile e ricostituibile facilmente in fase di lettura. In particolare il file presenterà il seguente formato:
+```csv
+telemetry_name,telemetry_value,timestamp
+``` 
+
+### Gestione del timestamp
+ThingsBoard richiede per la telemetria un timestamp epoch in millisecondi. Tuttavia la scheda non dispone di un sensore RTC collegato, quindi occorre gestire la comunicazione del tempo in modo differente.
+Attraverso il millis della scheda, è possibile comunicarlo al ricevitore in modo tale che, una volta ricevute le telemetrie, possa effettivamente calcolare il timestamp epoch corrispondente prima di inviarlo a ThingsBoard.
+
+Tuttavia sorge un problema: implementando il deep sleep ogni ora anche il millis si resetta. Non risulta quindi possibile registrare le misurazioni in modo attendibile, perchè tutte le misurazioni (anche se distanti da ore, avranno lo stesso timestamp).
+*Ad esempio, supponendo che la rilevazione della temperatura venga fatta circa 100ms dopo il risveglio, alla prima volta la telemetria avrà timestamp pari a 101ms. La seconda temperatura viene misurata dopo un'ora di deep sleep, che azzera il contatore millis, quindi il timestamp potrà essere 124ms, o addirittura 90ms. Ciò non fa percepire che le misure siano distanti un'ora l'una dall'altra*.
+
+Per ovviare a questo problema è stato pensato di utilizzare un contatore locale all'ESP32 che tenga aggiornato il contatore dei millisecondi, salvando il tempo di attività ad ogni risveglio e aggiungendo anche il tempo in cui il dispositivo è stato in riposo. Questo consente di comprendere molto meglio la distanza tra le varie misurazioni e calcolare l'epoch in modo corretto. 
+Un esempio di utilizzo è il seguente:
+```c++
+/* la notazione RTC_DATA_ATTR evita che il contatore timestamp
+venga reinizializzato ad ogni riavvio, 
+perdendo la funzionalità per cui era stato concepito */
+RTC_DATA_ATTR unsigned long saved_timestamp = 0;
+
+void loop() {
+  hour_counter++; 
+
+  if(hour_counter == 1 || hour_counter % TEMPERATURE_INTERVAL == 0){
+    Serial.println("Start recording temperature"); 
+    float temperature = get_temperature();
+    /* ogni volta che si salva una telemetria si usa il contatore del timestamp
+    più i millis percorsi da ogni avvio, rendendo la misurazione maggiormente tracciabile */
+    save_telemetry_into_file(TELEMETRYTYPE[0], temperature, saved_timestamp + millis());
+  }
+}
+```
+Seppur questa soluzione possa portare a qualche imprecisione nella misurazione del tempo della telemetria, risulta comunque irrisoria e totalmente tollerabile nel contesto in cui il progetto viene sviluppato, anche perchè le telemetrie spesso seguono una scansione oraria.
+
+### Schedulazione delle attività
+Dal momento che la scheda ESP32 deve consumare energia il meno possibile, visti i requisiti di partenza e la sua collocazione, occorre schedulare correttamente le attività e, una volta completate, mettere la scheda in deep_sleep. 
+
+Viste le richieste si è pensato di impostare la funzione responsabile del timestamp fermare la scheda secondo un input orario:
+```c++
+/**
+ * Function to put the ESP32 board in
+ * deep sleep mode in order to save energy. 
+ * This function is recommended only for this specific type of board.
+ * @param hours amount of hours to make the board sleep
+ * @return void
+ */
+void deep_sleep_hours(int hours) {
+  /* before putting the ESP32 into deep sleep 
+  saved the last timestamp in addition to the 
+  time provided to sleep in hours */
+  saved_timestamp += millis() + hours * 3600000;
+  esp_sleep_enable_timer_wakeup(
+      (uint64_t)hours * 3600ULL * 1000000ULL
+  );
+
+  esp_deep_sleep_start();
+}
+```
+L'installatore del sistema potrà agire su delle costanti dedicate che indica ogni quante unità di tempo (in questo caso ogni quante ore) il sistema deve fare misurazioni, riposarsi o inviare i dati al ricevitore.
+Ecco la sezione dedicata del codice:
+```c++
+/* define timing intervals 
+to gather telemetries. 
+The intervals are expressed in hours */
+#define TEMPERATURE_INTERVAL 1
+#define HUMIDITY_INTERVAL 1
+#define WEIGHT_INTERVAL 1
+#define NOISE_INTERVAL 1
+/* define after how many hours is 
+necessary to send telemetries */
+#define SENDING_INTERVAL 8
+#define ACTIVITY_INTERVAL 1 
+```
+E' presente poi un contatore di unità temporali che, controllando ogni quanto effettuare le varie operazioni, verifica se è arrivato il momento. Dopo ogni invio il contatore di unità temporali verrà azzerato. 
+
+**N.B** *Per altre funzionalità relative alla libreria **niagara** e per le funzioni di utilizzo dei sensori consultare rispettivamente la documentazione dedicata o la repository del team di sviluppo.*
+
 
 ## Ricevitore misurazioni
 La ricezione delle misurazioni viene effettuata attraverso un software in esecuzione su un *Raspberry Pi* che implementa il protocollo *Niagara* per la comunicazione con le arnie.  
