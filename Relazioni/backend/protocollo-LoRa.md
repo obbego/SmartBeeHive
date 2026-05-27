@@ -88,27 +88,29 @@ Un pacchetto inviato dal protocollo contiene la sorgente e la destinazione del m
 Secondo le specifiche del protocollo, l'identificatore deve sottostare alle seguenti caratteristiche:
   - Deve avere una lunghezza compresa fra 4 e 12 caratteri
   - Deve essere alfanumerico, nessun carattere speciale consentito in quanto potrebbe andare ad interferire con i separatori che vengono aggiungi a layer 2
-  - Non deve essere l'identificatore di broadcast, definito all'interno della libreria come la stringa `BROAD`. Questo identificatore non può essere impostato come identificatore di alcun nodo, ma può solamente essere una destinazione
 
-Nell’header, in seguito alla sezione contenente sorgente e destinazione del pacchetto, segue un valore numerico contenente il messaggio di controllo, che può essere un `SYN`, un `ACK`, oppure un `RETRANSMISSION_TIMEOUT`. Questi messaggi di controllo vengono utilizzati per identificare la funzione dei pacchetti durante la handshake.
+Non viene predisposto un identificatore di broadcast in quanto il protocollo prevede solamente comunicazioni unicast verso i dispositivi.
+
+## Funzionalità di basso livello
+Ogni volta che viene inviato un pacchetto attraverso `send` o `receive`, in background viene effettuato un handshake a tre vie fra il dispositivo e la destinazione tramite funzioni di livello più basso, implementate privatamente all'interno della libreria, che possono essere denominate `send_raw` e `receive_raw`. 
+Queste funzioni "raw" si occupano esclusivamente di incapsulare tre informazioni, all'interno di un vettore di dati grezzo, che può essere inviato al layer 1 verso l'esterno tramite segnali radio LoRa in broadcast
+Queste informazioni sono le seguenti: 
+- ID del dispositivo e della destinazione
+- Messaggio di controllo 
+- Corpo effettivo del pacchetto
+Nell’header, i messaggi di controllo, che può essere un `SYN`, un `ACK`, oppure un `RETRANSMISSION_TIMEOUT` vengono utilizzati per identificare la funzione dei pacchetti durante la handshake.
+
 ## Handshake a 3 vie e ritrasmissioni
-Il protocollo implementa una handshake a 3 vie. Questa viene utilizzata ad ogni invio di ogni pacchetto. Se un pacchetto viene frammentato, ogni frammento verrà inviato utilizzando questa handshake, si illustrano le fasi di questa:
+Il protocollo implementa una handshake a 3 vie. Questa viene utilizzata all'invio di ogni pacchetto. Se un pacchetto viene frammentato, ogni frammento verrà inviato utilizzando questa handshake, si illustrano le fasi di questa:
 - Il mittente invia un `SYN` al destinatario, contenente come payload la stringa da recepire
 - Il destinatario, alla ricevuta del `SYN`, calcola il CRC32 del suo payload e risponde con un `ACK`, il cui payload sarà a sua volta riempito con il risultato di questo calcolo
 - Il mittente procede a verificare la CRC32 ricevuta dal destinatario comparandola con quella da lui calcolata sul messaggio originale. Se le due combaciano, allora procede a rispondere con un `ACK` finale di conferma con payload vuoto, altrimenti viene inviato un nuovo `SYN`. All'invio del nuovo `SYN` viene effettuata una ritrasmissione che causa la ripetizione della handshake.
 - Se vengono effettuate piú di `MAX_RETRANSMISSIONS` ritrasmissioni, allora il mittente invia un pacchetto di tipo `RETRANSMISSION_TIMEOUT` indicando che é stato raggiunto il numero massimo di queste. Se questo pacchetto viene recepito correttamente al destinatario, allora questo interromperà la ricezione restituendo un codice di errore. Altrimenti sarà necessario attendere un timeout.
-
-## Funzionalità di basso livello
-Ogni volta che viene inviato un pacchetto attraverso `send` o `receive`, in background viene effettuato un handshake a tre vie fra il dispositivo e la destinazione tramite funzioni di livello più basso, implementate privatamente all'interno della libreria, che possono essere denominate `send_raw` e `receive_raw`. Queste funzioni "raw" si occupano esclusivamente di incapsulare tre informazioni, all'interno di un vettore di dati grezzo, che può essere inviato al layer 1 verso l'esterno tramite segnali radio LoRa in broadcast
-Queste informazioni sono le seguenti: 
-    - ID del dispositivo e della destinazione
-    - Messaggio di controllo 
-    - Corpo effettivo del pacchetto
     
 ## Frammentazione
 Il protocollo implementa un fragmenter che gestisce la frammentazione (`FragmentConstructor`) e la deframmentazione (`FragmentDestructor`) dei pacchetti. Segue una descrizione della gestione della frammentazione:
 - **Invio**:
-    - Alla chiamata della funzione `send(str, str)`, viene utilizzato il `FragmentConstructor` per separare il messaggio in segmenti, ognuno con header che separa:
+    - Alla chiamata della funzione `send(str, str)`, viene utilizzato il `FragmentConstructor` per separare il messaggio in pacchetti, ognuno con header che separa:
         - Fragment Index, indice del frammento
         - Total Fragments, ammontare totale di frammenti
         - Payload, messaggio frammentato
@@ -128,8 +130,11 @@ Al di sopra del protocollo Niagara, viene implementato il layer applicativo tram
 - *Chiave*: Una stringa cross-platform `str` contenente la chiave della misura (es. `"temperature"`)
 - *Valore*: Il valore della misura (es. `22.5`)
 - *Timestamp*: Il momento in cui la misura è stata effettuata.
+
 Dato che il dispositivo IoT che costruisce questi oggetti non dispone di un chip RTC, per ottenere correttamente il tempo di invio della misura questo layer si occupa di inviare nel messaggio sia il timestamp impostato dentro `NiagaraMeasure`, sia il timestamp indicativo di quando la misura è stata effettivamente inviata. Questo fa in modo di permettere al dispositivo ricevente che si presuppone sia connesso ad una rete internet e abbia accesso all'orario corrente, di correggere il timestamp secondo il momento in cui la misura è stata ricevuta, andando poi a ricavare i timestamp corretti di tutte le altre misure.
+
 Questo layer si occupa, inoltre, di inserire la misura in un messaggio che, una volta ricevuto dal gateway, viene automaticamente convertito in stringa JSON supportata da una qualsiasi IoT Platform, nel caso del progetto si fa uso di Thingsboard. Per operare, l'header `niagara_measure.h` fa uso delle seguenti classi:
+
 - **NiagaraSender**, il dispositivo che effettua la misura e deve quindi inviarla verso un gateway selezionato. Questo oggetto contiene una lista modificabile di oggetti `NiagaraMeasure` che vengono istanziati e passati manualmente. Una volta che il sender è stato correttamente popolato con tutti gli oggetti necessari da inviare, una funzione `send(str destination)` permette l'invio di tutte le misure verso una destinazione.
 - **NiagaraReceiver**, il gateway che riceve le misure fa uso di questa classe per riceverle e convertirle automaticamente in stringhe JSON supportate, che possono poi essere inoltrate via socket verso la IoTPlatform. Si usa, quindi, il metodo `receive()` che riceve la prima misura disponibile e fornisce il *Callsign* del dispositivo remoto che l'ha inviata.
 
@@ -168,23 +173,33 @@ Questo layer si occupa, inoltre, di inserire la misura in un messaggio che, una 
 La libreria Niagara implementa tutto lo stack niagara di comunicazione, fino al layer di frammentazione. Il layer applicativo viene implementato separatamente da `niagara_measure`. Segue una spiegazione dell'utilizzo dei componenti del layer applicativo:
 
 - **NiagaraMeasure** Permette la creazione di misure che possono essere trasmesse tramite il layer applicativo. Viene passato un oggetto `str` contenente la chiave, un `double` contenente il valore e un timestamp della misura che, se lasciato a `0`, fa in modo che la misura venga associata al tempo in cui viene inviata verso il gateway:
+
   Esempio di misura in cui viene specificato un timestamp:
+  
   `NiagaraMeasure temperature("temperature", 24.5, millis());`
+  
   Esempio di misura che fa uso del timestamp in cui viene inviato il messaggio:
+  
   `NiagaraMeasure humidity("humidity", 50);`
 - **NiagaraSender**
   Il costruttore della classe richiede il passaggio di un oggetto `Niagara` inizializzato per la comunicazione e di una quantità variabile di argomenti contenenti le misure con cui inizializzare il sender. È inoltre possibile non passare alcuna misura ed inserirle successivamente:
   `NiagaraSender(Niagara& device, NiagaraMeasure... measures);`
   - In quanto questo oggetto racchiude una lista di oggetti `NiagaraMeasure`, è inoltre possibile manipolarne il contenuto tramite ulteriori funzioni, come `add_measure` o `remove_measure`:
+    
     `sender.add_measure(temperature);`
+    
     `sender.remove_measure("humidity");`
+    
   - Una volta riempito il contenuto del sender, è possibile inviare il messaggio tramite la funzione `send` verso la destinazione, questa ritorna qualsiasi errore riscontrato durante l'invio:
+    
     `sender.send("Gateway0");`
 - **NiagaraReceiver**
   Il costruttore della classe richiede, come nel sender, il passaggio di un oggetto `Niagara` inizializzato per la comunicazione:
   `NiagaraReceiver(Niagara& device);`
   - È successivamente possibile fare uso del metodo `receive` per ricevere la prima misura disponibile. Si occupa successivamente il layer applicativo di correggere i timestamp e convertire gli oggetti `NiagaraMeasure` in JSON valido che viene poi restituito dal metodo:
+    
     `str json = receiver.receive(&error_code, &remote_dev);`
+    
     `error_code` punta ad un valore intero contenente il codice di errore riscontrato durante la ricezione, mentre la funzione ritorna il JSON convertito.
 
 # Codice di esempio
