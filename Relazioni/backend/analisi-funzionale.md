@@ -4,7 +4,6 @@
 
 Il sistema per la raccolta dati dell'alveare deve seguire il seguente schema di funzionamento:
 1. **SCHEDA ALVEARE** deve raccogliere le varie misurazioni con una frequenza che rispetta le esigenze di monitoraggio. In seguito attraverso protocollo LoRa dovrà inviare le informazioni al gateway secondo un intervallo predefinito. Tempi di misurazione e di invio potrebbero non coincidere tra loro, così come ogni misurazione potrebbe non necessitare della stessa frequenza.
-2. **GATEWAY** raccoglie i dati e li invia all'antenna di ricezione nell'edificio più vicino con un intervallo definito in base alle esigenze e fattori esterni (tolleranza delle api alle onde).
 3. **RICEVITORE** riceve i dati dal gateway e li invia immediatamente al server ThingsBoard per il relativo salvataggio.
 4. **SCHEDULER** si occupa dell'invio di richieste periodiche al server per il monitoraggio delle telemetrie dei diversi dispositivi. Tale funzione potrebbe essere assolta dallo stesso dispositivo che compie la funzione del ricevitore.
 5. **SERVER** il server deve essere configurato con ThingsBoard e ricevere correttamente i dati. Deve inoltre prevedere la ricevuta di alcune richieste da dispositivi per eseguire controlli sui dati e generare eventuali allarmi/informazioni. 

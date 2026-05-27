@@ -9,10 +9,6 @@ Per la misura dei parametri all'interno dell'alveare si fa uso di un sistema sen
 
 Nel sistema si trova inoltre un microcontrollore con lo scopo di misurare questi parametri. Questo è basato su *ESP32* con supporto per *LoRa* tramite chip *SX1262*.
 
-## Gateway arnie
-Il gateway è l'elemento che si occupa della ricezione delle informazioni dalle arnie stesse, per permettere un invio di queste verso il ricevitore tramite il protocollo *Niagara*, che successivamente si occuperà dell'invio a ThingsBoard per l'aggiunta delle misure al database.  
-Il gateway ha lo scopo di attendere una richiesta dal ricevitore delle misurazioni, in quanto quest'ultimo, essendo connesso a Internet, è al corrente della data e dell'ora e ha l'obiettivo di richiedere tre misure giornaliere alle arnie.  
-Il sistema sensoristico può effettuare più misure di quelle che vengono richieste dal ricevitore, effettuando solamente l'invio di questi dati sulla rete *LoRa* su richiesta da parte di quest'ultimo. Ciò avviene quando si deve fornire una lettura media delle misure attraverso l'intervallo delle otto ore fra una misura e l'altra, anziché una lettura istantanea.
 
 ## Ricevitore misurazioni
 La ricezione delle misurazioni viene effettuata attraverso un software in esecuzione su un *Raspberry Pi* che implementa il protocollo *Niagara* per la comunicazione con le arnie.  

@@ -5,8 +5,8 @@ SOURCE_FILE="lora-receiver.cpp"
 OUTPUT_DIR="./out"
 OUTPUT_FILE="lora-receiver.out"
 
-NIAGARA_SOURCE="../niagara/niagara.cpp"
-NIAGARA_INCLUDE="../niagara/niagara.h"
+NIAGARA_SOURCE="../niagara/*.cpp"
+NIAGARA_INCLUDE="../niagara/*.h"
 NIAGARA_BUILD="../niagara/niagara.out"
 
 # install necessary libraries if thet
