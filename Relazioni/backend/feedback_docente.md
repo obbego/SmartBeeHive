@@ -54,3 +54,15 @@ Il Project Plan risulta ben impostato e mostra una buona comprensione del signif
 Rispetto alla versione precedente si osserva un miglioramento nella definizione dei ruoli e delle responsabilità del gruppo. Per rendere il documento ancora più efficace come strumento di gestione del progetto, sarebbe utile esplicitare con maggiore dettaglio alcune responsabilità operative durante lo sviluppo, ad esempio per quanto riguarda attività di test, integrazione tra componenti e gestione della documentazione.
 
 Nel complesso il Project Plan è coerente con la consegna assegnata e rappresenta una buona base per la gestione e il monitoraggio dell’avanzamento del progetto.
+
+# Valutazione finale documentazione di progetto – Backend Alveare
+
+La documentazione del progetto backend risulta complessivamente molto solida, dettagliata e coerente con l’implementazione effettivamente presente nella repository del progetto.
+
+Le analisi dei requisiti, funzionale e tecnica sono state aggiornate recependo in modo significativo i feedback forniti durante le revisioni precedenti. In particolare risultano migliorati gli aspetti relativi alla verificabilità dei requisiti, alla descrizione del flusso dei dati e alla distinzione delle responsabilità tra i diversi componenti del sistema.
+
+L’analisi tecnica rappresenta il punto di maggiore forza del progetto. La documentazione descrive in modo approfondito la gestione della comunicazione LoRa, il protocollo Niagara, l’integrazione con ThingsBoard, la gestione delle rule chain, degli allarmi, dello scheduler e dei meccanismi di logging e validazione delle telemetrie. Tali aspetti risultano coerenti con la struttura del repository e con il codice effettivamente sviluppato.
+
+Il diagramma di Gantt risulta ben organizzato e coerente con le milestone assegnate, mentre il Project Plan è stato migliorato nella definizione dei ruoli e nella pianificazione delle attività. Rimane ancora possibile un ulteriore affinamento nella descrizione dettagliata delle responsabilità operative durante le fasi di sviluppo, test e integrazione.
+
+Nel complesso il progetto backend presenta una documentazione tecnica molto matura, ben collegata allo sviluppo reale del sistema e orientata a problematiche concrete di implementazione e gestione.
